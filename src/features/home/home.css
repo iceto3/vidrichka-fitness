@@ -1,0 +1,36 @@
+/**
+ * Home screen styles: greeting bubble, streak week dots, today's workout card, quests.
+ * Ported from the design mockups (HOME_CSS).
+ */
+.otterrow { align-items: flex-end; }
+.otterrow .bubble { margin-bottom: 24px; flex: 1; }
+.bubble .hl { color: var(--warm); }
+.iconbtn .nub { position: absolute; top: 9px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: var(--warm); border: 2px solid var(--card); }
+.iconbtn { position: relative; }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: 12px; text-align: center; font-size: 10.5px; font-weight: 700; color: var(--muted); }
+.days i { display: block; width: 20px; height: 20px; border-radius: 50%; margin: 0 auto 3px; background: var(--soft); }
+.days i.done { background: var(--warm); box-shadow: 0 2px 6px rgba(255, 122, 47, 0.35); }
+.days i.today { background: transparent; border: 2px dashed var(--warm); }
+.wcard { position: relative; overflow: hidden; border-radius: 26px; padding: 18px; color: #fff; background: linear-gradient(135deg, #0B8F96 0%, #087A80 60%, #076d72 100%); box-shadow: 0 12px 28px rgba(11, 143, 150, 0.3); }
+.dark .wcard { background: linear-gradient(135deg, #0f9aa1 0%, #0a7378 100%); box-shadow: none; }
+.wcard .deco { position: absolute; right: -40px; top: -50px; width: 190px; height: 190px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); }
+.wcard .deco2 { position: absolute; right: 40px; bottom: -70px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); }
+.wcard .chip.glass { padding: 6px 12px; background: rgba(255, 255, 255, 0.18); color: #fff; font-size: 11px; letter-spacing: 0.06em; }
+.wtitle { font-size: 24px; font-weight: 800; margin-top: 10px; }
+.wsub { opacity: 0.85; font-weight: 600; }
+.wmeta2 { font-weight: 700; font-size: 13px; opacity: 0.95; }
+.wcard .btn.white { height: 52px; }
+.quests { padding: 6px 16px; }
+.qhead { padding: 10px 0 4px; }
+.quest { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 12px 0; border-top: 1px solid var(--line); text-align: left; font-size: 14.5px; }
+.qhead + .quest { border-top: 0; }
+.qbox { width: 26px; height: 26px; border-radius: 9px; border: 2px solid var(--muted2, #c9d3d8); display: flex; align-items: center; justify-content: center; flex: none; }
+.qbox.done { background: var(--ok); border-color: var(--ok); color: #fff; }
+.struck { text-decoration: line-through; color: var(--muted); }
+.xp { font-size: 12px; font-weight: 800; color: #b07a00; background: #fff4d6; padding: 4px 9px; border-radius: 999px; white-space: nowrap; }
+.dark .xp { color: #f5c451; background: #3a3016; }
+.challenge, .recapcard { display: block; width: 100%; text-align: left; }
+.recapcard { display: flex; }
+.resume { width: 100%; text-align: left; margin-bottom: 12px; color: var(--accent-d); }
+.dark .resume { color: var(--accent); }
+.lh-t { line-height: 1.2; }
