@@ -12,7 +12,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -p .",
-    "test": "node --test tests/unit/",
+    "test": "node --test tests/unit/*.test.js",
     "test:e2e": "node tests/e2e/smoke.mjs",
     "test:e2e:dist": "npm run build && node tests/e2e/smoke.mjs --dir dist",
     "lighthouse": "node tools/lighthouse.mjs",
