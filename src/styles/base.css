@@ -1,0 +1,78 @@
+/* Base design tokens, typography and layout — taken from the approved mockups (style.css). */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('../../assets/fonts/PlusJakartaSans-latin.woff2') format('woff2');
+  font-weight: 200 800;
+  font-display: swap;
+  unicode-range: U+0000-024F, U+02BB-02DC, U+2000-206F, U+20AC, U+2122, U+2190-2212;
+}
+/* Plus Jakarta Sans has no Cyrillic: Bulgarian uses the visually close Manrope. */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('../../assets/fonts/Manrope-cyrillic.woff2') format('woff2');
+  font-weight: 200 800;
+  font-display: swap;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+:root {
+  --bg: #f4f7f8; --card: #fff; --text: #13232c; --muted: #637581; --line: #e6ecef;
+  --soft: #eef3f5; --accent: #0b8f96; --accent-d: #077179; --accent-soft: #ddf3f3;
+  --warm: #ff7a2f; --warm-t: #c2520f; --warm-soft: #ffebdd; --ok: #1fb46b; --ok-t: #12804a; --ok-soft: #ddf6e8;
+  --gold: #f5b935; --red: #e5484d; --blue: #2f80ed; --blue-soft: #e0f0ff; --violet: #7c5cff;
+  --shadow: 0 1px 2px rgba(19, 35, 44, 0.04), 0 6px 20px rgba(19, 35, 44, 0.06);
+  --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px);
+  --nav-h: calc(66px + max(18px, var(--sab)));
+  color-scheme: light;
+}
+.dark {
+  --bg: #0c1418; --card: #152229; --text: #e9f0f3; --muted: #8fa1ab; --line: #22333b;
+  --soft: #1c2c34; --accent: #2bb8be; --accent-d: #1e9ca2; --accent-soft: #143a3e;
+  --warm: #ff8a45; --warm-t: #ff9a5c; --warm-soft: #3a2518; --ok: #34c77f; --ok-t: #34c77f; --ok-soft: #173a29;
+  --blue-soft: #132a40;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased;
+  font-size: 14px; line-height: 1.35; min-height: 100dvh; overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+body.locked { overflow: hidden; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: none; border: 0; cursor: pointer; touch-action: manipulation; text-align: inherit; }
+button:disabled { cursor: default; }
+input, select, textarea { font-size: 16px; } /* ≥16px prevents iOS zoom on focus */
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#app { max-width: 480px; margin: 0 auto; min-height: 100dvh; position: relative; }
+#page { padding-bottom: calc(var(--nav-h) + 16px); }
+body.no-nav #page { padding-bottom: calc(24px + var(--sab)); }
+.content { padding: calc(var(--sat) + 14px) 16px 0; }
+.row { display: flex; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.between { justify-content: space-between; }
+.center { text-align: center; }
+.wrap { flex-wrap: wrap; }
+.f1 { flex: 1; min-width: 0; }
+.gap4 { gap: 4px; } .gap6 { gap: 6px; } .gap8 { gap: 8px; } .gap10 { gap: 10px; } .gap12 { gap: 12px; } .gap16 { gap: 16px; }
+.mt4 { margin-top: 4px; } .mt6 { margin-top: 6px; } .mt8 { margin-top: 8px; } .mt10 { margin-top: 10px; } .mt12 { margin-top: 12px; }
+.mt14 { margin-top: 14px; } .mt16 { margin-top: 16px; } .mt20 { margin-top: 20px; }
+.h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.h2 { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+.h3 { font-size: 15px; font-weight: 700; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; } .xs { font-size: 11px; }
+.b { font-weight: 700; } .xb { font-weight: 800; }
+.num { font-variant-numeric: tabular-nums; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 16px; }
+.divider { height: 1px; background: var(--line); }
+.section-title { display: flex; justify-content: space-between; align-items: center; margin: 18px 2px 10px; }
+.section-title .h3 { font-size: 16px; font-weight: 800; }
+.link { color: var(--accent-d); font-weight: 700; font-size: 13px; min-height: 32px; display: inline-flex; align-items: center; }
+.dark .link { color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition: none !important; } }
