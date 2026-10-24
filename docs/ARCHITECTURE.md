@@ -40,20 +40,20 @@ tools/                serve.mjs (dev server), build.mjs (esbuild → dist), ligh
 
 1. `store.load()` reads every IndexedDB object store into memory once. Reads are then synchronous (`all`, `get`, `kv`).
 2. Writes (`put`, `remove`, `setKv`) update memory immediately, persist asynchronously and emit `store:<name>` on the bus.
-3. Views are pure-ish render functions that return HTML strings via `html```. User input is delegated: elements carry `data-act`, `data-change`, `data-input`, `data-go` or `data-back`, and the router calls the matching function from the view's `actions`. An action that returns `false` skips the re-render; otherwise the view re-renders.
+3. Views are pure-ish render functions that return HTML strings via `html```. User input is delegated: elements carry `data-act`, `data-change`, `data-input`, `data-go`or`data-back`, and the router calls the matching function from the view's `actions`. An action that returns `false` skips the re-render; otherwise the view re-renders.
 4. Cross-feature effects go through the bus. Saving a finished session emits `store:sessions` and `store:any`. The motivation rewards engine listens, awards XP and badges, and emits `level:up` / `badge:earned`; these show as toasts and on the summary screen.
 
 ## Extension points (registry)
 
 `register(kind, ...items)` in `core/registry.js` accepts:
 
-| kind | item | used by |
-|---|---|---|
-| `tabs` | `{id, icon, label, path, order}` | bottom navigation |
-| `routes` | `{pattern: 'plan/:id', load: async (params) => View}` | router (lazy-loaded chunks) |
-| `badges` | `{id, label, icon, color, earned(stats)}` | motivation engine, Progress |
-| `quests` | `{id, label, xp, show?(stats), done(stats), go}` | Home |
-| `progressTabs` | `{id, label, order, load}` | Progress segmented tabs |
+| kind           | item                                                  | used by                     |
+| -------------- | ----------------------------------------------------- | --------------------------- |
+| `tabs`         | `{id, icon, label, path, order}`                      | bottom navigation           |
+| `routes`       | `{pattern: 'plan/:id', load: async (params) => View}` | router (lazy-loaded chunks) |
+| `badges`       | `{id, label, icon, color, earned(stats)}`             | motivation engine, Progress |
+| `quests`       | `{id, label, xp, show?(stats), done(stats), go}`      | Home                        |
+| `progressTabs` | `{id, label, order, load}`                            | Progress segmented tabs     |
 
 Features never import another feature's views, only its `api.js`. Removing a feature folder and its import in `features/index.js` removes the feature.
 

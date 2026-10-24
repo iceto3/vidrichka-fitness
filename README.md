@@ -17,16 +17,16 @@ Node ≥ 20 is required.
 
 ## Scripts
 
-| script | what it does |
-|---|---|
-| `npm run lint` | ESLint (flat config) |
-| `npm run format` / `format:check` | Prettier |
-| `npm run typecheck` | `tsc` checks the JSDoc types in `src/` (checkJs) |
-| `npm test` | unit tests (node:test): calories, streaks/freezes, XP/levels, PRs, migrations/backup validation, EN/BG key completeness, recap, data |
-| `npm run test:e2e` | Playwright smoke at 412×915 on Chromium (Android, Pixel 7 UA) and WebKit (iPhone 14); add `-- --shots` to refresh `screenshots/` |
-| `npm run test:e2e:dist` | build, then run the smoke tests against `dist/` (including the cache-first offline check) |
-| `npm run lighthouse` | Lighthouse (mobile) against `dist/`; reports go to `.lighthouse/` |
-| `npm run check` | lint + format check + typecheck + unit tests + build |
+| script                            | what it does                                                                                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run lint`                    | ESLint (flat config)                                                                                                                 |
+| `npm run format` / `format:check` | Prettier                                                                                                                             |
+| `npm run typecheck`               | `tsc` checks the JSDoc types in `src/` (checkJs)                                                                                     |
+| `npm test`                        | unit tests (node:test): calories, streaks/freezes, XP/levels, PRs, migrations/backup validation, EN/BG key completeness, recap, data |
+| `npm run test:e2e`                | Playwright smoke at 412×915 on Chromium (Android, Pixel 7 UA) and WebKit (iPhone 14); add `-- --shots` to refresh `screenshots/`     |
+| `npm run test:e2e:dist`           | build, then run the smoke tests against `dist/` (including the cache-first offline check)                                            |
+| `npm run lighthouse`              | Lighthouse (mobile) against `dist/`; reports go to `.lighthouse/`                                                                    |
+| `npm run check`                   | lint + format check + typecheck + unit tests + build                                                                                 |
 
 The e2e script uses `/usr/bin/google-chrome` (or `CHROME_PATH`) for Chromium. For WebKit it needs Playwright's build: run `npx playwright-core install --with-deps webkit` once.
 
