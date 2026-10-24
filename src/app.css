@@ -1,0 +1,11 @@
+/* Stylesheet entry. Each feature owns its CSS file; register new ones here. */
+@import url('./styles/base.css');
+@import url('./styles/components.css');
+@import url('./features/home/home.css');
+@import url('./features/workouts/workouts.css');
+@import url('./features/library/library.css');
+@import url('./features/food/food.css');
+@import url('./features/progress/progress.css');
+@import url('./features/body/body.css');
+@import url('./features/motivation/motivation.css');
+@import url('./features/profile/profile.css');
