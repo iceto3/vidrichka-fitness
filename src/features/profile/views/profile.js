@@ -70,7 +70,7 @@ function outfitSheet() {
       return html`<h2 class="h2">${t('profile.outfit')}</h2><p class="muted small b mt4">${t('profile.outfitHint')}</p>
 <div class="outfits mt12">${OUTFITS.map((o) => {
         const locked = lv < (o.level ?? 1);
-        return html`<button class="outfit${cur === o.id ? ' on' : ''}" data-act="pick" data-id="${o.id}" ${locked ? raw('disabled') : ''} aria-pressed="${cur === o.id}">
+        return html`<button class="outfit${cur === o.id ? ' on' : ''}" data-act="pick" data-id="${o.id}" ${locked ? raw('disabled') : ''} aria-pressed="${String(cur === o.id)}">
 <span class="oav">${otter({ size: 76, pose: 'wave', level: o.id === 'auto' ? lv : 99, outfit: o.id })}</span><span class="b small">${t(`outfit.${o.id}`)}</span>${locked ? html`<span class="xs b muted">${t('profile.unlockAt', { n: o.level })}</span>` : ''}</button>`;
       })}</div>
 <p class="muted xs b mt12">${t('profile.gearLevels', {

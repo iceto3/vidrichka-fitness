@@ -51,7 +51,7 @@ ${it.sets.map((s, j) => {
   return html`<div class="set${cols}${s.done ? ' done' : ''}${on ? ' active' : ''}"><div class="slabel">${t('workout.set')}<br>${j + 1}</div>
 ${weighted ? stepper({ act: 'w', value: fmtKg(s.w), unit: 'kg', data: { i, j }, label: `${lbl} ${t('workout.weight')}`, disabled: s.done }) : ''}
 ${stepper({ act: 'r', value: s.r, data: { i, j }, label: `${lbl} ${repsLabel(it.exId)}`, disabled: s.done })}
-<button class="done-b${s.done ? ' ok' : on ? ' go' : ''}" data-act="done" data-i="${i}" data-j="${j}" aria-pressed="${s.done}" aria-label="${s.done ? t('workout.undo', { n: j + 1 }) : t('workout.markDone', { n: j + 1 })}">${s.done ? ic('check', 20, 3) : t('workout.done')}</button></div>`;
+<button class="done-b${s.done ? ' ok' : on ? ' go' : ''}" data-act="done" data-i="${i}" data-j="${j}" aria-pressed="${String(s.done)}" aria-label="${s.done ? t('workout.undo', { n: j + 1 }) : t('workout.markDone', { n: j + 1 })}">${s.done ? ic('check', 20, 3) : t('workout.done')}</button></div>`;
 })}
 <div class="row center-j gap8 mt8"><button class="linkbtn" data-act="addSet" data-i="${i}">${ic('plus', 17, 2.6)}${t('workout.addSet')}</button>
 ${it.sets.some((s) => !s.done) && it.sets.length > 1 ? html`<button class="linkbtn muted" data-act="rmSet" data-i="${i}">${ic('minus', 17, 2.6)}${t('workout.removeSet')}</button>` : ''}</div>

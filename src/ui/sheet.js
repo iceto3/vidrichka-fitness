@@ -48,13 +48,20 @@ export function openSheet(view) {
 }
 
 /** @param {{view: SheetView, el: HTMLElement}} e */
-const render = (e) =>
+const render = (e) => {
   swap(
     e.el,
     html`<div class="overlay"></div><div class="panel" role="dialog" aria-modal="true" tabindex="-1">${
       e.view.kind === 'dialog' || e.view.kind === 'full' ? '' : html`<div class="grab"></div>`
     }${raw(String(e.view.render()))}</div>`,
   );
+  // Name the dialog after its first heading (or the page title) for screen readers.
+  const panel = e.el.querySelector('.panel');
+  const h = panel?.querySelector('h1, h2, h3, .h2, .h3');
+  if (h) panel.setAttribute('aria-labelledby', (h.id ||= `dlg-h-${++headingSeq}`));
+  else panel?.setAttribute('aria-label', document.title);
+};
+let headingSeq = 0;
 
 /**
  * Close a sheet (default: the top one).

@@ -13,6 +13,8 @@ import { ic } from './icons.js';
  */
 export const renderNav = (active) =>
   html`<div class="nav" role="tablist">${registry.tabs.map(
-    (tab) => html`<button class="t${tab.id === active ? ' on' : ''}" role="tab" aria-selected="${tab.id === active}"
+    (
+      tab,
+    ) => html`<button class="t${tab.id === active ? ' on' : ''}" role="tab" aria-selected="${String(tab.id === active)}"
       data-go="${tab.path}"><span class="pill">${ic(tab.icon, 23, tab.id === active ? 2.2 : 1.9)}</span>${t(tab.label)}</button>`,
   )}</div>`;

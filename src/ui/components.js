@@ -59,7 +59,7 @@ export function stepper(o) {
  * @param {Record<string,string>} [data]
  */
 export const toggle = (on, act, label, data = {}) =>
-  html`<button class="toggle${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="${label}" data-act="${act}"
+  html`<button class="toggle${on ? ' on' : ''}" role="switch" aria-checked="${String(on)}" aria-label="${label}" data-act="${act}"
   ${raw(
     Object.entries(data)
       .map(([k, v]) => `data-${k}="${v}"`)
@@ -76,7 +76,7 @@ export const toggle = (on, act, label, data = {}) =>
 export const seg = (opts, active, act, cls = 'seg') =>
   html`<div class="${cls}" role="radiogroup">${opts.map(
     (o) =>
-      html`<button class="${o.value === active ? 'on' : ''}" role="radio" aria-checked="${o.value === active}" data-act="${act}" data-v="${o.value}">${o.label}</button>`,
+      html`<button class="${o.value === active ? 'on' : ''}" role="radio" aria-checked="${String(o.value === active)}" data-act="${act}" data-v="${o.value}">${o.label}</button>`,
   )}</div>`;
 
 /**

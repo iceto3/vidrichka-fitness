@@ -34,7 +34,7 @@ export const filters = () => html`${seg(
   ...Object.keys(MUSCLE_GROUPS),
 ].map(
   (g) =>
-    html`<button class="chip fchip${f.group === g ? ' on' : ''}" data-act="group" data-v="${g}" aria-pressed="${f.group === g}">${t(`group.${g}`)}</button>`,
+    html`<button class="chip fchip${f.group === g ? ' on' : ''}" data-act="group" data-v="${g}" aria-pressed="${String(f.group === g)}">${t(`group.${g}`)}</button>`,
 )}</div>`;
 
 /**

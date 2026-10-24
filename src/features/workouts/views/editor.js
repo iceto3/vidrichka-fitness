@@ -58,7 +58,7 @@ export default ({ id }) => {
       )}</div>
 <div class="field mt12"><span>${t('editor.days')}</span><div class="days7" role="group">${[0, 1, 2, 3, 4, 5, 6].map(
         (i) =>
-          html`<button class="dbtn${d.days.includes(i) ? ' on' : ''}" data-act="day" data-i="${i}" aria-pressed="${d.days.includes(i)}" aria-label="${weekdayName(i, 'long')}">${weekdayName(i, 'narrow')}</button>`,
+          html`<button class="dbtn${d.days.includes(i) ? ' on' : ''}" data-act="day" data-i="${i}" aria-pressed="${String(d.days.includes(i))}" aria-label="${weekdayName(i, 'long')}">${weekdayName(i, 'narrow')}</button>`,
       )}</div></div>
 <h2 class="sect mt16">${t('editor.exercises')} <span class="muted">${d.items.length}</span></h2>
 ${d.items.map(

@@ -159,7 +159,7 @@ ${
 <div class="chips">${meals.map((m) => html`<button class="chip" data-act="logMeal" data-id="${m.id}">⭐ ${m.name} · ${totals(m.items).kcal}</button>`)}</div>`
     : ''
 }
-<div class="section-title"><h2 class="h3">${showRecent ? t('food.recent') : t('food.quickPicks')}</h2><button class="link" data-act="recent" aria-pressed="${showRecent}">${showRecent ? t('food.quickPicks') : t('food.recent')}</button></div>
+<div class="section-title"><h2 class="h3">${showRecent ? t('food.recent') : t('food.quickPicks')}</h2><button class="link" data-act="recent" aria-pressed="${String(showRecent)}">${showRecent ? t('food.quickPicks') : t('food.recent')}</button></div>
 <div class="chips">${picks.length ? picks.map((f) => html`<button class="chip" data-act="pick" data-id="${f.id}">${f.emoji} ${foodName(f)}</button>`) : html`<span class="muted small b">${t('food.noRecent')}</span>`}</div>
 <div class="section-title"><h2 class="h3">${t('food.categories')}</h2></div>
 <div class="cats">${categoriesByUse().map((c) => html`<button class="cat" data-act="cat" data-id="${c.id}"><span class="e" style="background:${c.bg}">${c.emoji}</span>${t(`foodcat.${c.id}`)}</button>`)}</div>

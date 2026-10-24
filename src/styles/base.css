@@ -18,7 +18,7 @@
   --bg: #f4f7f8;
   --card: #fff;
   --text: #13232c;
-  --muted: #637581;
+  --muted: #5b6d79;
   --line: #e6ecef;
   --soft: #eef3f5;
   --accent: #0b8f96;
@@ -424,7 +424,7 @@ body.no-nav .toast {
   color: var(--accent);
 }
 .warm-t {
-  color: var(--warm);
+  color: var(--warm-t);
 }
 .op65 {
   opacity: 0.65;
