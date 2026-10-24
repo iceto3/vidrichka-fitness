@@ -40,7 +40,7 @@ tools/                serve.mjs (dev server), build.mjs (esbuild → dist), ligh
 
 1. `store.load()` reads every IndexedDB object store into memory once. Reads are then synchronous (`all`, `get`, `kv`).
 2. Writes (`put`, `remove`, `setKv`) update memory immediately, persist asynchronously and emit `store:<name>` on the bus.
-3. Views are pure-ish render functions that return HTML strings via `html```. User input is delegated: elements carry `data-act`, `data-change`, `data-input`, `data-go`or`data-back`, and the router calls the matching function from the view's `actions`. An action that returns `false` skips the re-render; otherwise the view re-renders.
+3. Views are pure-ish render functions that return HTML strings via `html```. User input is delegated: elements carry `data-act`, `data-change`, `data-input`, `data-go`or`data-back`, and the router calls the matching function from the view's `actions`. An action that returns `false` skips the re-render; otherwise the view re-renders. Re-renders are **in place** (`morph`in`ui/dom.js`): the new HTML is diffed against the live DOM, so unchanged nodes, focus, scroll position and running CSS animations survive a tap. Only navigating to a new page replaces the DOM (`swap`). Keep generated ids deterministic (no random/counter ids in SVG gradients or clip paths), or morph has to replace those nodes.
 4. Cross-feature effects go through the bus. Saving a finished session emits `store:sessions` and `store:any`. The motivation rewards engine listens, awards XP and badges, and emits `level:up` / `badge:earned`; these show as toasts and on the summary screen.
 
 ## Extension points (registry)
@@ -74,3 +74,9 @@ Features never import another feature's views, only its `api.js`. Removing a fea
 
 - **iOS Safari (Home Screen):** apple-touch-icon and splash screens, `viewport-fit=cover` with safe-area insets, `100dvh`, inputs at ≥16 px (no zoom), `touch-action: manipulation` (no double-tap zoom). There is no vibration API on iOS, so sound is used instead; audio is unlocked by a tap. Notifications are only available in the installed app on iOS 16.4+ and are requested from a tap.
 - **Android Chrome:** `beforeinstallprompt` install button, vibration, and Periodic Background Sync for reminders where the browser allows it.
+
+## Daily rhythm and celebrations (1.1)
+
+- `features/daily/logic.js` is pure: it plans each day's reminder **slots** (`planDay`), picks the due ones (`dueSlots`, one per group, each shown once via `days.shown`), and computes sleep hours, the bedtime estimate and the protein countdown. Data lives in the `days` store (one row per day key; bedtime belongs to the evening's row until 04:00).
+- `features/daily/notify.js` localizes slots and posts the next 7 days to the service worker. `sw.js` keeps a copy of `dueSlots` between `// <due>` markers (a unit test checks they agree), shows due slots on `periodicsync`, and handles notification actions by writing straight to IndexedDB (it opens the DB without a version, so it never upgrades it). It then posts `{type:'db'}` so an open app reloads those rows.
+- `features/celebrations` maps app events (`water:added`, `set:done`, `protein:done`, `checkin:done`, `workout:finished`, `quests:all`, `level:up`, `badge:earned`, `streak:week`, `challenge:done`) to small, medium and big scenes. A queue plays them one at a time; scenes respect `prefers-reduced-motion`, and sounds respect the Profile toggle.

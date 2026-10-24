@@ -48,10 +48,13 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/EXTENDING.md](docs/EX
 
 ## Limitations (honest)
 
-- **Reminders:** a web app can't schedule exact alarms.
-  - While the app is open, reminders show as in-app notifications or nudges.
-  - On installed Android Chrome, Periodic Background Sync may deliver them roughly on time, but the browser decides when it runs.
-  - On iPhone, notifications only work in the Home Screen app on iOS 16.4+, after you allow them, and they still need the app to run. Treat reminders as best-effort.
+- **Reminders (workout and the 1.1 daily rhythm):** a web app with no server can't schedule exact alarms. The app uses, best first:
+  1. **Notification Triggers** where a browser has them (scheduled ahead, exact). No current stable browser ships them, so this is future-proofing.
+  2. **Periodic Background Sync** on installed Android Chrome. The app asks for a check every 15 minutes, but Chrome decides the real interval from how much the app is used — anything from minutes to hours late. The service worker then shows the due reminder and handles **“Yes, I ate”** and **“+1 glass”** buttons without opening the app.
+  3. **In-app catch-up:** while the app is open it checks every 30 s (in-app dialogs when on screen, system notifications when in the background), and on every open the latest missed reminder of each kind is shown once. Stale ones (e.g. 11:00 water at 18:00) are dropped.
+- **iPhone (iOS 16.4+ Home Screen app):** no Periodic Background Sync and no Notification Triggers, so **reminders appear only while the app is open or recently used** — opening the app catches up. iOS ignores `silent` (every notification uses the system sound settings) and has no notification buttons, so tapping a protein/water reminder opens the app with a big Yes / water button instead. Real background alarms on iPhone would need a push server (out of scope).
+- **Android:** the 7:30 nudge and 22:30 bedtime nudge are `silent`; the 8:15 alarm vibrates and stays until handled (`requireInteraction`). The alarm is skipped when the 7:30 one was tapped or #morning was opened — but only if Android lets the app check in between.
+- **Bedtime:** if you forget to say goodnight, bedtime is estimated from the last app use after 20:00 (marked “estimated”); fix it with one tap in the 11:00 check-in.
 - **Barcode scanning:** needs camera permission and HTTPS.
   - Android Chrome uses the fast native `BarcodeDetector`.
   - iOS Safari has no `BarcodeDetector`, so it uses the zxing fallback. That is slower and needs good light; manual entry always works.

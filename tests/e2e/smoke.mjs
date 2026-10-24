@@ -7,6 +7,10 @@
  * Flows: onboarding → workout (steppers, Done locks set, rest timer, skip, finish) → summary;
  * food via category → grams sheet → second item → "save as regular meal?" prompt;
  * a body measurement; Bulgarian language; dark theme; backup export; offline reload (Chromium).
+ * 1.1: + buttons update in place (same DOM nodes, sheet animation not restarted, scroll kept);
+ * daily rhythm on a fixed clock: 7:30 in-app prompt → #morning countdown (survives reload) →
+ * "Yes, I ate" small celebration; 11:00 and 19:30 check-ins; goodnight ritual; four nights →
+ * Progress › Sleep.
  *
  * Usage: node tests/e2e/smoke.mjs [--dir dist] [--only android|iphone] [--shots]
  *   --shots writes screenshots to ./screenshots (android: <name>.png, iphone: iphone-<name>.png).
@@ -78,6 +82,8 @@ async function run(name, browser, P) {
     serviceWorkers: name === 'android' ? 'allow' : 'block',
   });
   const page = await ctx.newPage();
+  // Fixed, flowing clock (Sofia, UTC+3 until 25 Oct) so the daily reminders are deterministic.
+  await page.clock.install({ time: new Date('2026-10-20T06:00:00+03:00') });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on(
@@ -92,12 +98,35 @@ async function run(name, browser, P) {
     await page.evaluate(() => document.querySelectorAll('.toast').forEach((e) => e.remove()));
     await page.screenshot({ path: `screenshots/${P.prefix}${n}.png`, fullPage: full });
   };
+  const layer = page.locator('#layer');
+  const settle = () => page.waitForTimeout(350);
+  /** Wait until no celebration is showing; taps the button of a big one. */
+  const clearCel = async () => {
+    for (let i = 0; i < 80; i++) {
+      const busy = await page.evaluate(() => {
+        const c = document.getElementById('cel');
+        if (!c?.children.length) return false;
+        /** @type {HTMLElement | null} */ (c.querySelector('.tapbtn'))?.click();
+        return true;
+      });
+      if (!busy) return;
+      await page.waitForTimeout(250);
+    }
+    throw new Error('celebration did not finish');
+  };
+  /** Navigate (after any celebration has finished, as a person would). */
   const go = async (/** @type {string} */ r) => {
+    await clearCel();
     await page.evaluate((r) => (location.hash = '#/' + r), r);
     await page.waitForTimeout(350);
   };
-  const layer = page.locator('#layer');
-  const settle = () => page.waitForTimeout(350);
+  /** Tag a node so a later `same()` can tell whether it survived a re-render. */
+  const tag = (/** @type {string} */ sel) =>
+    page.evaluate((sel) => {
+      /** @type {any} */ (document.querySelector(sel)).__smoke = 1;
+    }, sel);
+  const same = (/** @type {string} */ sel) =>
+    page.evaluate((sel) => /** @type {any} */ (document.querySelector(sel))?.__smoke === 1, sel);
 
   // Onboarding
   await page.goto(BASE);
@@ -131,6 +160,7 @@ async function run(name, browser, P) {
   await page.locator('.summary').waitFor();
   assert.match(await page.locator('.summary .grid3').innerText(), /3\s*of/i);
   await page.waitForTimeout(2600);
+  await clearCel();
   await shot('summary');
   await page.locator('.summary [data-go="home"]').last().click();
   await settle();
@@ -141,9 +171,24 @@ async function run(name, browser, P) {
   await page.locator('.cat').first().click();
   await layer.locator('[data-act="pick"]').first().click();
   await layer.locator('#grams').waitFor();
+  await settle();
+  await tag('#layer .panel');
+  await tag('#layer [data-act="g"][data-d="1"]');
+  const g0 = await layer.locator('#grams').inputValue();
   await layer.locator('[data-act="g"][data-d="1"]').click();
   await layer.locator('[data-act="g"][data-d="1"]').click();
   await settle();
+  assert.notEqual(await layer.locator('#grams').inputValue(), g0, '+ changes the grams');
+  assert.ok(await same('#layer .panel'), 'grams sheet panel is kept on + (no flicker)');
+  assert.ok(await same('#layer [data-act="g"][data-d="1"]'), '+ button node is kept');
+  const anims = await page.evaluate(
+    () =>
+      document
+        .querySelector('#layer .panel')
+        .getAnimations({ subtree: true })
+        .filter((a) => a.playState === 'running').length,
+  );
+  assert.equal(anims, 0, 'no animation restarted by +');
   await shot('food-add');
   await layer.locator('[data-act="done"]').click();
   await settle();
@@ -180,6 +225,7 @@ async function run(name, browser, P) {
   // Backup export
   await go('profile');
   await shot('profile');
+  await clearCel();
   const dl = page.waitForEvent('download', { timeout: 8000 });
   await page.locator('[data-act="export"]').click();
   const file = await dl;
@@ -230,6 +276,147 @@ async function run(name, browser, P) {
     console.log('  ✔ offline reload works');
   }
 
+  await daily(page, { go, settle, shot, clearCel, tag, same, layer });
+
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
+}
+
+/**
+ * 1.1 daily rhythm on the fixed clock: prompt → morning → protein yes → check-ins → goodnight,
+ * then a few nights so Progress › Sleep has data. Also the water + button keeps its node and scroll.
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
+  const at = async (/** @type {number} */ d, /** @type {string} */ hm) => {
+    await page.clock.setSystemTime(new Date(`2026-10-${d}T${hm}:00+03:00`));
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await settle();
+  };
+  /** Answer "Later" to reminder prompts until none has shown up for 2.5 s. */
+  const closePrompts = async () => {
+    for (let quiet = 0, i = 0; quiet < 5 && i < 60; i++) {
+      if (await layer.locator('.dprompt').count()) {
+        await layer.locator('[data-close]').first().click();
+        quiet = 0;
+      } else quiet++;
+      await page.waitForTimeout(500);
+    }
+  };
+  const tuck = async () => {
+    await page.locator('.moonbtn').click();
+    await page.locator('.gn-asleep').waitFor();
+    await page.waitForTimeout(4200); // yawn → curl up → Zzz
+  };
+
+  // 7:31 – the silent morning reminder shows in-app; it opens the full-screen morning page.
+  await go('home');
+  await at(20, '07:31');
+  await layer.locator('.dprompt').waitFor();
+  assert.match(await layer.locator('.dprompt').innerText(), /morning/i);
+  await layer.locator('.dprompt [data-act="go"]').click();
+  await page.locator('.pclock').waitFor();
+  assert.match(page.url(), /#\/morning/);
+  assert.equal(await page.locator('#nav').isVisible(), false, 'morning page is full-screen');
+  await page.reload();
+  await page.locator('.pclock').waitFor({ timeout: 8000 });
+  assert.match(await page.locator('.pclock').innerText(), /2\d:\d\d|30:00/, 'countdown survives a reload');
+  await page.locator('.yes').click();
+  await page.locator('.cel .toastc').waitFor();
+  console.log('  ✔ morning → protein yes → small celebration');
+  await clearCel();
+  await closePrompts();
+
+  // 11:05 check-in (+ water + keeps its node and the scroll position)
+  await at(20, '11:05');
+  await closePrompts();
+  await go('food');
+  await closePrompts();
+  await page.locator('.bluebtn').scrollIntoViewIfNeeded();
+  await page.evaluate(() => scrollBy(0, 40));
+  await settle();
+  await tag('.bluebtn');
+  await tag('.glasses');
+  const y = await page.evaluate(() => scrollY);
+  const n = await page.locator('.glass.on').count();
+  await page.locator('.bluebtn').click();
+  await settle();
+  assert.equal(await page.locator('.glass.on').count(), n + 1, '+1 glass');
+  assert.ok((await same('.bluebtn')) && (await same('.glasses')), 'water + updates in place');
+  assert.equal(await page.evaluate(() => scrollY), y, 'scroll position kept');
+  await clearCel();
+  await go('checkin/morning');
+  await page.locator('[data-f="mood"][data-v="4"]').click();
+  await page.locator('[data-f="sleepQ"][data-v="3"]').click();
+  await settle();
+  assert.equal(await page.locator('[data-act="rate"].on').count(), 2);
+  await clearCel();
+
+  // 19:35 evening check-in
+  await at(20, '19:35');
+  await closePrompts();
+  await go('checkin/evening');
+  await page.locator('[data-f="energy"][data-v="4"]').click();
+  await settle();
+  assert.equal(await page.locator('[data-act="rate"].on').count(), 1);
+  await clearCel();
+
+  // 22:35 goodnight from the moon card on Home
+  await at(20, '22:35');
+  await closePrompts();
+  await go('home');
+  await page.locator('[data-act="tuck"]').first().click();
+  await page.locator('.moonbtn, .gn-asleep').first().waitFor();
+  if (await page.locator('.moonbtn').count()) await tuck();
+  await clearCel();
+  console.log('  ✔ check-ins and goodnight');
+
+  // A few more nights for Progress › Sleep
+  const nights = [
+    [21, '07:20', '23:10', [4, 3], 3],
+    [22, '07:45', '22:50', [5, 4], 5],
+    [23, '07:10', '23:30', [3, 5], 4],
+  ];
+  for (const [d, wake, bed, [mood, sq], energy] of nights) {
+    await at(d, wake);
+    await closePrompts();
+    await go('morning');
+    await page.locator('.yes').click();
+    await clearCel();
+    await at(d, '11:10');
+    await closePrompts();
+    await go('checkin/morning');
+    await page.locator(`[data-f="mood"][data-v="${mood}"]`).click();
+    await page.locator(`[data-f="sleepQ"][data-v="${sq}"]`).click();
+    await clearCel();
+    await at(d, '19:40');
+    await closePrompts();
+    await go('checkin/evening');
+    await page.locator(`[data-f="energy"][data-v="${energy}"]`).click();
+    await clearCel();
+    await at(d, bed);
+    await closePrompts();
+    await go('goodnight');
+    await tuck();
+    await clearCel();
+  }
+  await shot('goodnight');
+
+  await at(24, '07:05');
+  await closePrompts();
+  await go('morning');
+  await page.locator('.pclock').waitFor();
+  assert.match(await page.locator('body').innerText(), /\d+[.,]?\d*\s*h/, 'slept hours shown');
+  await page.waitForTimeout(1500);
+  await shot('morning');
+  await page.locator('.yes').click();
+  await clearCel();
+  await closePrompts();
+  await go('progress/sleep');
+  await page.locator('.sbars').waitFor();
+  await settle();
+  await shot('progress-sleep');
+  await go('home');
+  await page.evaluate(() => scrollTo(0, 0));
 }
