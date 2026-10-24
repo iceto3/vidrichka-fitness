@@ -11,7 +11,6 @@ import { exById, exName, youtubeUrl } from '../api.js';
 import { stepFigure } from '../figures.js';
 import { bodyMap } from '../bodymap.js';
 
-/** @param {string} id */
 const chipsFor = (/** @type {string[]} */ ms, /** @type {string} */ cls, /** @type {string} */ dot) =>
   ms.map((m) => html`<span class="chip ${cls}"><i class="dot" style="background:${dot}"></i>${t(`muscle.${m}`)}</span>`);
 

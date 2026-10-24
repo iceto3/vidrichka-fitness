@@ -71,7 +71,7 @@ ${MEASURE_FIELDS.map((f) => html`<label class="field mt10"><span>${t(`measure.${
           if (Number.isFinite(n) && n > 0 && n < 400) row[f.id] = n;
         }
         if (Object.keys(row).length <= 3) return emit('toast', { key: 'body.needValue' }), false;
-        put('measurements', row);
+        put('measurements', /** @type {any} */ (row));
         closeSheet();
         emit('toast', { key: 'body.saved' });
         return false;

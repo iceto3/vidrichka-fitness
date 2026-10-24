@@ -58,8 +58,9 @@ const pluralFor = (n) => new Intl.PluralRules(locale()).select(n) === 'one' ? 'o
 /**
  * Localized "multilingual value": `{en, bg}` objects or plain strings.
  * @param {string|Record<string,string>|undefined} v
+ * @returns {string}
  */
-export const L = (v) => (v && typeof v === 'object' ? (v[lang] ?? v.en ?? Object.values(v)[0]) : (v ?? ''));
+export const L = (v) => /** @type {string} */ (v && typeof v === 'object' ? (v[lang] ?? v.en ?? Object.values(v)[0]) : (v ?? ''));
 
 /**
  * Format a date with Intl options in the active locale.

@@ -3,7 +3,7 @@
  * personal records, confetti and a shareable PNG card.
  * @module features/workouts/views/summary
  */
-import { html, raw } from '../../../ui/dom.js';
+import { html } from '../../../ui/dom.js';
 import { fmtDate, fmtNum, t } from '../../../core/i18n.js';
 import { get } from '../../../core/store.js';
 import { settings } from '../../../core/settings.js';
@@ -32,7 +32,7 @@ export default ({ id }) => ({
     const s = get('sessions', id);
     if (!s) return html`<div class="content"><button class="iconbtn" data-go="home" aria-label="${t('common.close')}">${ic('close', 20)}</button><p class="b mt16">${t('summary.missing')}</p></div>`;
     const name = settings().userName;
-    return html`${raw(confetti())}<div class="content summary">
+    return html`${confetti()}<div class="content summary">
 <div class="row between"><button class="iconbtn" data-go="home" aria-label="${t('common.close')}">${ic('close', 20)}</button><span class="chip accent">${ic('check', 14, 3)}${t('summary.saved')}</span></div>
 <div class="hero-otter">${otter({ size: 180, pose: 'cheer', mood: 'excited' })}</div>
 <div class="center"><h1 class="h1 big">${name ? t('summary.greatJobName', { name }) : t('summary.greatJob')}</h1>

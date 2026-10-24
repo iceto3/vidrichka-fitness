@@ -104,7 +104,7 @@ const size = async (/** @type {string} */ f) => {
 const kb = (/** @type {number} */ n) => `${(n / 1024).toFixed(1)} kB`;
 const jsFiles = files.filter((f) => f.startsWith('js/'));
 const initial = [mainJs, ...Object.entries(js.metafile.outputs).find(([k]) => k.endsWith(mainJs))?.[1].imports.filter((i) => i.kind === 'import-statement').map((i) => relative(out, join(root, i.path))) ?? []];
-let tot = { raw: 0, gz: 0 }, init = { raw: 0, gz: 0 };
+const tot = { raw: 0, gz: 0 }, init = { raw: 0, gz: 0 };
 for (const f of jsFiles) {
   const s = await size(f);
   tot.raw += s.raw; tot.gz += s.gz;

@@ -12,7 +12,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 
 createServer(async (req, res) => {
   try {
-    let p = normalize(decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname));
+    const p = normalize(decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname));
     let file = join(root, p);
     if (!file.startsWith(root)) throw new Error('outside root');
     if ((await stat(file)).isDirectory()) file = join(file, 'index.html');

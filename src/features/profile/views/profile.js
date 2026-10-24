@@ -133,7 +133,7 @@ ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic t
       if (!file) return false;
       const { readBackup, restore } = await import('../backup.js');
       const r = await readBackup(file);
-      if (!r.ok) return emit('toast', { key: `backup.${r.error}` }), false;
+      if (!r.ok) return emit('toast', { key: `backup.${/** @type {any} */ (r).error}` }), false;
       const ok = await confirmDialog({ title: t('backup.confirmTitle'), body: t('backup.confirmBody', { date: r.snap.exportedAt ? fmtDate(r.snap.exportedAt, { day: 'numeric', month: 'short', year: 'numeric' }) : '?', w: r.counts.sessions ?? 0, f: r.counts.food ?? 0, p: r.counts.photos ?? 0 }), ok: t('backup.replace'), danger: true });
       if (!ok) return false;
       await restore(r.snap);

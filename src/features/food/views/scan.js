@@ -39,7 +39,7 @@ async function makeDecoder() {
     }
   }
   const Z = await loadZxing();
-  const hints = new Map([[Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E, Z.BarcodeFormat.CODE_128]], [Z.DecodeHintType.TRY_HARDER, true]]);
+  const hints = new Map(/** @type {any} */ ([[Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E, Z.BarcodeFormat.CODE_128]], [Z.DecodeHintType.TRY_HARDER, true]]));
   const reader = new Z.MultiFormatReader();
   reader.setHints(hints);
   const c = document.createElement('canvas'), g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d', { willReadFrequently: true }));
