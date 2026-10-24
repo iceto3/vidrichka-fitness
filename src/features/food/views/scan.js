@@ -17,13 +17,14 @@ const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'];
 /** @type {Promise<any>|null} */
 let zxing = null;
 /** Load ZXing once via a script tag (UMD global). */
-const loadZxing = () => (zxing ??= new Promise((res, rej) => {
-  const s = document.createElement('script');
-  s.src = ZXING_URL;
-  s.onload = () => res(/** @type {any} */ (window).ZXing);
-  s.onerror = () => ((zxing = null), rej(new Error('zxing')));
-  document.head.append(s);
-}));
+const loadZxing = () =>
+  (zxing ??= new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = ZXING_URL;
+    s.onload = () => res(/** @type {any} */ (window).ZXing);
+    s.onerror = () => ((zxing = null), rej(new Error('zxing')));
+    document.head.append(s);
+  }));
 
 /**
  * Build a frame decoder: native BarcodeDetector when it supports EAN, else ZXing.
@@ -39,17 +40,35 @@ async function makeDecoder() {
     }
   }
   const Z = await loadZxing();
-  const hints = new Map(/** @type {any} */ ([[Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E, Z.BarcodeFormat.CODE_128]], [Z.DecodeHintType.TRY_HARDER, true]]));
+  const hints = new Map(
+    /** @type {any} */ ([
+      [
+        Z.DecodeHintType.POSSIBLE_FORMATS,
+        [
+          Z.BarcodeFormat.EAN_13,
+          Z.BarcodeFormat.EAN_8,
+          Z.BarcodeFormat.UPC_A,
+          Z.BarcodeFormat.UPC_E,
+          Z.BarcodeFormat.CODE_128,
+        ],
+      ],
+      [Z.DecodeHintType.TRY_HARDER, true],
+    ]),
+  );
   const reader = new Z.MultiFormatReader();
   reader.setHints(hints);
-  const c = document.createElement('canvas'), g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d', { willReadFrequently: true }));
+  const c = document.createElement('canvas'),
+    g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d', { willReadFrequently: true }));
   return async (v) => {
     if (!v.videoWidth) return null;
-    const w = 640, h = Math.round((v.videoHeight / v.videoWidth) * w);
-    c.width = w, (c.height = h);
+    const w = 640,
+      h = Math.round((v.videoHeight / v.videoWidth) * w);
+    ((c.width = w), (c.height = h));
     g.drawImage(v, 0, 0, w, h);
     try {
-      return reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(c)))).getText();
+      return reader
+        .decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(c))))
+        .getText();
     } catch {
       return null;
     }
@@ -64,7 +83,9 @@ async function makeDecoder() {
 export function openScanner(onFood, onManual) {
   /** @type {MediaStream|null} */
   let stream = null;
-  let stop = false, status = t('scan.starting'), code = '';
+  let stop = false,
+    status = t('scan.starting'),
+    code = '';
   const setStatus = (/** @type {string} */ s) => {
     status = s;
     const el = document.getElementById('scanstatus');
@@ -75,12 +96,13 @@ export function openScanner(onFood, onManual) {
     setStatus(t('scan.looking', { code: c }));
     const cached = all('foods').find((f) => f.barcode === c);
     const r = cached ?? (await product(c, getLang()));
-    if (r && r !== 'notfound') return closeSheet(), onFood(r);
+    if (r && r !== 'notfound') return (closeSheet(), onFood(r));
     setStatus(r === 'notfound' ? t('scan.notFound') : t('scan.offline'));
   };
   openSheet({
     kind: 'full',
-    render: () => html`<div class="row between"><h2 class="h2">${t('food.scan')}</h2><button class="iconbtn" data-close aria-label="${t('common.close')}">${ic('close', 20)}</button></div>
+    render:
+      () => html`<div class="row between"><h2 class="h2">${t('food.scan')}</h2><button class="iconbtn" data-close aria-label="${t('common.close')}">${ic('close', 20)}</button></div>
 <div class="scanbox mt12"><video id="scanvid" playsinline muted autoplay></video><div class="scanframe" aria-hidden="true"></div></div>
 <p class="b small mt10 center" id="scanstatus" role="status">${status}</p>
 <form class="row gap8 mt12" data-act="noop"><input class="input f1" id="bcode" inputmode="numeric" pattern="[0-9]*" placeholder="${t('scan.typeCode')}" value="${code}" aria-label="${t('scan.typeCode')}">
@@ -90,7 +112,10 @@ export function openScanner(onFood, onManual) {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('no camera');
         const decode = await makeDecoder();
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } }, audio: false });
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 } },
+          audio: false,
+        });
         if (stop) return stream.getTracks().forEach((tr) => tr.stop());
         const v = /** @type {HTMLVideoElement} */ (document.getElementById('scanvid'));
         v.srcObject = stream;

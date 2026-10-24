@@ -2,22 +2,124 @@
  * Body tab styles: weight card, measurement grid with deltas, progress photos, compare.
  * Ported from B_CSS.
  */
-.weightcard { width: 100%; padding: 14px 16px; text-align: left; align-items: center; }
-.weightcard svg { flex: none; }
-.mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.mgrid .m { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; text-align: left; min-height: 58px; color: var(--text); }
-.mgrid .m .n { font-size: 11.5px; font-weight: 700; color: var(--muted); }
-.mgrid .m .v { font-size: 16px; font-weight: 800; margin-top: 1px; }
-.mgrid .m .v small { font-size: 11px; color: var(--muted); }
-.mgrid .addm { background: var(--accent); box-shadow: 0 6px 16px rgba(11, 143, 150, 0.28); color: #fff; justify-content: center; gap: 8px; font-weight: 800; font-size: 14px; }
-.dark .mgrid .addm { color: #06262a; }
-.photos { align-items: stretch; }
-.ph { flex: 1; height: 112px; border-radius: 18px; position: relative; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; background: linear-gradient(180deg, #e9eef1, #d9e1e6); }
-.ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.ph .lb, .cmp .lb { position: absolute; left: 10px; top: 10px; font-size: 11px; font-weight: 800; background: rgba(255, 255, 255, 0.9); color: #13232c; padding: 3px 8px; border-radius: 999px; }
-.ph.empty-ph { background: linear-gradient(180deg, #e9eef1, #d9e1e6); }
-.dark .ph.empty-ph, .dark .ph { background: linear-gradient(180deg, #1c2c34, #15242b); }
-.ph.addph { flex: 0.55; border: 2px dashed var(--line); background: var(--card); flex-direction: column; align-items: center; justify-content: center; color: var(--accent-d); gap: 4px; font-weight: 800; font-size: 11.5px; cursor: pointer; }
-.ph.addph:focus-within { outline: 3px solid var(--accent); }
-.cmp figure { position: relative; border-radius: 18px; overflow: hidden; aspect-ratio: 3 / 4; background: var(--soft); }
-.cmp img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.weightcard {
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  align-items: center;
+}
+.weightcard svg {
+  flex: none;
+}
+.mgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.mgrid .m {
+  background: var(--card);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  min-height: 58px;
+  color: var(--text);
+}
+.mgrid .m .n {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.mgrid .m .v {
+  font-size: 16px;
+  font-weight: 800;
+  margin-top: 1px;
+}
+.mgrid .m .v small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.mgrid .addm {
+  background: var(--accent);
+  box-shadow: 0 6px 16px rgba(11, 143, 150, 0.28);
+  color: #fff;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 14px;
+}
+.dark .mgrid .addm {
+  color: #06262a;
+}
+.photos {
+  align-items: stretch;
+}
+.ph {
+  flex: 1;
+  height: 112px;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: linear-gradient(180deg, #e9eef1, #d9e1e6);
+}
+.ph img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ph .lb,
+.cmp .lb {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.9);
+  color: #13232c;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.ph.empty-ph {
+  background: linear-gradient(180deg, #e9eef1, #d9e1e6);
+}
+.dark .ph.empty-ph,
+.dark .ph {
+  background: linear-gradient(180deg, #1c2c34, #15242b);
+}
+.ph.addph {
+  flex: 0.55;
+  border: 2px dashed var(--line);
+  background: var(--card);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-d);
+  gap: 4px;
+  font-weight: 800;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.ph.addph:focus-within {
+  outline: 3px solid var(--accent);
+}
+.cmp figure {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  background: var(--soft);
+}
+.cmp img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

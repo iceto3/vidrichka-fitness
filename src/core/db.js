@@ -9,7 +9,14 @@ export const DB_NAME = 'vidrichka-fitness';
 
 /** All object stores (each keyed by `id`). */
 export const STORES = /** @type {const} */ ([
-  'kv', 'plans', 'sessions', 'measurements', 'food', 'meals', 'foods', 'photos',
+  'kv',
+  'plans',
+  'sessions',
+  'measurements',
+  'food',
+  'meals',
+  'foods',
+  'photos',
 ]);
 
 /** @type {((db: IDBDatabase, tx: IDBTransaction) => void)[]} */

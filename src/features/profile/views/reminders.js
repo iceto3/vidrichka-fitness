@@ -20,8 +20,19 @@ export default () => {
   return {
     tab: 'profile',
     render: () => {
-      const r = settings().reminders, s = support();
-      const how = s.iosNeedsInstall ? 'reminders.iosInstall' : !s.notif ? 'reminders.unsupported' : s.permission === 'denied' ? 'reminders.denied' : s.triggers ? 'reminders.triggers' : s.periodic ? 'reminders.periodic' : 'reminders.inApp';
+      const r = settings().reminders,
+        s = support();
+      const how = s.iosNeedsInstall
+        ? 'reminders.iosInstall'
+        : !s.notif
+          ? 'reminders.unsupported'
+          : s.permission === 'denied'
+            ? 'reminders.denied'
+            : s.triggers
+              ? 'reminders.triggers'
+              : s.periodic
+                ? 'reminders.periodic'
+                : 'reminders.inApp';
       return html`<div class="content">${topBar(t('profile.reminders'))}
 <div class="card mt12 row between"><div><div class="b">${t('reminders.enable')}</div><div class="muted xs b">${t('reminders.enableSub')}</div></div>${toggle(r.enabled, 'on', t('reminders.enable'))}</div>
 <div class="card mt12 ${r.enabled ? '' : 'dim'}"><label class="field"><span>${t('reminders.time')}</span><input class="input" type="time" data-change="time" value="${r.time}"></label>
@@ -42,7 +53,8 @@ ${s.notif && s.permission === 'granted' ? html`<button class="btn sec w100 mt10"
       },
       time: (el) => set({ time: /** @type {HTMLInputElement} */ (el).value || '18:30' }),
       day: (el) => {
-        const i = Number(el.dataset.i), d = settings().reminders.days;
+        const i = Number(el.dataset.i),
+          d = settings().reminders.days;
         set({ days: d.includes(i) ? d.filter((x) => x !== i) : [...d, i].sort() });
       },
       install: () => installApp(),

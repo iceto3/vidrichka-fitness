@@ -20,11 +20,13 @@ import { backupDue, canInstall, installApp } from '../../profile/api.js';
 /** Render `**bold**` segments of a translated string as highlighted spans. @param {string} s */
 const hl = (s) => raw(esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="warm-t">$1</span>'));
 
-const greetKey = (/** @type {number} */ h) => (h < 5 ? 'home.evening' : h < 12 ? 'home.morning' : h < 18 ? 'home.afternoon' : 'home.evening');
+const greetKey = (/** @type {number} */ h) =>
+  h < 5 ? 'home.evening' : h < 12 ? 'home.morning' : h < 18 ? 'home.afternoon' : 'home.evening';
 
 /** Workout days of the current week as a Mon..Sun row. */
 function weekDots() {
-  const mon = startOfWeek(), today = dayKey();
+  const mon = startOfWeek(),
+    today = dayKey();
   const done = new Set(sessions().map((s) => dayKey(s.endedAt)));
   return html`<div class="days" aria-hidden="true">${[0, 1, 2, 3, 4, 5, 6].map((i) => {
     const k = dayKey(addDays(mon, i));
@@ -34,9 +36,12 @@ function weekDots() {
 
 /** Today's workout / rest-day card. */
 function workoutCard() {
-  const s = stats(), plan = planFor(), next = nextPlan();
-  const p = s.workedOutToday || !plan ? next?.plan ?? plan : plan;
-  if (!p) return html`<div class="wcard mt12"><div class="deco"></div><div class="deco2"></div><div class="rel"><div class="wtitle">${t('home.noPlans')}</div>
+  const s = stats(),
+    plan = planFor(),
+    next = nextPlan();
+  const p = s.workedOutToday || !plan ? (next?.plan ?? plan) : plan;
+  if (!p)
+    return html`<div class="wcard mt12"><div class="deco"></div><div class="deco2"></div><div class="rel"><div class="wtitle">${t('home.noPlans')}</div>
 <button class="btn white mt14 w100" data-go="plan/new">${ic('plus', 18)}${t('workouts.newPlan')}</button></div></div>`;
   const label = s.workedOutToday ? t('home.doneToday') : plan ? t('home.todayWorkout') : t('home.restDay');
   return html`<div class="wcard mt12"><div class="deco"></div><div class="deco2"></div>
@@ -50,13 +55,34 @@ function workoutCard() {
 export default () => ({
   tab: 'home',
   render: () => {
-    const s = stats(), set = settings(), lv = level(), now = new Date(), a = activeWorkout();
-    const st = s.streak, plan = planFor();
-    const msg = messageFor({ streak: st.weeks, weekCount: st.thisWeek, goal: st.goal, daysSinceWorkout: s.daysSinceWorkout, workedOutToday: s.workedOutToday, todayPlan: plan ? planName(plan) : undefined, hour: now.getHours(), totalWorkouts: s.totalWorkouts });
-    const mood = moodFor({ daysSinceWorkout: s.daysSinceWorkout, workedOutToday: s.workedOutToday, prToday: s.prToday });
+    const s = stats(),
+      set = settings(),
+      lv = level(),
+      now = new Date(),
+      a = activeWorkout();
+    const st = s.streak,
+      plan = planFor();
+    const msg = messageFor({
+      streak: st.weeks,
+      weekCount: st.thisWeek,
+      goal: st.goal,
+      daysSinceWorkout: s.daysSinceWorkout,
+      workedOutToday: s.workedOutToday,
+      todayPlan: plan ? planName(plan) : undefined,
+      hour: now.getHours(),
+      totalWorkouts: s.totalWorkouts,
+    });
+    const mood = moodFor({
+      daysSinceWorkout: s.daysSinceWorkout,
+      workedOutToday: s.workedOutToday,
+      prToday: s.prToday,
+    });
     const left = Math.max(0, st.goal - st.thisWeek);
     const prevMonth = monthKey(addDays(new Date(now.getFullYear(), now.getMonth(), 1), -1));
-    const showRecap = now.getDate() <= 7 && sessions().some((x) => monthKey(new Date(x.endedAt)) === prevMonth) && kv('recapSeen', '') !== prevMonth;
+    const showRecap =
+      now.getDate() <= 7 &&
+      sessions().some((x) => monthKey(new Date(x.endedAt)) === prevMonth) &&
+      kv('recapSeen', '') !== prevMonth;
     return html`<div class="content home">
 <div class="row between"><div><div class="muted small b">${fmtDate(now, { weekday: 'long', day: 'numeric', month: 'long' })}</div>
 <h1 class="h1 mt2">${t(greetKey(now.getHours()))}${set.userName ? `, ${set.userName}` : ''}</h1></div>
@@ -74,14 +100,22 @@ ${a ? html`<button class="card resume row gap12" data-go="workout"><span class="
 ${workoutCard()}
 <section class="card mt12 quests" aria-label="${t('home.quests')}"><div class="row between qhead"><h2 class="h3 xb">${t('home.quests')}</h2>
 <div class="row gap6"><div class="lvl sm" aria-label="${t('home.level', { n: lv.level })}">${lv.level}</div><div class="bar w96">${raw(`<i style="width:${lv.pct * 100}%;background:var(--gold)"></i>`)}</div><span class="xs b muted num">${lv.into}/${lv.need} XP</span></div></div>
-${quests().map((q) => html`<button class="quest" data-go="${q.go ?? 'home'}"><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
-<span class="f1 b${q.isDone ? ' struck' : ''}">${t(q.label, q.vars)}${/** @type {any} */ (q.vars).goal != null ? html` <span class="muted small">(${t('home.progressOf', q.vars)})</span>` : ''}</span><span class="xp">+${q.xp} XP</span></button>`)}</section>
+${quests().map(
+  (
+    q,
+  ) => html`<button class="quest" data-go="${q.go ?? 'home'}"><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
+<span class="f1 b${q.isDone ? ' struck' : ''}">${t(q.label, q.vars)}${/** @type {any} */ (q.vars).goal != null ? html` <span class="muted small">(${t('home.progressOf', q.vars)})</span>` : ''}</span><span class="xp">+${q.xp} XP</span></button>`,
+)}</section>
 <button class="card mt12 challenge" data-go="progress/lifts"><div class="row between"><span class="row gap8"><span class="sq gold">${ic('target', 18, 2.4)}</span><span class="b">${t('home.challenge', { month: fmtDate(now, { month: 'long' }) })}</span></span><span class="xs b muted num">${s.monthWorkouts}/${s.monthTarget}</span></div>
 <div class="muted xs b mt6 left">${s.monthWorkouts >= s.monthTarget ? t('home.challengeDone') : t('home.challengeBody', { n: s.monthTarget, xp: 100 })}</div>${bar(s.monthWorkouts / s.monthTarget, 'var(--gold)', 'mt8')}</button>
 ${showRecap ? html`<button class="card mt12 row gap12 recapcard" data-act="recap" data-m="${prevMonth}"><span class="sq violet">${ic('gift', 20, 2.2)}</span><span class="f1 left"><span class="b block">${t('home.recapTitle', { month: fmtDate(new Date(prevMonth + '-15'), { month: 'long' }) })}</span><span class="muted xs b">${t('home.recapBody')}</span></span>${ic('right', 18, 2.2, 'var(--muted)')}</button>` : ''}
 ${backupDue() ? html`<button class="card mt12 row gap12" data-go="profile"><span class="sq acc">${ic('cloud', 20, 2.2)}</span><span class="f1 left"><span class="b block">${t('home.backupTitle')}</span><span class="muted xs b">${t('home.backupBody')}</span></span>${ic('right', 18, 2.2, 'var(--muted)')}</button>` : ''}
-${canInstall() && !kv('installDismissed', false) ? html`<div class="card mt12 row gap12"><span class="sq acc">${ic('download', 20, 2.2)}</span><span class="f1"><span class="b block">${t('install.cardTitle')}</span><span class="muted xs b">${t('install.cardBody')}</span></span>
-<button class="btn sm" data-act="install">${t('install.cta')}</button><button class="iconbtn flat sm" data-act="noInstall" aria-label="${t('common.close')}">${ic('close', 16)}</button></div>` : ''}
+${
+  canInstall() && !kv('installDismissed', false)
+    ? html`<div class="card mt12 row gap12"><span class="sq acc">${ic('download', 20, 2.2)}</span><span class="f1"><span class="b block">${t('install.cardTitle')}</span><span class="muted xs b">${t('install.cardBody')}</span></span>
+<button class="btn sm" data-act="install">${t('install.cta')}</button><button class="iconbtn flat sm" data-act="noInstall" aria-label="${t('common.close')}">${ic('close', 16)}</button></div>`
+    : ''
+}
 </div>`;
   },
   actions: {

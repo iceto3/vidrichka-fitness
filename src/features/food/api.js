@@ -23,13 +23,17 @@ export const foodById = (id) => local.get(id) ?? get('foods', id);
 export const foodName = (f) => L(f.name);
 
 /** Diary rows for a day (water excluded), by time. @param {string} date */
-export const dayRows = (date) => all('food').filter((r) => r.date === date && r.type !== 'water').sort((a, b) => a.ts - b.ts);
+export const dayRows = (date) =>
+  all('food')
+    .filter((r) => r.date === date && r.type !== 'water')
+    .sort((a, b) => a.ts - b.ts);
 
 /** Glasses of water on a day. @param {string} date */
 export const water = (date) => get('food', `water_${date}`)?.glasses ?? 0;
 
 /** Set glasses of water. @param {string} date @param {number} glasses */
-export const setWater = (date, glasses) => put('food', { id: `water_${date}`, type: 'water', date, glasses: Math.max(0, glasses) });
+export const setWater = (date, glasses) =>
+  put('food', { id: `water_${date}`, type: 'water', date, glasses: Math.max(0, glasses) });
 
 /**
  * Log a portion of a food.
@@ -43,7 +47,18 @@ export function logFood(food, grams, meal, date = view.date) {
   const use = kv('foodUse', {});
   setKv('foodUse', { ...use, [food.id]: { n: (use[food.id]?.n ?? 0) + 1, ts: Date.now(), cat: food.cat } });
   const ts = date === dayKey() ? Date.now() : new Date(`${date}T12:00`).getTime();
-  return put('food', { id: uid('f'), date, meal, ts, time: hhmm(new Date(ts)), foodId: food.id, name: food.name, emoji: food.emoji, grams, ...portion(food, grams) });
+  return put('food', {
+    id: uid('f'),
+    date,
+    meal,
+    ts,
+    time: hhmm(new Date(ts)),
+    foodId: food.id,
+    name: food.name,
+    emoji: food.emoji,
+    grams,
+    ...portion(food, grams),
+  });
 }
 
 /** Remove a diary row. @param {string} id */
@@ -58,7 +73,21 @@ export const savedMeals = () => all('meals').sort((a, b) => (b.uses ?? 0) - (a.u
  * @param {any[]} rows
  */
 export const saveMeal = (name, rows) =>
-  put('meals', { id: uid('meal'), name, uses: 0, items: rows.map(({ foodId, name: n, emoji, grams, kcal, p, c, f }) => ({ foodId, name: n, emoji, grams, kcal, p, c, f })) });
+  put('meals', {
+    id: uid('meal'),
+    name,
+    uses: 0,
+    items: rows.map(({ foodId, name: n, emoji, grams, kcal, p, c, f }) => ({
+      foodId,
+      name: n,
+      emoji,
+      grams,
+      kcal,
+      p,
+      c,
+      f,
+    })),
+  });
 
 /**
  * Log all items of a saved meal in one tap.
@@ -69,7 +98,9 @@ export function logSavedMeal(id, meal) {
   const m = get('meals', id);
   if (!m) return;
   const ts = view.date === dayKey() ? Date.now() : new Date(`${view.date}T12:00`).getTime();
-  m.items.forEach((/** @type {any} */ it, /** @type {number} */ i) => put('food', { ...it, id: uid('f'), date: view.date, meal, ts: ts + i, time: hhmm(new Date(ts)) }));
+  m.items.forEach((/** @type {any} */ it, /** @type {number} */ i) =>
+    put('food', { ...it, id: uid('f'), date: view.date, meal, ts: ts + i, time: hhmm(new Date(ts)) }),
+  );
   put('meals', { ...m, uses: (m.uses ?? 0) + 1 });
 }
 
@@ -84,11 +115,17 @@ export function categoriesByUse() {
 
 /** Recently used foods (most recent first). @param {number} [max] */
 export const recentFoods = (max = 8) =>
-  Object.entries(kv('foodUse', {})).sort((a, b) => b[1].ts - a[1].ts).map(([id]) => foodById(id)).filter(Boolean).slice(0, max);
+  Object.entries(kv('foodUse', {}))
+    .sort((a, b) => b[1].ts - a[1].ts)
+    .map(([id]) => foodById(id))
+    .filter(Boolean)
+    .slice(0, max);
 
 /** Quick picks: personal most-used foods, topped up with defaults. */
 export function quickPicks() {
-  const used = Object.entries(kv('foodUse', {})).sort((a, b) => b[1].n - a[1].n).map(([id]) => id);
+  const used = Object.entries(kv('foodUse', {}))
+    .sort((a, b) => b[1].n - a[1].n)
+    .map(([id]) => id);
   return [...new Set([...used.slice(0, 6), ...QUICK_PICKS])].slice(0, 6).map(foodById).filter(Boolean);
 }
 
@@ -100,5 +137,7 @@ export function searchLocal(q) {
   const s = q.trim().toLowerCase();
   if (!s) return [];
   const pool = [...FOODS, ...all('foods')];
-  return pool.filter((f) => (typeof f.name === 'string' ? f.name : `${f.name.en} ${f.name.bg}`).toLowerCase().includes(s)).slice(0, 30);
+  return pool
+    .filter((f) => (typeof f.name === 'string' ? f.name : `${f.name.en} ${f.name.bg}`).toLowerCase().includes(s))
+    .slice(0, 30);
 }

@@ -19,10 +19,13 @@ addEventListener('beforeinstallprompt', (e) => {
 addEventListener('appinstalled', () => ((deferred = null), emit('ui:refresh')));
 
 /** Running as an installed app? */
-export const isStandalone = () => matchMedia('(display-mode: standalone)').matches || /** @type {any} */ (navigator).standalone === true;
+export const isStandalone = () =>
+  matchMedia('(display-mode: standalone)').matches || /** @type {any} */ (navigator).standalone === true;
 
 /** iPhone / iPad (incl. iPadOS reporting as Mac). */
-export const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.userAgent.includes('Mac') && navigator.maxTouchPoints > 1);
+export const isIOS = () =>
+  /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+  (navigator.userAgent.includes('Mac') && navigator.maxTouchPoints > 1);
 
 /** Whether we can offer installing at all. */
 export const canInstall = () => !isStandalone() && (!!deferred || isIOS());
@@ -37,11 +40,15 @@ export async function installApp() {
   }
   openSheet({
     render: () => html`<h2 class="h2">${t('install.title')}</h2>
-${isIOS() ? html`<ol class="steps-list mt12">
+${
+  isIOS()
+    ? html`<ol class="steps-list mt12">
 <li><span class="sic acc">${ic('share', 20, 2.2)}</span><span>${t('install.ios1')}</span></li>
 <li><span class="sic acc">${ic('plus', 20, 2.4)}</span><span>${t('install.ios2')}</span></li>
 <li><span class="sic acc">${ic('check', 20, 2.6)}</span><span>${t('install.ios3')}</span></li></ol>
-<p class="muted small b mt12">${t('install.iosNote')}</p>` : html`<p class="b mt12">${t('install.other')}</p>`}
+<p class="muted small b mt12">${t('install.iosNote')}</p>`
+    : html`<p class="b mt12">${t('install.other')}</p>`
+}
 <button class="btn w100 mt16" data-act="ok">${t('common.ok')}</button>`,
     actions: { ok: () => (closeSheet(), false) },
   });

@@ -27,14 +27,17 @@ function lastHint(it, weighted) {
   const last = lastSets(sessions(), it.exId);
   if (!last.length) return '';
   const tip = suggest(last, it.target.reps, weighted, settings().weightStep);
-  const txt = weighted ? `${fmtKg(last[0].w)} kg × ${last.map((s) => s.r).join(', ')}` : last.map((s) => s.r).join(', ');
+  const txt = weighted
+    ? `${fmtKg(last[0].w)} kg × ${last.map((s) => s.r).join(', ')}`
+    : last.map((s) => s.r).join(', ');
   return html`<div class="row gap8 mt12 small lasttime"><span class="muted b">${t('workout.lastTime')}</span><span class="b num">${txt}</span>
 ${tip ? html`<span class="chip warm nudge">${tip.kind === 'weight' ? t('workout.tryKg', { n: fmtKg(tip.value) }) : t('workout.tryReps', { n: tip.value })}</span>` : ''}</div>`;
 }
 
 /** One exercise card. @param {WItem} it @param {number} i @param {[number, number]|null} act */
 function exCard(it, i, act) {
-  const ex = exById(it.exId), weighted = ex?.weighted ?? true;
+  const ex = exById(it.exId),
+    weighted = ex?.weighted ?? true;
   const cols = weighted ? '' : ' bw';
   return html`<section class="card ex mt12" aria-label="${exName(it.exId)}">
 <div class="row between top-al"><div class="row gap12"><div class="exicon">${exThumb(it.exId)}</div>
@@ -86,7 +89,8 @@ export default () => {
     if (el) el.textContent = clock(Math.floor((Date.now() - w.startedAt) / 1000));
     if (!w.rest) return;
     const left = Math.max(0, Math.ceil((w.rest.endAt - Date.now()) / 1000));
-    const l = $('#rest-left'), pb = $('#rest-pb');
+    const l = $('#rest-left'),
+      pb = $('#rest-pb');
     if (l) l.textContent = clock(left);
     if (pb) pb.style.width = `${(left / w.rest.total) * 100}%`;
     if (left <= 0) restDone();
@@ -96,18 +100,24 @@ export default () => {
     tab: 'workouts',
     render: () => {
       const w = activeWorkout();
-      if (!w) return html`<div class="content center mt20"><p class="b">${t('workout.none')}</p><button class="btn mt16" data-go="workouts">${t('workouts.title')}</button></div>`;
+      if (!w)
+        return html`<div class="content center mt20"><p class="b">${t('workout.none')}</p><button class="btn mt16" data-go="workouts">${t('workouts.title')}</button></div>`;
       const act = activeSet(w.items);
       const total = w.items.reduce((/** @type {number} */ a, /** @type {WItem} */ it) => a + it.sets.length, 0);
-      const left = w.items.reduce((/** @type {number} */ a, /** @type {WItem} */ it) => a + it.sets.filter((s) => !s.done).length, 0);
+      const left = w.items.reduce(
+        (/** @type {number} */ a, /** @type {WItem} */ it) => a + it.sets.filter((s) => !s.done).length,
+        0,
+      );
       const cur = act ? act[0] : w.items.length - 1;
       return html`<div class="wtop"><button class="iconbtn" data-go="home" aria-label="${t('workout.minimize')}">${ic('down', 22)}</button>
 <div class="center"><h1 class="h2">${planName(w)}</h1><div class="live num"><i></i><span id="elapsed">${clock(Math.floor((Date.now() - w.startedAt) / 1000))}</span></div></div>
 <button class="finish" data-act="finish">${t('workout.finish')}</button></div>
-<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${total - left}">${w.items.map((/** @type {WItem} */ it) => {
-  const d = it.sets.filter((s) => s.done).length;
-  return html`<i class="${d === it.sets.length ? 'on' : d ? 'half' : ''}"></i>`;
-})}</div>
+<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${total - left}">${w.items.map(
+        (/** @type {WItem} */ it) => {
+          const d = it.sets.filter((s) => s.done).length;
+          return html`<i class="${d === it.sets.length ? 'on' : d ? 'half' : ''}"></i>`;
+        },
+      )}</div>
 <div class="row between wmeta"><span class="muted xs b caps">${t('workout.exerciseOf', { n: cur + 1, total: w.items.length })}</span><span class="muted xs b">${t('workout.setsLeft', { n: left })}</span></div>
 <div class="content wlist">${w.items.map((/** @type {WItem} */ it, /** @type {number} */ i) => exCard(it, i, act))}
 <button class="btn ok mt16 w100" data-act="finish">${ic('check', 20, 3)}${t('workout.finishWorkout')}</button></div>
@@ -116,18 +126,32 @@ ${w.rest ? restBar(w.rest) : ''}`;
     mount: () => {
       keepAwake();
       const w = activeWorkout();
-      if (w?.rest && w.rest.endAt < Date.now()) S.skipRest(), emit('ui:refresh');
+      if (w?.rest && w.rest.endAt < Date.now()) (S.skipRest(), emit('ui:refresh'));
       timer = setInterval(tick, 250);
     },
     unmount: () => (clearInterval(timer), releaseAwake()),
     actions: {
       w: (el, ev) => {
-        const i = num(el, 'i'), j = num(el, 'j'), cur = activeWorkout().items[i].sets[j].w;
-        S.setWeight(i, j, ev.type === 'change' ? parseFloat(/** @type {HTMLInputElement} */ (el).value.replace(',', '.')) || 0 : cur + num(el, 'd') * step());
+        const i = num(el, 'i'),
+          j = num(el, 'j'),
+          cur = activeWorkout().items[i].sets[j].w;
+        S.setWeight(
+          i,
+          j,
+          ev.type === 'change'
+            ? parseFloat(/** @type {HTMLInputElement} */ (el).value.replace(',', '.')) || 0
+            : cur + num(el, 'd') * step(),
+        );
       },
       r: (el, ev) => {
-        const i = num(el, 'i'), j = num(el, 'j'), cur = activeWorkout().items[i].sets[j].r;
-        S.setReps(i, j, ev.type === 'change' ? parseInt(/** @type {HTMLInputElement} */ (el).value, 10) || 0 : cur + num(el, 'd'));
+        const i = num(el, 'i'),
+          j = num(el, 'j'),
+          cur = activeWorkout().items[i].sets[j].r;
+        S.setReps(
+          i,
+          j,
+          ev.type === 'change' ? parseInt(/** @type {HTMLInputElement} */ (el).value, 10) || 0 : cur + num(el, 'd'),
+        );
       },
       done: (el) => {
         unlockAudio();
@@ -140,16 +164,37 @@ ${w.rest ? restBar(w.rest) : ''}`;
       skip: () => void S.skipRest(),
       finish: async () => {
         const w = activeWorkout();
-        const done = w.items.reduce((/** @type {number} */ a, /** @type {WItem} */ it) => a + it.sets.filter((s) => s.done).length, 0);
-        const left = w.items.reduce((/** @type {number} */ a, /** @type {WItem} */ it) => a + it.sets.filter((s) => !s.done).length, 0);
+        const done = w.items.reduce(
+          (/** @type {number} */ a, /** @type {WItem} */ it) => a + it.sets.filter((s) => s.done).length,
+          0,
+        );
+        const left = w.items.reduce(
+          (/** @type {number} */ a, /** @type {WItem} */ it) => a + it.sets.filter((s) => !s.done).length,
+          0,
+        );
         if (!done) {
-          if (await confirmDialog({ title: t('workout.discardTitle'), body: t('workout.discardBody'), ok: t('workout.discard'), danger: true })) {
+          if (
+            await confirmDialog({
+              title: t('workout.discardTitle'),
+              body: t('workout.discardBody'),
+              ok: t('workout.discard'),
+              danger: true,
+            })
+          ) {
             S.discard();
             emit('nav', { path: 'workouts', replace: true });
           }
           return;
         }
-        if (left && !(await confirmDialog({ title: t('workout.finishTitle'), body: t('workout.finishBody', { n: left }), ok: t('workout.finish') }))) return;
+        if (
+          left &&
+          !(await confirmDialog({
+            title: t('workout.finishTitle'),
+            body: t('workout.finishBody', { n: left }),
+            ok: t('workout.finish'),
+          }))
+        )
+          return;
         const s = S.finish();
         emit('nav', { path: `summary/${s.id}`, replace: true });
       },

@@ -30,24 +30,31 @@ export const WEEKS_PER_FREEZE = 4;
 export function weeklyStreak(workoutDays, goalAt, now = new Date()) {
   /** @type {Record<string, number>} */
   const perWeek = {};
-  workoutDays.forEach((d) => { const w = weekKey(parseDay(d)); perWeek[w] = (perWeek[w] ?? 0) + 1; });
+  workoutDays.forEach((d) => {
+    const w = weekKey(parseDay(d));
+    perWeek[w] = (perWeek[w] ?? 0) + 1;
+  });
   const current = weekKey(now);
   const weeks = Object.keys(perWeek).sort();
-  let streak = 0, run = 0, best = 0, freezes = 0;
+  let streak = 0,
+    run = 0,
+    best = 0,
+    freezes = 0;
   /** @type {string[]} */
   const frozen = [];
   for (let w = weeks[0]; w && w < current; w = weekKey(addDays(parseDay(w), 7))) {
     if ((perWeek[w] ?? 0) >= goalAt(w)) {
-      streak++, run++;
+      (streak++, run++);
       if (run % WEEKS_PER_FREEZE === 0 && freezes < MAX_FREEZES) freezes++;
     } else if (streak > 0 && freezes > 0) {
-      freezes--, frozen.push(w);
+      (freezes--, frozen.push(w));
     } else {
-      streak = 0, run = 0;
+      ((streak = 0), (run = 0));
     }
     best = Math.max(best, streak);
   }
-  const thisWeek = perWeek[current] ?? 0, goal = goalAt(current);
+  const thisWeek = perWeek[current] ?? 0,
+    goal = goalAt(current);
   const total = streak + (thisWeek >= goal ? 1 : 0);
   return { weeks: total, best: Math.max(best, total), freezes, thisWeek, goal, frozen };
 }

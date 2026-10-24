@@ -33,7 +33,8 @@ const clean = (v) => Math.max(0, Math.round(v * 4) / 4);
  */
 export const setWeight = (i, j, value) =>
   edit((w) => {
-    const it = w.items[i], v = clean(value);
+    const it = w.items[i],
+      v = clean(value);
     it.sets.forEach((/** @type {any} */ s, k) => (k === j || (k > j && !s.done)) && (s.w = v));
   });
 
@@ -58,16 +59,20 @@ export function toggleDone(i, j) {
 }
 
 /** Add a set (copying the last one) to item i. @param {number} i */
-export const addSet = (i) => edit((w) => {
-  const sets = w.items[i].sets, last = sets[sets.length - 1];
-  sets.push({ w: last?.w ?? 0, r: last?.r ?? w.items[i].target.reps, done: false });
-});
+export const addSet = (i) =>
+  edit((w) => {
+    const sets = w.items[i].sets,
+      last = sets[sets.length - 1];
+    sets.push({ w: last?.w ?? 0, r: last?.r ?? w.items[i].target.reps, done: false });
+  });
 
 /** Remove the last unfinished set of item i. @param {number} i */
-export const removeSet = (i) => edit((w) => {
-  const sets = w.items[i].sets, k = sets.map((/** @type {any} */ s) => s.done).lastIndexOf(false);
-  if (k >= 0 && sets.length > 1) sets.splice(k, 1);
-});
+export const removeSet = (i) =>
+  edit((w) => {
+    const sets = w.items[i].sets,
+      k = sets.map((/** @type {any} */ s) => s.done).lastIndexOf(false);
+    if (k >= 0 && sets.length > 1) sets.splice(k, 1);
+  });
 
 /** Adjust the running rest timer. @param {number} sec Seconds to add. */
 export const addRest = (sec) => edit((w) => w.rest && ((w.rest.endAt += sec * 1000), (w.rest.total += sec)));
@@ -85,14 +90,28 @@ export const discard = () => setKv('active', null);
 export function finish() {
   const w = activeWorkout();
   if (!w) return null;
-  const endedAt = Date.now(), durationSec = Math.round((endedAt - w.startedAt) / 1000);
+  const endedAt = Date.now(),
+    durationSec = Math.round((endedAt - w.startedAt) / 1000);
   const items = w.items.filter((/** @type {WItem} */ it) => it.sets.some((s) => s.done));
   const totals = summarize(w.items, exById);
   const prs = detectPRs(items, sessions(), exById);
   const bodyKg = bodyWeight();
   const kcal = estimateKcal(sessionMet(items, exById), bodyKg, durationSec);
   const xp = xpForWorkout({ setsDone: totals.setsDone, prs: prs.length });
-  const session = { id: w.id, planId: w.planId, name: w.name, startedAt: w.startedAt, endedAt, durationSec, items: w.items, ...totals, prs, kcal, bodyKg, xp };
+  const session = {
+    id: w.id,
+    planId: w.planId,
+    name: w.name,
+    startedAt: w.startedAt,
+    endedAt,
+    durationSec,
+    items: w.items,
+    ...totals,
+    prs,
+    kcal,
+    bodyKg,
+    xp,
+  };
   put('sessions', session);
   setKv('active', null);
   award(`session:${session.id}`, xp);

@@ -59,8 +59,13 @@ export function award(id, amt) {
 /** Stats context (cached until data changes). */
 export function stats() {
   cache ??= computeStats({
-    sessions: all('sessions'), food: all('food'), measurements: all('measurements'), photos: all('photos'),
-    goalAt, waterGoal: settings().waterGoal, level: level().level,
+    sessions: all('sessions'),
+    food: all('food'),
+    measurements: all('measurements'),
+    photos: all('photos'),
+    goalAt,
+    waterGoal: settings().waterGoal,
+    level: level().level,
   });
   return cache;
 }
@@ -68,7 +73,9 @@ export function stats() {
 /** Today's quests with completion state. */
 export const quests = () => {
   const s = stats();
-  return registry.quests.filter((q) => !q.show || q.show(s)).map((q) => ({ ...q, isDone: q.done(s), vars: q.detail?.(s) ?? {} }));
+  return registry.quests
+    .filter((q) => !q.show || q.show(s))
+    .map((q) => ({ ...q, isDone: q.done(s), vars: q.detail?.(s) ?? {} }));
 };
 
 /** All badges with earned date (or null). */

@@ -30,7 +30,8 @@ export default ({ id }) => ({
   tab: 'workouts',
   render: () => {
     const s = get('sessions', id);
-    if (!s) return html`<div class="content"><button class="iconbtn" data-go="home" aria-label="${t('common.close')}">${ic('close', 20)}</button><p class="b mt16">${t('summary.missing')}</p></div>`;
+    if (!s)
+      return html`<div class="content"><button class="iconbtn" data-go="home" aria-label="${t('common.close')}">${ic('close', 20)}</button><p class="b mt16">${t('summary.missing')}</p></div>`;
     const name = settings().userName;
     return html`${confetti()}<div class="content summary">
 <div class="row between"><button class="iconbtn" data-go="home" aria-label="${t('common.close')}">${ic('close', 20)}</button><span class="chip accent">${ic('check', 14, 3)}${t('summary.saved')}</span></div>
@@ -38,9 +39,13 @@ export default ({ id }) => ({
 <div class="center"><h1 class="h1 big">${name ? t('summary.greatJobName', { name }) : t('summary.greatJob')}</h1>
 <div class="muted b mt6">${t('summary.complete', { plan: planName(s) })} · ${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })}</div></div>
 <div class="grid3 mt20">${statTiles(s).map(([i, l, v]) => html`<div class="stat"><div class="l">${ic(String(i), 15, 2.3)}${l}</div><div class="v num">${v}</div></div>`)}</div>
-${s.prs.map((/** @type {any} */ p) => html`<div class="card pr-card mt12 row gap12"><div class="trophy">${ic('trophy', 26, 2.2)}</div>
+${s.prs.map(
+  (
+    /** @type {any} */ p,
+  ) => html`<div class="card pr-card mt12 row gap12"><div class="trophy">${ic('trophy', 26, 2.2)}</div>
 <div class="f1"><div class="xs xb caps prt">${t('summary.newRecord')}</div><div class="h3 xb">${exName(p.exId)} · ${p.w ? `${p.w} kg × ${p.r}` : t('summary.repsN', { n: p.r })}</div>
-<div class="small b prsub">${p.w ? t('summary.prevBest', { prev: `${p.prevW} kg`, diff: `+${Math.round((p.w - p.prevW) * 100) / 100 || 0} kg` }) : t('summary.prevBest', { prev: p.prevR, diff: `+${p.r - p.prevR}` })}</div></div></div>`)}
+<div class="small b prsub">${p.w ? t('summary.prevBest', { prev: `${p.prevW} kg`, diff: `+${Math.round((p.w - p.prevW) * 100) / 100 || 0} kg` }) : t('summary.prevBest', { prev: p.prevR, diff: `+${p.r - p.prevR}` })}</div></div></div>`,
+)}
 <p class="muted xs mt8 center">${t('summary.kcalNote')}</p>
 <div class="row gap10 mt20"><button class="btn sec f1" data-act="share">${ic('share', 19, 2.2)}${t('common.share')}</button><button class="btn f14" data-go="home">${t('workout.done')}</button></div>
 </div>`;
@@ -52,9 +57,17 @@ ${s.prs.map((/** @type {any} */ p) => html`<div class="card pr-card mt12 row gap
         title: t('summary.complete', { plan: planName(s) }),
         sub: fmtDate(s.endedAt, { weekday: 'long', day: 'numeric', month: 'long' }),
         otterSvg: otterSvg({ size: 420, pose: 'cheer', mood: 'excited', gear: ['headband'] }),
-        stats: [[t('summary.time'), `${Math.round(s.durationSec / 60)} ${t('unit.min')}`], [t('summary.sets'), String(s.setsDone)], [t('summary.reps'), String(s.reps)],
-          [t('summary.volume'), `${fmtNum(s.volume)} kg`], [t('summary.kcal'), `~${s.kcal}`], ['XP', `+${s.xp}`]],
-        highlight: s.prs[0] ? `🏆 ${exName(s.prs[0].exId)} ${s.prs[0].w ? `${s.prs[0].w} kg × ${s.prs[0].r}` : `× ${s.prs[0].r}`}` : '',
+        stats: [
+          [t('summary.time'), `${Math.round(s.durationSec / 60)} ${t('unit.min')}`],
+          [t('summary.sets'), String(s.setsDone)],
+          [t('summary.reps'), String(s.reps)],
+          [t('summary.volume'), `${fmtNum(s.volume)} kg`],
+          [t('summary.kcal'), `~${s.kcal}`],
+          ['XP', `+${s.xp}`],
+        ],
+        highlight: s.prs[0]
+          ? `🏆 ${exName(s.prs[0].exId)} ${s.prs[0].w ? `${s.prs[0].w} kg × ${s.prs[0].r}` : `× ${s.prs[0].r}`}`
+          : '',
         footer: 'Vidrichka Fitness',
       });
       const r = await shareFile(blob, `workout-${s.id}.png`, t('summary.shareText', { plan: planName(s) }));

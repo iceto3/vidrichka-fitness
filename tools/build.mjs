@@ -26,7 +26,13 @@ const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 
-const common = /** @type {const} */ ({ bundle: true, minify: true, metafile: true, logLevel: 'warning', absWorkingDir: root });
+const common = /** @type {const} */ ({
+  bundle: true,
+  minify: true,
+  metafile: true,
+  logLevel: 'warning',
+  absWorkingDir: root,
+});
 
 const js = await build({
   ...common,
@@ -53,10 +59,16 @@ const css = await build({
 
 /** Output path (relative to dist) of the entry whose source is `src`. */
 const entryOut = (/** @type {import('esbuild').Metafile} */ meta, /** @type {string} */ src) =>
-  relative(out, join(root, /** @type {string} */ (Object.entries(meta.outputs).find(([, o]) => o.entryPoint === src)?.[0])));
+  relative(
+    out,
+    join(root, /** @type {string} */ (Object.entries(meta.outputs).find(([, o]) => o.entryPoint === src)?.[0])),
+  );
 const mainJs = entryOut(js.metafile, 'src/main.js');
 const appCss = entryOut(css.metafile, 'src/app.css');
-const latinFont = relative(out, join(root, /** @type {string} */ (Object.keys(css.metafile.outputs).find((f) => f.includes('PlusJakartaSans')))));
+const latinFont = relative(
+  out,
+  join(root, /** @type {string} */ (Object.keys(css.metafile.outputs).find((f) => f.includes('PlusJakartaSans')))),
+);
 
 await cp(join(root, 'assets/icons'), join(out, 'assets/icons'), { recursive: true });
 await cp(join(root, 'assets/vendor'), join(out, 'assets/vendor'), { recursive: true });
@@ -103,12 +115,23 @@ const size = async (/** @type {string} */ f) => {
 };
 const kb = (/** @type {number} */ n) => `${(n / 1024).toFixed(1)} kB`;
 const jsFiles = files.filter((f) => f.startsWith('js/'));
-const initial = [mainJs, ...Object.entries(js.metafile.outputs).find(([k]) => k.endsWith(mainJs))?.[1].imports.filter((i) => i.kind === 'import-statement').map((i) => relative(out, join(root, i.path))) ?? []];
-const tot = { raw: 0, gz: 0 }, init = { raw: 0, gz: 0 };
+const initial = [
+  mainJs,
+  ...(Object.entries(js.metafile.outputs)
+    .find(([k]) => k.endsWith(mainJs))?.[1]
+    .imports.filter((i) => i.kind === 'import-statement')
+    .map((i) => relative(out, join(root, i.path))) ?? []),
+];
+const tot = { raw: 0, gz: 0 },
+  init = { raw: 0, gz: 0 };
 for (const f of jsFiles) {
   const s = await size(f);
-  tot.raw += s.raw; tot.gz += s.gz;
-  if (initial.includes(f)) { init.raw += s.raw; init.gz += s.gz; }
+  tot.raw += s.raw;
+  tot.gz += s.gz;
+  if (initial.includes(f)) {
+    init.raw += s.raw;
+    init.gz += s.gz;
+  }
 }
 const c = await size(appCss);
 const report = {
@@ -118,7 +141,10 @@ const report = {
   allJs: { raw: tot.raw, gzip: tot.gz },
   css: { raw: c.raw, gzip: c.gz },
   precacheFiles: precache.length,
-  precacheBytes: (await Promise.all(files.map((f) => stat(join(out, f)).then((s) => s.size)))).reduce((a, b) => a + b, 0),
+  precacheBytes: (await Promise.all(files.map((f) => stat(join(out, f)).then((s) => s.size)))).reduce(
+    (a, b) => a + b,
+    0,
+  ),
 };
 await writeFile(join(out, 'build-report.json'), JSON.stringify(report, null, 2));
 console.log(`Built ${version} → dist/

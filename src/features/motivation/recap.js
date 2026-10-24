@@ -13,12 +13,19 @@ export function monthRecap(month, d) {
   const days = new Set(ss.map((s) => dayKey(s.endedAt)));
   /** @type {Record<string, number>} */
   const exCount = {};
-  ss.forEach((s) => s.items?.forEach((/** @type {any} */ it) => it.sets?.some((/** @type {any} */ x) => x.done) && (exCount[it.exId] = (exCount[it.exId] ?? 0) + 1)));
+  ss.forEach((s) =>
+    s.items?.forEach(
+      (/** @type {any} */ it) =>
+        it.sets?.some((/** @type {any} */ x) => x.done) && (exCount[it.exId] = (exCount[it.exId] ?? 0) + 1),
+    ),
+  );
   const top = Object.entries(exCount).sort((a, b) => b[1] - a[1])[0];
   const foodRows = d.food.filter((f) => f.date?.startsWith(month) && f.type !== 'water');
   const foodDays = new Set(foodRows.map((f) => f.date));
   const kcal = foodRows.reduce((a, f) => a + (f.kcal || 0), 0);
-  const w = d.measurements.filter((m) => m.date?.startsWith(month) && m.weight != null).sort((a, b) => (a.date < b.date ? -1 : 1));
+  const w = d.measurements
+    .filter((m) => m.date?.startsWith(month) && m.weight != null)
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
   return {
     month,
     workouts: ss.length,
@@ -32,6 +39,8 @@ export function monthRecap(month, d) {
     foodDays: foodDays.size,
     avgKcal: foodDays.size ? Math.round(kcal / foodDays.size) : 0,
     weightDelta: w.length >= 2 ? Math.round((w[w.length - 1].weight - w[0].weight) * 10) / 10 : null,
-    badges: Object.entries(d.badges).filter(([, ts]) => monthKey(new Date(ts)) === month).map(([id]) => id),
+    badges: Object.entries(d.badges)
+      .filter(([, ts]) => monthKey(new Date(ts)) === month)
+      .map(([id]) => id),
   };
 }

@@ -26,7 +26,7 @@ export async function shrink(file) {
   if (!img) return file;
   const k = Math.min(1, MAX / Math.max(img.width, img.height));
   const c = document.createElement('canvas');
-  c.width = Math.round(img.width * k), (c.height = Math.round(img.height * k));
+  ((c.width = Math.round(img.width * k)), (c.height = Math.round(img.height * k)));
   /** @type {CanvasRenderingContext2D} */ (c.getContext('2d')).drawImage(img, 0, 0, c.width, c.height);
   return new Promise((res) => c.toBlob((b) => res(b ?? file), 'image/jpeg', 0.85));
 }
@@ -36,4 +36,5 @@ export async function shrink(file) {
  * @param {File} file
  * @param {string} [date]
  */
-export const addPhoto = async (file, date = dayKey()) => put('photos', { id: uid('ph'), date, ts: Date.now(), blob: await shrink(file) });
+export const addPhoto = async (file, date = dayKey()) =>
+  put('photos', { id: uid('ph'), date, ts: Date.now(), blob: await shrink(file) });

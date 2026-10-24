@@ -15,7 +15,9 @@ import { ic } from './icons.js';
  * @param {{color?: string, track?: string, inner?: any, label?: string}} [o]
  */
 export function ring(size, sw, pct, o = {}) {
-  const r = (size - sw) / 2, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, pct || 0));
+  const r = (size - sw) / 2,
+    c = 2 * Math.PI * r,
+    p = Math.max(0, Math.min(1, pct || 0));
   return html`<div class="ring" style="width:${size}px;height:${size}px" role="img" aria-label="${o.label ?? Math.round(p * 100) + '%'}">
 <svg width="${size}" height="${size}" aria-hidden="true"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${o.track ?? 'var(--soft)'}" stroke-width="${sw}"/>
 ${p > 0 ? html`<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${o.color ?? 'var(--accent)'}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${c * p} ${c}"/>` : ''}</svg>
@@ -37,7 +39,11 @@ export const bar = (pct, color = 'var(--accent)', cls = '') =>
  * @param {{act: string, value: string|number, unit?: string, data?: Record<string,any>, label: string, disabled?: boolean, id?: string, big?: boolean}} o
  */
 export function stepper(o) {
-  const attrs = raw(Object.entries(o.data ?? {}).map(([k, v]) => `data-${k}="${v}"`).join(' '));
+  const attrs = raw(
+    Object.entries(o.data ?? {})
+      .map(([k, v]) => `data-${k}="${v}"`)
+      .join(' '),
+  );
   const dis = o.disabled ? raw('disabled') : '';
   return html`<div class="step${o.big ? ' big' : ''}">
 <button class="sb" data-act="${o.act}" data-d="-1" ${attrs} ${dis} aria-label="${o.label} −">${ic('minus', o.big ? 24 : 16, 2.6)}</button>
@@ -54,7 +60,11 @@ export function stepper(o) {
  */
 export const toggle = (on, act, label, data = {}) =>
   html`<button class="toggle${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="${label}" data-act="${act}"
-  ${raw(Object.entries(data).map(([k, v]) => `data-${k}="${v}"`).join(' '))}></button>`;
+  ${raw(
+    Object.entries(data)
+      .map(([k, v]) => `data-${k}="${v}"`)
+      .join(' '),
+  )}></button>`;
 
 /**
  * Segmented control.
@@ -65,7 +75,8 @@ export const toggle = (on, act, label, data = {}) =>
  */
 export const seg = (opts, active, act, cls = 'seg') =>
   html`<div class="${cls}" role="radiogroup">${opts.map(
-    (o) => html`<button class="${o.value === active ? 'on' : ''}" role="radio" aria-checked="${o.value === active}" data-act="${act}" data-v="${o.value}">${o.label}</button>`,
+    (o) =>
+      html`<button class="${o.value === active ? 'on' : ''}" role="radio" aria-checked="${o.value === active}" data-act="${act}" data-v="${o.value}">${o.label}</button>`,
   )}</div>`;
 
 /**
@@ -101,4 +112,5 @@ export function delta(d, unit = '', digits = 1) {
 }
 
 /** Empty-state block. @param {string} icon @param {string} text */
-export const empty = (icon, text) => html`<div class="empty">${ic(icon, 28, 2)}<div class="b muted">${text}</div></div>`;
+export const empty = (icon, text) =>
+  html`<div class="empty">${ic(icon, 28, 2)}<div class="b muted">${text}</div></div>`;

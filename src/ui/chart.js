@@ -12,19 +12,32 @@ let gid = 0;
  * @param {{w?: number, h?: number, unit?: string, color?: string, label?: string}} [o]
  */
 export function lineChart(pts, o = {}) {
-  const W = o.w ?? 340, H = o.h ?? 130, pl = 32, pr = 10, pt = 26, pb = 22, color = o.color ?? 'var(--accent)';
+  const W = o.w ?? 340,
+    H = o.h ?? 130,
+    pl = 32,
+    pr = 10,
+    pt = 26,
+    pb = 22,
+    color = o.color ?? 'var(--accent)';
   if (!pts.length) return html``;
   const ys = pts.map((p) => p.y);
-  let lo = Math.min(...ys), hi = Math.max(...ys);
+  let lo = Math.min(...ys),
+    hi = Math.max(...ys);
   const padv = (hi - lo) * 0.15 || Math.max(1, hi * 0.05);
-  lo = Math.floor(lo - padv); hi = Math.ceil(hi + padv);
-  const X = (/** @type {number} */ i) => pl + (pts.length === 1 ? (W - pl - pr) / 2 : (i * (W - pl - pr)) / (pts.length - 1));
+  lo = Math.floor(lo - padv);
+  hi = Math.ceil(hi + padv);
+  const X = (/** @type {number} */ i) =>
+    pl + (pts.length === 1 ? (W - pl - pr) / 2 : (i * (W - pl - pr)) / (pts.length - 1));
   const Y = (/** @type {number} */ v) => pt + ((hi - v) / (hi - lo)) * (H - pt - pb);
   const d = pts.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(' ');
   const ticks = [lo, (lo + hi) / 2, hi].map((g) => Math.round(g * 10) / 10);
   const step = Math.ceil(pts.length / 8);
-  const last = pts.length - 1, lx = X(last), ly = Y(pts[last].y), id = `ag${++gid}`;
-  const tag = `${fmt(pts[last].y)}${o.unit ? ' ' + o.unit : ''}`, tw = tag.length * 6.4 + 14;
+  const last = pts.length - 1,
+    lx = X(last),
+    ly = Y(pts[last].y),
+    id = `ag${++gid}`;
+  const tag = `${fmt(pts[last].y)}${o.unit ? ' ' + o.unit : ''}`,
+    tw = tag.length * 6.4 + 14;
   return html`<svg class="chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${o.label ?? ''}">
 <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B8F96" stop-opacity=".28"/><stop offset="1" stop-color="#0B8F96" stop-opacity="0"/></linearGradient></defs>
 ${ticks.map((g) => raw(`<line x1="${pl}" x2="${W - pr}" y1="${Y(g)}" y2="${Y(g)}" stroke="var(--line)" stroke-dasharray="3 4"/><text x="${pl - 6}" y="${Y(g) + 4}" text-anchor="end" font-size="10" font-weight="700" fill="var(--muted)">${fmt(g)}</text>`))}
@@ -45,7 +58,11 @@ ${pts.map((p, i) => (i % step === 0 || i === last ? raw(`<text x="${X(i)}" y="${
  */
 export function sparkline(vals, color = '#1FB46B') {
   if (vals.length < 2) return html``;
-  const W = 140, H = 42, lo = Math.min(...vals), hi = Math.max(...vals) || 1, id = `sg${++gid}`;
+  const W = 140,
+    H = 42,
+    lo = Math.min(...vals),
+    hi = Math.max(...vals) || 1,
+    id = `sg${++gid}`;
   const pts = vals.map((v, i) => [(i * W) / (vals.length - 1), 4 + ((hi - v) / (hi - lo || 1)) * (H - 10)]);
   const d = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
   const [ex, ey] = pts[pts.length - 1];

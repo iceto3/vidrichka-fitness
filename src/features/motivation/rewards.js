@@ -15,7 +15,8 @@ let timer = 0;
 export function syncRewards() {
   const s = stats();
   let changed = quests().filter((q) => q.isDone && award(`quest:${s.today}:${q.id}`, q.xp)).length > 0;
-  if (s.monthWorkouts >= s.monthTarget && award(`challenge:${s.month}`, XP.challenge)) emit('challenge:done', s.month), (changed = true);
+  if (s.monthWorkouts >= s.monthTarget && award(`challenge:${s.month}`, XP.challenge))
+    (emit('challenge:done', s.month), (changed = true));
   const earned = kv('badges', {});
   const fresh = registry.badges.filter((b) => !earned[b.id] && b.earned(stats()));
   if (fresh.length) {

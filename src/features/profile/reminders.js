@@ -50,17 +50,34 @@ export async function scheduleReminders() {
   const s = support();
   if (s.periodic) {
     try {
-      if (settings().reminders.enabled) await /** @type {any} */ (reg).periodicSync.register('reminder', { minInterval: 60 * 60 * 1000 });
+      if (settings().reminders.enabled)
+        await /** @type {any} */ (reg).periodicSync.register('reminder', { minInterval: 60 * 60 * 1000 });
       else await /** @type {any} */ (reg).periodicSync.unregister('reminder');
     } catch {
       /* not installed or not allowed */
     }
   }
-  reg.active?.postMessage({ type: 'reminders', reminders: settings().reminders, title: t('reminder.title'), body: t('reminder.body'), lastShown: kv('reminderShown', '') });
+  reg.active?.postMessage({
+    type: 'reminders',
+    reminders: settings().reminders,
+    title: t('reminder.title'),
+    body: t('reminder.body'),
+    lastShown: kv('reminderShown', ''),
+  });
   if (s.triggers && s.permission === 'granted') {
     const when = nextReminder();
-    (await reg.getNotifications({ tag: 'reminder', includeTriggered: false } /** @type {any} */)).forEach((n) => n.close());
-    if (when) await reg.showNotification(t('reminder.title'), /** @type {any} */ ({ body: t('reminder.body'), tag: 'reminder', showTrigger: new /** @type {any} */ (window).TimestampTrigger(when.getTime()) }));
+    (await reg.getNotifications({ tag: 'reminder', includeTriggered: false } /** @type {any} */)).forEach((n) =>
+      n.close(),
+    );
+    if (when)
+      await reg.showNotification(
+        t('reminder.title'),
+        /** @type {any} */ ({
+          body: t('reminder.body'),
+          tag: 'reminder',
+          showTrigger: new /** @type {any} */ (window).TimestampTrigger(when.getTime()),
+        }),
+      );
   }
 }
 
@@ -70,8 +87,10 @@ export async function scheduleReminders() {
  * @param {boolean} workedOutToday
  */
 export function checkDue(workedOutToday) {
-  const r = settings().reminders, now = new Date();
-  if (!r.enabled || workedOutToday || !r.days.includes(weekdayMon(now)) || kv('reminderShown', '') === dayKey()) return false;
+  const r = settings().reminders,
+    now = new Date();
+  if (!r.enabled || workedOutToday || !r.days.includes(weekdayMon(now)) || kv('reminderShown', '') === dayKey())
+    return false;
   const [h, m] = r.time.split(':').map(Number);
   if (now.getHours() * 60 + now.getMinutes() < h * 60 + m) return false;
   setKv('reminderShown', dayKey());

@@ -25,10 +25,12 @@ import { weeklyStreak } from './streak.js';
  */
 export function dayRuns(days, now) {
   const sorted = [...days].sort();
-  let max = 0, run = 0, prev = '';
+  let max = 0,
+    run = 0,
+    prev = '';
   for (const d of sorted) {
     run = prev && daysBetween(parseDay(prev), parseDay(d)) === 1 ? run + 1 : 1;
-    max = Math.max(max, run), prev = d;
+    ((max = Math.max(max, run)), (prev = d));
   }
   let cur = 0;
   for (let d = days.has(dayKey(now)) ? now : addDays(now, -1); days.has(dayKey(d)); d = addDays(d, -1)) cur++;
@@ -40,7 +42,9 @@ export function dayRuns(days, now) {
  * @param {StatsInput} i
  */
 export function computeStats(i) {
-  const now = i.now ?? new Date(), today = dayKey(now), month = monthKey(now);
+  const now = i.now ?? new Date(),
+    today = dayKey(now),
+    month = monthKey(now);
   const sessions = [...i.sessions].sort((a, b) => a.endedAt - b.endedAt);
   const workoutDays = sessions.map((s) => dayKey(s.endedAt));
   const last = sessions[sessions.length - 1];
@@ -54,7 +58,9 @@ export function computeStats(i) {
   workoutDays.forEach((d) => (perMonth[d.slice(0, 7)] = (perMonth[d.slice(0, 7)] ?? 0) + 1));
   const target = (/** @type {string} */ m) => i.goalAt(`${m}-01`) * 4;
   return {
-    today, month, level: i.level ?? 1,
+    today,
+    month,
+    level: i.level ?? 1,
     totalWorkouts: sessions.length,
     totalKg: sessions.reduce((a, s) => a + (s.volume || 0), 0),
     prCount: sessions.reduce((a, s) => a + (s.prs?.length || 0), 0),
@@ -64,7 +70,9 @@ export function computeStats(i) {
     daysSinceWorkout: last ? daysBetween(last.endedAt, now) : null,
     lastSession: last ?? null,
     food: dayRuns(foodDays, now),
-    todayMeals, water, waterGoal: i.waterGoal,
+    todayMeals,
+    water,
+    waterGoal: i.waterGoal,
     measurements: i.measurements.length,
     measuredToday: lastMeasure?.date === today,
     daysSinceMeasure: lastMeasure ? daysBetween(parseDay(lastMeasure.date), now) : null,

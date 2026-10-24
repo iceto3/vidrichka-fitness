@@ -6,9 +6,12 @@
 import { register } from '../../core/registry.js';
 
 const G = {
-  teal: 'linear-gradient(135deg,#2BB8BE,#0B7F86)', orange: 'linear-gradient(135deg,#FF9F5A,#FF6A1F)',
-  gold: 'linear-gradient(135deg,#F7C548,#F59E0B)', violet: 'linear-gradient(135deg,#A88BFF,#7C5CFF)',
-  green: 'linear-gradient(135deg,#4CD68F,#1FB46B)', blue: 'linear-gradient(135deg,#6AAEFF,#2F80ED)',
+  teal: 'linear-gradient(135deg,#2BB8BE,#0B7F86)',
+  orange: 'linear-gradient(135deg,#FF9F5A,#FF6A1F)',
+  gold: 'linear-gradient(135deg,#F7C548,#F59E0B)',
+  violet: 'linear-gradient(135deg,#A88BFF,#7C5CFF)',
+  green: 'linear-gradient(135deg,#4CD68F,#1FB46B)',
+  blue: 'linear-gradient(135deg,#6AAEFF,#2F80ED)',
   red: 'linear-gradient(135deg,#FF8A8E,#E5484D)',
 };
 

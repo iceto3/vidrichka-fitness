@@ -37,7 +37,8 @@ export const planFor = (d = new Date()) => plans().find((p) => p.days.includes(w
 /** The next scheduled plan after today (for "next up"). */
 export function nextPlan() {
   for (let i = 1; i <= 7; i++) {
-    const d = new Date(Date.now() + i * 864e5), p = planFor(d);
+    const d = new Date(Date.now() + i * 864e5),
+      p = planFor(d);
     if (p) return { plan: p, date: d };
   }
   return null;
@@ -54,7 +55,14 @@ export function startWorkout(planId) {
   if (activeWorkout()) return activeWorkout();
   const plan = get('plans', planId);
   if (!plan) throw new Error(`unknown plan ${planId}`);
-  const w = { id: uid('s'), planId, name: plan.name, startedAt: Date.now(), items: newItems(plan.items, sessions()), rest: null };
+  const w = {
+    id: uid('s'),
+    planId,
+    name: plan.name,
+    startedAt: Date.now(),
+    items: newItems(plan.items, sessions()),
+    rest: null,
+  };
   setKv('active', w);
   return w;
 }

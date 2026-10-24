@@ -14,7 +14,8 @@ import { portion } from '../logic.js';
 export const GRAM_STEP = 10;
 
 /** Macro line (P / C / F). @param {{p: number, c: number, f: number}} n */
-export const macroLine = (n) => html`<span class="row gap12 small b num"><span><span class="cp">●</span> ${t('food.p')} ${Math.round(n.p)} g</span><span><span class="cc">●</span> ${t('food.c')} ${Math.round(n.c)} g</span><span><span class="cf">●</span> ${t('food.f')} ${Math.round(n.f)} g</span></span>`;
+export const macroLine = (n) =>
+  html`<span class="row gap12 small b num"><span><span class="cp">●</span> ${t('food.p')} ${Math.round(n.p)} g</span><span><span class="cc">●</span> ${t('food.c')} ${Math.round(n.c)} g</span><span><span class="cf">●</span> ${t('food.f')} ${Math.round(n.f)} g</span></span>`;
 
 /**
  * Open the grams sheet.
@@ -36,7 +37,16 @@ ${food.portion && food.portion !== g ? html`<div class="row center-j mt8"><butto
 <button class="btn w100 mt14" data-act="done">${ic('check', 20, 3)}${t('workout.done')}</button>`;
     },
     actions: {
-      g: (el, ev) => void (g = Math.min(5000, Math.max(0, ev.type === 'change' ? Math.round(parseFloat(/** @type {HTMLInputElement} */ (el).value) || 0) : g + Number(el.dataset.d) * GRAM_STEP))),
+      g: (el, ev) =>
+        void (g = Math.min(
+          5000,
+          Math.max(
+            0,
+            ev.type === 'change'
+              ? Math.round(parseFloat(/** @type {HTMLInputElement} */ (el).value) || 0)
+              : g + Number(el.dataset.d) * GRAM_STEP,
+          ),
+        )),
       portion: () => void (g = food.portion),
       done: () => {
         if (g <= 0) return false;

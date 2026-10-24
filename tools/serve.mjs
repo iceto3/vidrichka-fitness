@@ -8,7 +8,18 @@ import { extname, join, normalize, resolve } from 'node:path';
 
 const port = Number(process.argv[2] ?? 8080);
 const root = resolve(process.argv[3] ?? '.');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.txt': 'text/plain' };
+const TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json',
+  '.webmanifest': 'application/manifest+json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.woff2': 'font/woff2',
+  '.txt': 'text/plain',
+};
 
 createServer(async (req, res) => {
   try {
@@ -17,7 +28,10 @@ createServer(async (req, res) => {
     if (!file.startsWith(root)) throw new Error('outside root');
     if ((await stat(file)).isDirectory()) file = join(file, 'index.html');
     const body = await readFile(file);
-    res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-cache' });
+    res.writeHead(200, {
+      'content-type': TYPES[extname(file)] ?? 'application/octet-stream',
+      'cache-control': 'no-cache',
+    });
     res.end(body);
   } catch {
     res.writeHead(404, { 'content-type': 'text/plain' });

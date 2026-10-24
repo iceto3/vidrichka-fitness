@@ -26,7 +26,9 @@ export const OUTFITS = [
 export function gearFor(level, outfit = 'auto') {
   const pick = OUTFITS.find((o) => o.id === outfit && o.level <= level);
   if (pick?.gear) return pick.gear;
-  const gear = Object.entries(GEAR_LEVELS).filter(([g, l]) => l <= level && g !== 'dumbbell').map(([g]) => g);
+  const gear = Object.entries(GEAR_LEVELS)
+    .filter(([g, l]) => l <= level && g !== 'dumbbell')
+    .map(([g]) => g);
   return gear.includes('crown') ? gear.filter((g) => g !== 'headband') : gear;
 }
 
@@ -48,8 +50,13 @@ export function moodFor(a) {
  */
 export function messageFor(c) {
   if (c.totalWorkouts === 0) return { key: 'mascot.first', vars: {} };
-  if (c.workedOutToday) return { key: c.weekCount >= c.goal ? 'mascot.goalDone' : 'mascot.doneToday', vars: { n: c.weekCount, goal: c.goal } };
-  if (c.daysSinceWorkout != null && c.daysSinceWorkout >= 5) return { key: 'mascot.miss', vars: { n: c.daysSinceWorkout } };
+  if (c.workedOutToday)
+    return {
+      key: c.weekCount >= c.goal ? 'mascot.goalDone' : 'mascot.doneToday',
+      vars: { n: c.weekCount, goal: c.goal },
+    };
+  if (c.daysSinceWorkout != null && c.daysSinceWorkout >= 5)
+    return { key: 'mascot.miss', vars: { n: c.daysSinceWorkout } };
   if (c.streak >= 2 && c.todayPlan) return { key: 'mascot.streakPlan', vars: { n: c.streak, plan: c.todayPlan } };
   if (c.streak >= 2) return { key: 'mascot.streak', vars: { n: c.streak } };
   if (c.goal - c.weekCount === 1) return { key: 'mascot.oneToGo', vars: {} };

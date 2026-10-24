@@ -28,8 +28,20 @@ export function openManualForm(init, onSave) {
       v: (el) => ((v[el.dataset.k ?? ''] = /** @type {HTMLInputElement} */ (el).value), false),
       save: () => {
         const n = (/** @type {string} */ k) => Math.max(0, parseFloat(v[k].replace(',', '.')) || 0);
-        if (!v.name.trim() || !n('kcal')) return emit('toast', { key: 'manual.need' }), false;
-        const food = { id: uid('custom'), source: 'custom', cat: 'other', emoji: '🍽️', name: v.name.trim(), barcode: init.barcode || undefined, kcal: n('kcal'), p: n('p'), c: n('c'), f: n('f'), portion: n('portion') || 100 };
+        if (!v.name.trim() || !n('kcal')) return (emit('toast', { key: 'manual.need' }), false);
+        const food = {
+          id: uid('custom'),
+          source: 'custom',
+          cat: 'other',
+          emoji: '🍽️',
+          name: v.name.trim(),
+          barcode: init.barcode || undefined,
+          kcal: n('kcal'),
+          p: n('p'),
+          c: n('c'),
+          f: n('f'),
+          portion: n('portion') || 100,
+        };
         closeSheet();
         setTimeout(() => onSave(food), 0);
         return false;

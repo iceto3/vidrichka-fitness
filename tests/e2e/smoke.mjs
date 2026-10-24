@@ -31,7 +31,18 @@ await new Promise((r) => setTimeout(r, 400));
 if (SHOTS) mkdirSync('screenshots', { recursive: true });
 
 const PROFILES = {
-  android: { type: chromium, launch: CHROME ? { executablePath: CHROME, args: ['--no-sandbox'] } : {}, ctx: { viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: devices['Pixel 7'].userAgent }, prefix: '' },
+  android: {
+    type: chromium,
+    launch: CHROME ? { executablePath: CHROME, args: ['--no-sandbox'] } : {},
+    ctx: {
+      viewport: { width: 412, height: 915 },
+      deviceScaleFactor: 2,
+      isMobile: true,
+      hasTouch: true,
+      userAgent: devices['Pixel 7'].userAgent,
+    },
+    prefix: '',
+  },
   iphone: { type: webkit, launch: {}, ctx: { ...devices['iPhone 14'] }, prefix: 'iphone-' },
 };
 
@@ -59,17 +70,32 @@ process.exit(failed ? 1 : 0);
  * @param {any} P
  */
 async function run(name, browser, P) {
-  const ctx = await browser.newContext({ ...P.ctx, acceptDownloads: true, locale: 'en-GB', timezoneId: 'Europe/Sofia', serviceWorkers: name === 'android' ? 'allow' : 'block' });
+  const ctx = await browser.newContext({
+    ...P.ctx,
+    acceptDownloads: true,
+    locale: 'en-GB',
+    timezoneId: 'Europe/Sofia',
+    serviceWorkers: name === 'android' ? 'allow' : 'block',
+  });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => m.type() === 'error' && !/favicon|ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(m.text()) && errors.push(m.text()));
+  page.on(
+    'console',
+    (m) =>
+      m.type() === 'error' &&
+      !/favicon|ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(m.text()) &&
+      errors.push(m.text()),
+  );
   const shot = async (/** @type {string} */ n, full = false) => {
     if (!SHOTS) return;
     await page.evaluate(() => document.querySelectorAll('.toast').forEach((e) => e.remove()));
     await page.screenshot({ path: `screenshots/${P.prefix}${n}.png`, fullPage: full });
   };
-  const go = async (/** @type {string} */ r) => { await page.evaluate((r) => (location.hash = '#/' + r), r); await page.waitForTimeout(350); };
+  const go = async (/** @type {string} */ r) => {
+    await page.evaluate((r) => (location.hash = '#/' + r), r);
+    await page.waitForTimeout(350);
+  };
   const layer = page.locator('#layer');
   const settle = () => page.waitForTimeout(350);
 
@@ -127,7 +153,10 @@ async function run(name, browser, P) {
   await settle();
   assert.equal(await page.locator('.basket .chip').count(), 2, 'two items in the meal basket');
   await page.locator('.topbar .btn[data-act="finish"]').click();
-  await layer.getByText(/regular meal/i).first().waitFor();
+  await layer
+    .getByText(/regular meal/i)
+    .first()
+    .waitFor();
   await page.waitForTimeout(600);
   await shot('food-save');
   await layer.locator('[data-act="save"]').click();
@@ -156,7 +185,10 @@ async function run(name, browser, P) {
   const file = await dl;
   assert.match(file.suggestedFilename(), /^vidrichka-backup-.*\.json$/);
   const json = JSON.parse(await (await import('node:fs/promises')).readFile(await file.path(), 'utf8'));
-  assert.ok(json.app && json.version && json.stores?.sessions?.length === 1 && json.stores.measurements.length === 1, 'backup contains the session and measurement');
+  assert.ok(
+    json.app && json.version && json.stores?.sessions?.length === 1 && json.stores.measurements.length === 1,
+    'backup contains the session and measurement',
+  );
 
   // Home (EN), Bulgarian, dark
   await go('home');
@@ -175,11 +207,16 @@ async function run(name, browser, P) {
   assert.ok(await page.evaluate(() => document.documentElement.classList.contains('dark')));
   await go('home');
   await shot('home-dark');
-  await page.locator('[data-act="theme"][data-v="light"]').click().catch(() => {});
+  await page
+    .locator('[data-act="theme"][data-v="light"]')
+    .click()
+    .catch(() => {});
 
   // Offline (Chromium: service worker)
   if (name === 'android') {
-    await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+    });
     await page.reload();
     await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 8000 });
     await page.waitForTimeout(800);

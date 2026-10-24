@@ -12,7 +12,9 @@ import { stepFigure } from '../figures.js';
 import { bodyMap } from '../bodymap.js';
 
 const chipsFor = (/** @type {string[]} */ ms, /** @type {string} */ cls, /** @type {string} */ dot) =>
-  ms.map((m) => html`<span class="chip ${cls}"><i class="dot" style="background:${dot}"></i>${t(`muscle.${m}`)}</span>`);
+  ms.map(
+    (m) => html`<span class="chip ${cls}"><i class="dot" style="background:${dot}"></i>${t(`muscle.${m}`)}</span>`,
+  );
 
 /**
  * @param {{id: string}} p
@@ -23,9 +25,16 @@ export default ({ id }) => {
   return {
     tab: 'workouts',
     render: () => {
-      if (!e) return String(html`<div class="content"><button class="iconbtn" data-back aria-label="${t('common.back')}">${ic('back')}</button><p class="mt16 b">${t('library.notFound')}</p></div>`);
+      if (!e)
+        return String(
+          html`<div class="content"><button class="iconbtn" data-back aria-label="${t('common.back')}">${ic('back')}</button><p class="mt16 b">${t('library.notFound')}</p></div>`,
+        );
       const fav = kv('favs', []).includes(id);
-      const area = e.primary.some((m) => ['glutes', 'quads', 'hamstrings', 'calves'].includes(m)) ? 'lower' : e.primary.includes('core') ? 'core' : 'upper';
+      const area = e.primary.some((m) => ['glutes', 'quads', 'hamstrings', 'calves'].includes(m))
+        ? 'lower'
+        : e.primary.includes('core')
+          ? 'core'
+          : 'upper';
       return String(html`<div class="content">
 <div class="row between"><button class="iconbtn" data-back="library" aria-label="${t('common.back')}">${ic('back', 22)}</button>
 <div class="h3 muted">${t('library.title')}</div>

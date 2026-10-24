@@ -70,8 +70,7 @@ export const clock = (sec) => {
 };
 
 /** Whole days between two dates (b - a). @param {Date|number} a @param {Date|number} b */
-export const daysBetween = (a, b) =>
-  Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 864e5);
+export const daysBetween = (a, b) => Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 864e5);
 
 /** @param {Date|number} d */
 function startOfDay(d) {

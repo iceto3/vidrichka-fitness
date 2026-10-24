@@ -35,8 +35,17 @@ function onboarding() {
   const s = { name: '', goal: settings().weeklyGoal };
   openSheet({
     kind: 'dialog',
-    render: () => html`<div class="center onboard">${otter({ size: 130, pose: 'wave' })}<h1 class="h2 mt8">${t('onboard.title')}</h1><p class="muted b mt6 lh">${t('onboard.body')}</p></div>
-<div class="row between mt12"><span class="b">${t('profile.language')}</span>${seg([{ value: 'en', label: 'English' }, { value: 'bg', label: 'Български' }], getLang(), 'lang', 'mini')}</div>
+    render:
+      () => html`<div class="center onboard">${otter({ size: 130, pose: 'wave' })}<h1 class="h2 mt8">${t('onboard.title')}</h1><p class="muted b mt6 lh">${t('onboard.body')}</p></div>
+<div class="row between mt12"><span class="b">${t('profile.language')}</span>${seg(
+        [
+          { value: 'en', label: 'English' },
+          { value: 'bg', label: 'Български' },
+        ],
+        getLang(),
+        'lang',
+        'mini',
+      )}</div>
 <label class="field mt12"><span>${t('profile.yourName')}</span><input class="input" id="obname" data-input="name" value="${s.name}" autocomplete="given-name" placeholder="${t('onboard.namePh')}"></label>
 <div class="row between mt12"><span class="b">${t('profile.weeklyGoal')}</span>${stepper({ act: 'goal', value: s.goal, label: t('profile.weeklyGoal') })}</div>
 <p class="muted xs b mt6">${t('onboard.goalHint')}</p>
@@ -45,7 +54,16 @@ function onboarding() {
     actions: {
       lang: async (el) => void setSettings({ lang: el.dataset.v }),
       name: (el) => ((s.name = /** @type {HTMLInputElement} */ (el).value), false),
-      goal: (el, ev) => void (s.goal = Math.min(7, Math.max(1, ev.type === 'change' ? Number(/** @type {HTMLInputElement} */ (el).value) || s.goal : s.goal + Number(el.dataset.d)))),
+      goal: (el, ev) =>
+        void (s.goal = Math.min(
+          7,
+          Math.max(
+            1,
+            ev.type === 'change'
+              ? Number(/** @type {HTMLInputElement} */ (el).value) || s.goal
+              : s.goal + Number(el.dataset.d),
+          ),
+        )),
       go: () => {
         setSettings({ userName: s.name.trim(), weeklyGoal: s.goal, onboarded: true });
         closeSheet();
@@ -62,24 +80,35 @@ function startServiceWorker() {
   // not when the very first worker claims the page.
   const hadController = !!navigator.serviceWorker.controller;
   let reloading = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => hadController && !reloading && ((reloading = true), location.reload()));
-  navigator.serviceWorker.register('./sw.js').then((reg) => {
-    if (!reg) return;
-    const offer = (/** @type {ServiceWorker} */ w) => {
-      const bar = document.createElement('div');
-      bar.className = 'update-bar';
-      bar.setAttribute('role', 'status');
-      bar.innerHTML = String(html`<span>${t('update.ready')}</span><button class="btn sm">${t('update.reload')}</button>`);
-      bar.querySelector('button')?.addEventListener('click', () => w.postMessage({ type: 'SKIP_WAITING' }));
-      document.body.append(bar);
-    };
-    if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
-    reg.addEventListener('updatefound', () => {
-      const w = reg.installing;
-      w?.addEventListener('statechange', () => w.state === 'installed' && navigator.serviceWorker.controller && offer(w));
-    });
-    setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
-  }).catch((e) => console.warn('[sw] registration failed', e));
+  navigator.serviceWorker.addEventListener(
+    'controllerchange',
+    () => hadController && !reloading && ((reloading = true), location.reload()),
+  );
+  navigator.serviceWorker
+    .register('./sw.js')
+    .then((reg) => {
+      if (!reg) return;
+      const offer = (/** @type {ServiceWorker} */ w) => {
+        const bar = document.createElement('div');
+        bar.className = 'update-bar';
+        bar.setAttribute('role', 'status');
+        bar.innerHTML = String(
+          html`<span>${t('update.ready')}</span><button class="btn sm">${t('update.reload')}</button>`,
+        );
+        bar.querySelector('button')?.addEventListener('click', () => w.postMessage({ type: 'SKIP_WAITING' }));
+        document.body.append(bar);
+      };
+      if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const w = reg.installing;
+        w?.addEventListener(
+          'statechange',
+          () => w.state === 'installed' && navigator.serviceWorker.controller && offer(w),
+        );
+      });
+      setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+    })
+    .catch((e) => console.warn('[sw] registration failed', e));
 }
 
 /** Reminders: schedule what the platform supports, and check while the app is open. */

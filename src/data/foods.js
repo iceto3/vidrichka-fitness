@@ -229,8 +229,15 @@ const ROWS = {
 /** All built-in foods. @type {Food[]} */
 export const FOODS = Object.entries(ROWS).flatMap(([cat, rows]) =>
   rows.map(([id, en, bg, kcal, p, c, f, portion, emoji]) => ({
-    id: String(id), cat, name: { en: String(en), bg: String(bg) },
-    kcal: Number(kcal), p: Number(p), c: Number(c), f: Number(f), portion: Number(portion), emoji: String(emoji),
+    id: String(id),
+    cat,
+    name: { en: String(en), bg: String(bg) },
+    kcal: Number(kcal),
+    p: Number(p),
+    c: Number(c),
+    f: Number(f),
+    portion: Number(portion),
+    emoji: String(emoji),
   })),
 );
 

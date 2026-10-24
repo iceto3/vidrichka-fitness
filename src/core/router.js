@@ -21,7 +21,8 @@ let seq = 0;
  * @returns {Record<string,string>|null}
  */
 export function matchPath(pattern, path) {
-  const a = pattern.split('/'), b = path.split('/');
+  const a = pattern.split('/'),
+    b = path.split('/');
   if (a.length !== b.length) return null;
   /** @type {Record<string,string>} */
   const params = {};
@@ -42,12 +43,13 @@ export const currentPath = () => location.hash.replace(/^#\/?/, '').split('?')[0
  */
 export function navigate(path, opts = {}) {
   const url = `#/${path}`;
-  if (opts.replace) history.replaceState(null, '', url), show();
+  if (opts.replace) (history.replaceState(null, '', url), show());
   else location.hash = url;
 }
 
 /** Go back in history, or to a fallback path when there is none. @param {string} [fallback] */
-export const back = (fallback = 'home') => (history.length > 1 ? history.back() : navigate(fallback, { replace: true }));
+export const back = (fallback = 'home') =>
+  history.length > 1 ? history.back() : navigate(fallback, { replace: true });
 
 /** Resolve and render the current hash. */
 async function show() {

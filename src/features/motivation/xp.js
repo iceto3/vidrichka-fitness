@@ -16,7 +16,8 @@ export const xpNeeded = (level) => 250 + 125 * (level - 1);
  * @returns {{level: number, into: number, need: number, pct: number}}
  */
 export function levelInfo(total) {
-  let level = 1, rest = Math.max(0, Math.floor(total || 0));
+  let level = 1,
+    rest = Math.max(0, Math.floor(total || 0));
   while (rest >= xpNeeded(level)) rest -= xpNeeded(level++);
   return { level, into: rest, need: xpNeeded(level), pct: rest / xpNeeded(level) };
 }

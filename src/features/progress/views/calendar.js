@@ -15,10 +15,13 @@ const state = { y: new Date().getFullYear(), m: new Date().getMonth() };
 /** @returns {import('../../../core/registry.js').View} */
 export default () => ({
   render: () => {
-    const first = new Date(state.y, state.m, 1), mk = monthKey(first), days = new Date(state.y, state.m + 1, 0).getDate();
+    const first = new Date(state.y, state.m, 1),
+      mk = monthKey(first),
+      days = new Date(state.y, state.m + 1, 0).getDate();
     const list = sessions().filter((s) => monthKey(new Date(s.endedAt)) === mk);
     const byDay = new Set(list.map((s) => dayKey(s.endedAt)));
-    const today = dayKey(), isNow = mk === monthKey();
+    const today = dayKey(),
+      isNow = mk === monthKey();
     return html`<div class="card mt12 cal">
 <div class="row between"><button class="iconbtn flat sm" data-act="mon" data-d="-1" aria-label="${t('calendar.prev')}">${ic('left', 18)}</button>
 <h2 class="h3 xb">${fmtDate(first, { month: 'long', year: 'numeric' })}</h2>
@@ -34,9 +37,17 @@ ${Array.from({ length: days }, (_, i) => {
 <div class="stat"><div class="l">${ic('bolt', 15, 2.3)}${t('summary.volume')}</div><div class="v num">${fmtNum(list.reduce((a, s) => a + s.volume, 0) / 1000, 1)} <small>t</small></div></div></div>
 ${list.length && !isNow ? html`<button class="btn sec w100 mt12" data-act="recap">${ic('gift', 18, 2.2)}${t('calendar.recap', { month: fmtDate(first, { month: 'long' }) })}</button>` : ''}
 <div class="section-title"><h2 class="h3">${t('calendar.history')}</h2></div>
-${list.length ? html`<div class="card list">${list.map((s) => html`<button class="lrow" data-go="summary/${s.id}"><span class="f1 left"><span class="b block">${planName(s)}</span>
+${
+  list.length
+    ? html`<div class="card list">${list.map(
+        (
+          s,
+        ) => html`<button class="lrow" data-go="summary/${s.id}"><span class="f1 left"><span class="b block">${planName(s)}</span>
 <span class="muted xs b">${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })} · ${Math.round(s.durationSec / 60)} ${t('unit.min')} · ${fmtNum(s.volume)} kg</span></span>
-${s.prs.length ? html`<span class="chip warm chip-sm">${ic('trophy', 13, 2.4)}${s.prs.length}</span>` : ''}${ic('right', 16, 2.2, 'var(--muted)')}</button>`)}</div>` : empty('calendar', t('calendar.none'))}`;
+${s.prs.length ? html`<span class="chip warm chip-sm">${ic('trophy', 13, 2.4)}${s.prs.length}</span>` : ''}${ic('right', 16, 2.2, 'var(--muted)')}</button>`,
+      )}</div>`
+    : empty('calendar', t('calendar.none'))
+}`;
   },
   actions: {
     mon: (el) => {

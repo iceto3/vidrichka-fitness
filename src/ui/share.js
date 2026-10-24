@@ -73,16 +73,18 @@ export const svgImage = (svg) =>
  * @returns {Promise<Blob>}
  */
 export async function shareCard(o) {
-  const W = 1080, H = 1350, c = document.createElement('canvas');
-  c.width = W, (c.height = H);
+  const W = 1080,
+    H = 1350,
+    c = document.createElement('canvas');
+  ((c.width = W), (c.height = H));
   const g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
   await document.fonts?.ready;
   const grad = g.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, '#0B8F96'), grad.addColorStop(1, '#076A70');
+  (grad.addColorStop(0, '#0B8F96'), grad.addColorStop(1, '#076A70'));
   g.fillStyle = grad;
   g.fillRect(0, 0, W, H);
   g.fillStyle = 'rgba(255,255,255,.08)';
-  g.beginPath(), g.arc(W - 120, 160, 260, 0, 7), g.fill();
+  (g.beginPath(), g.arc(W - 120, 160, 260, 0, 7), g.fill());
   try {
     g.drawImage(await svgImage(o.otterSvg), W / 2 - 210, 90, 420, 420);
   } catch {
@@ -97,9 +99,10 @@ export async function shareCard(o) {
   g.fillStyle = 'rgba(255,255,255,.8)';
   g.fillText(o.sub, W / 2, 672, W - 120);
   o.stats.slice(0, 6).forEach(([label, value], i) => {
-    const x = 70 + (i % 3) * 320, y = 740 + Math.floor(i / 3) * 210;
+    const x = 70 + (i % 3) * 320,
+      y = 740 + Math.floor(i / 3) * 210;
     g.fillStyle = 'rgba(255,255,255,.14)';
-    g.beginPath(), g.roundRect(x, y, 300, 185, 36), g.fill();
+    (g.beginPath(), g.roundRect(x, y, 300, 185, 36), g.fill());
     g.fillStyle = '#fff';
     g.font = font(60);
     g.fillText(value, x + 150, y + 95, 270);
@@ -109,7 +112,7 @@ export async function shareCard(o) {
   });
   if (o.highlight) {
     g.fillStyle = '#FF7A2F';
-    g.beginPath(), g.roundRect(70, 1170, W - 140, 90, 45), g.fill();
+    (g.beginPath(), g.roundRect(70, 1170, W - 140, 90, 45), g.fill());
     g.fillStyle = '#fff';
     g.font = font(40);
     g.fillText(o.highlight, W / 2, 1229, W - 180);

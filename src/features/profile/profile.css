@@ -2,32 +2,167 @@
  * Profile styles: profile card with otter avatar, outfit picker, settings rows.
  * Ported from PF_CSS.
  */
-.pcard { padding: 14px 16px; }
-.avatar { width: 96px; height: 96px; border-radius: 30px; background: linear-gradient(160deg, #ddf3f3, #bfe6e7); display: flex; align-items: flex-end; justify-content: center; overflow: hidden; flex: none; position: relative; }
-.dark .avatar, .dark .oav { background: linear-gradient(160deg, #1b4448, #143a3e); }
-.outfitrow { width: 100%; background: var(--soft); border-radius: 14px; padding: 8px 10px; min-height: 44px; }
-.outfitrow .link { font-size: 12.5px; }
-.pstats .vsep { flex: none; }
-.srow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 60px; width: 100%; text-align: left; }
-.srow + .srow { border-top: 1px solid var(--line); }
-.srow { flex-wrap: wrap; row-gap: 8px; }
-.srow .t { flex: 1 1 120px; min-width: 0; }
-.srow > :last-child { margin-left: auto; }
-.srow .st { font-size: 14.5px; font-weight: 700; }
-.sic.teal { background: #e3f5f5; color: #0b8f96; }
-.sbtn { min-height: 40px; padding: 0 10px; border-radius: 11px; background: var(--soft); font-weight: 800; font-size: 12.5px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text); position: relative; }
-.sbtn::after { content: ''; position: absolute; inset: -2px 0; }
-.sbtn:focus-within { outline: 3px solid var(--accent); }
-.outfits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.outfit { background: var(--soft); border-radius: 18px; padding: 8px 6px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; text-align: center; line-height: 1.2; border: 2px solid transparent; color: var(--text); }
-.outfit.on { border-color: var(--accent); background: var(--accent-soft); }
-.outfit[disabled] { opacity: 0.5; }
-.oav { width: 76px; height: 76px; border-radius: 22px; background: linear-gradient(160deg, #ddf3f3, #bfe6e7); overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
-.note { background: var(--soft); border-radius: 14px; padding: 12px 14px; font-size: 13px; font-weight: 600; line-height: 1.45; color: var(--muted); }
-.cheer { text-align: center; }
-.lang { display: flex; background: var(--soft); border-radius: 12px; padding: 3px; }
-.lang button { padding: 0 12px; min-height: 38px; border-radius: 9px; font-weight: 800; font-size: 12.5px; color: var(--muted); }
-.lang button.on { background: var(--accent-d); color: #fff; }
-.srow .step { width: 132px; flex: none; }
-.srow .mini, .srow .toggle, .srow .sbtn { flex: none; }
-.srow .t .xs { line-height: 1.3; }
+.pcard {
+  padding: 14px 16px;
+}
+.avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 30px;
+  background: linear-gradient(160deg, #ddf3f3, #bfe6e7);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  flex: none;
+  position: relative;
+}
+.dark .avatar,
+.dark .oav {
+  background: linear-gradient(160deg, #1b4448, #143a3e);
+}
+.outfitrow {
+  width: 100%;
+  background: var(--soft);
+  border-radius: 14px;
+  padding: 8px 10px;
+  min-height: 44px;
+}
+.outfitrow .link {
+  font-size: 12.5px;
+}
+.pstats .vsep {
+  flex: none;
+}
+.srow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  min-height: 60px;
+  width: 100%;
+  text-align: left;
+}
+.srow + .srow {
+  border-top: 1px solid var(--line);
+}
+.srow {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.srow .t {
+  flex: 1 1 120px;
+  min-width: 0;
+}
+.srow > :last-child {
+  margin-left: auto;
+}
+.srow .st {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+.sic.teal {
+  background: #e3f5f5;
+  color: #0b8f96;
+}
+.sbtn {
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 11px;
+  background: var(--soft);
+  font-weight: 800;
+  font-size: 12.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  color: var(--text);
+  position: relative;
+}
+.sbtn::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
+}
+.sbtn:focus-within {
+  outline: 3px solid var(--accent);
+}
+.outfits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.outfit {
+  background: var(--soft);
+  border-radius: 18px;
+  padding: 8px 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+  border: 2px solid transparent;
+  color: var(--text);
+}
+.outfit.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.outfit[disabled] {
+  opacity: 0.5;
+}
+.oav {
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, #ddf3f3, #bfe6e7);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.note {
+  background: var(--soft);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.cheer {
+  text-align: center;
+}
+.lang {
+  display: flex;
+  background: var(--soft);
+  border-radius: 12px;
+  padding: 3px;
+}
+.lang button {
+  padding: 0 12px;
+  min-height: 38px;
+  border-radius: 9px;
+  font-weight: 800;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.lang button.on {
+  background: var(--accent-d);
+  color: #fff;
+}
+.srow .step {
+  width: 132px;
+  flex: none;
+}
+.srow .mini,
+.srow .toggle,
+.srow .sbtn {
+  flex: none;
+}
+.srow .t .xs {
+  line-height: 1.3;
+}

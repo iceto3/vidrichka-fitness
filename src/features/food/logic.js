@@ -5,7 +5,12 @@
  */
 
 /** Meal slots in display order with typical start hours. */
-export const MEALS = /** @type {const} */ ([['breakfast', 4], ['lunch', 11], ['snack', 15], ['dinner', 18]]);
+export const MEALS = /** @type {const} */ ([
+  ['breakfast', 4],
+  ['lunch', 11],
+  ['snack', 15],
+  ['dinner', 18],
+]);
 
 /** Meal that fits a time of day. @param {Date} [d] */
 export const mealFor = (d = new Date()) => [...MEALS].reverse().find(([, h]) => d.getHours() >= h)?.[0] ?? 'snack';
@@ -16,7 +21,8 @@ export const mealFor = (d = new Date()) => [...MEALS].reverse().find(([, h]) => 
  * @param {number} grams
  */
 export const portion = (per100, grams) => {
-  const k = grams / 100, r = (/** @type {number} */ v) => Math.round((v || 0) * k * 10) / 10;
+  const k = grams / 100,
+    r = (/** @type {number} */ v) => Math.round((v || 0) * k * 10) / 10;
   return { kcal: Math.round((per100.kcal || 0) * k), p: r(per100.p), c: r(per100.c), f: r(per100.f) };
 };
 
@@ -25,10 +31,17 @@ export const portion = (per100, grams) => {
  * @param {{kcal: number, p: number, c: number, f: number}[]} rows
  */
 export const totals = (rows) =>
-  rows.reduce((a, r) => ({ kcal: a.kcal + (r.kcal || 0), p: a.p + (r.p || 0), c: a.c + (r.c || 0), f: a.f + (r.f || 0) }), { kcal: 0, p: 0, c: 0, f: 0 });
+  rows.reduce(
+    (a, r) => ({ kcal: a.kcal + (r.kcal || 0), p: a.p + (r.p || 0), c: a.c + (r.c || 0), f: a.f + (r.f || 0) }),
+    { kcal: 0, p: 0, c: 0, f: 0 },
+  );
 
 /** Signature of a meal's foods (order-independent). @param {{foodId?: string, name?: any}[]} items */
-export const signature = (items) => items.map((i) => i.foodId ?? JSON.stringify(i.name)).sort().join('|');
+export const signature = (items) =>
+  items
+    .map((i) => i.foodId ?? JSON.stringify(i.name))
+    .sort()
+    .join('|');
 
 /**
  * How many earlier days had a meal with exactly these foods.

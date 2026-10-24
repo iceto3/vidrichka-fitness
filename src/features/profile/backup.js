@@ -10,12 +10,13 @@ import { dayKey } from '../../core/dates.js';
 import { shareFile } from '../../ui/share.js';
 
 /** @param {Blob} b @returns {Promise<string>} */
-const toDataUrl = (b) => new Promise((res, rej) => {
-  const r = new FileReader();
-  r.onload = () => res(String(r.result));
-  r.onerror = rej;
-  r.readAsDataURL(b);
-});
+const toDataUrl = (b) =>
+  new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = rej;
+    r.readAsDataURL(b);
+  });
 
 /** @param {string} url */
 const fromDataUrl = async (url) => (await fetch(url)).blob();
@@ -23,7 +24,9 @@ const fromDataUrl = async (url) => (await fetch(url)).blob();
 /** Build the backup JSON string. */
 export async function backupJson() {
   const snap = snapshot();
-  snap.stores.photos = await Promise.all(snap.stores.photos.map(async (p) => ({ ...p, blob: p.blob instanceof Blob ? await toDataUrl(p.blob) : p.blob })));
+  snap.stores.photos = await Promise.all(
+    snap.stores.photos.map(async (p) => ({ ...p, blob: p.blob instanceof Blob ? await toDataUrl(p.blob) : p.blob })),
+  );
   return JSON.stringify(snap);
 }
 
@@ -59,6 +62,11 @@ export async function readBackup(file) {
  */
 export async function restore(snap) {
   const s = migrate(snap);
-  s.stores.photos = await Promise.all((s.stores.photos ?? []).map(async (p) => ({ ...p, blob: typeof p.blob === 'string' ? await fromDataUrl(p.blob) : p.blob })));
+  s.stores.photos = await Promise.all(
+    (s.stores.photos ?? []).map(async (p) => ({
+      ...p,
+      blob: typeof p.blob === 'string' ? await fromDataUrl(p.blob) : p.blob,
+    })),
+  );
   await replaceAll(s);
 }

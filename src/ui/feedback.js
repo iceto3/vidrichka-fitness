@@ -24,18 +24,19 @@ export function unlockAudio() {
 export function beep(notes = [880, 1175, 1568]) {
   if (!ctx || ctx.state === 'closed') return;
   try {
-  const t0 = ctx.currentTime;
-  notes.forEach((f, i) => {
-    const o = /** @type {AudioContext} */ (ctx).createOscillator(), g = /** @type {AudioContext} */ (ctx).createGain();
-    o.frequency.value = f;
-    o.type = 'sine';
-    g.gain.setValueAtTime(0.0001, t0 + i * 0.16);
-    g.gain.exponentialRampToValueAtTime(0.35, t0 + i * 0.16 + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.16 + 0.25);
-    o.connect(g).connect(/** @type {AudioContext} */ (ctx).destination);
-    o.start(t0 + i * 0.16);
-    o.stop(t0 + i * 0.16 + 0.3);
-  });
+    const t0 = ctx.currentTime;
+    notes.forEach((f, i) => {
+      const o = /** @type {AudioContext} */ (ctx).createOscillator(),
+        g = /** @type {AudioContext} */ (ctx).createGain();
+      o.frequency.value = f;
+      o.type = 'sine';
+      g.gain.setValueAtTime(0.0001, t0 + i * 0.16);
+      g.gain.exponentialRampToValueAtTime(0.35, t0 + i * 0.16 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.16 + 0.25);
+      o.connect(g).connect(/** @type {AudioContext} */ (ctx).destination);
+      o.start(t0 + i * 0.16);
+      o.stop(t0 + i * 0.16 + 0.3);
+    });
   } catch {
     /* no audio device (e.g. headless, or another app owns audio) */
   }
@@ -71,7 +72,13 @@ export const releaseAwake = () => (lock?.release?.(), (lock = null));
 export async function notify(title, body, tag = 'vf') {
   if (!('Notification' in window) || Notification.permission !== 'granted') return false;
   const reg = await navigator.serviceWorker?.getRegistration();
-  if (reg) await reg.showNotification(title, { body, tag, icon: 'assets/icons/icon-192.png', badge: 'assets/icons/icon-192.png' });
+  if (reg)
+    await reg.showNotification(title, {
+      body,
+      tag,
+      icon: 'assets/icons/icon-192.png',
+      badge: 'assets/icons/icon-192.png',
+    });
   else new Notification(title, { body, tag });
   return true;
 }

@@ -14,13 +14,28 @@ const f = { place: 'all', group: 'all' };
 
 /** Exercises matching the current filters. */
 export const filtered = () =>
-  EXERCISES.filter((e) => (f.place === 'all' || e.place.includes(f.place)) &&
-    (f.group === 'all' || [...e.primary, ...e.secondary.slice(0, 1)].some((m) => MUSCLE_GROUPS[/** @type {keyof MUSCLE_GROUPS} */ (f.group)]?.includes(m))));
+  EXERCISES.filter(
+    (e) =>
+      (f.place === 'all' || e.place.includes(f.place)) &&
+      (f.group === 'all' ||
+        [...e.primary, ...e.secondary.slice(0, 1)].some((m) =>
+          MUSCLE_GROUPS[/** @type {keyof MUSCLE_GROUPS} */ (f.group)]?.includes(m),
+        )),
+  );
 
 /** Filter controls. */
-export const filters = () => html`${seg(['all', 'gym', 'home'].map((v) => ({ value: v, label: t(`place.${v}`) })), f.place, 'place')}
-<div class="hscroll mt10" role="group" aria-label="${t('library.muscles')}">${['all', ...Object.keys(MUSCLE_GROUPS)].map(
-  (g) => html`<button class="chip fchip${f.group === g ? ' on' : ''}" data-act="group" data-v="${g}" aria-pressed="${f.group === g}">${t(`group.${g}`)}</button>`)}</div>`;
+export const filters = () => html`${seg(
+  ['all', 'gym', 'home'].map((v) => ({ value: v, label: t(`place.${v}`) })),
+  f.place,
+  'place',
+)}
+<div class="hscroll mt10" role="group" aria-label="${t('library.muscles')}">${[
+  'all',
+  ...Object.keys(MUSCLE_GROUPS),
+].map(
+  (g) =>
+    html`<button class="chip fchip${f.group === g ? ' on' : ''}" data-act="group" data-v="${g}" aria-pressed="${f.group === g}">${t(`group.${g}`)}</button>`,
+)}</div>`;
 
 /**
  * One exercise row.
@@ -41,7 +56,8 @@ export const filterActions = {
 /** @returns {import('../../../core/registry.js').View} */
 export default () => ({
   tab: 'workouts',
-  render: () => String(html`<div class="content">${topBar(t('library.title'), t('library.count', { n: EXERCISES.length }))}
+  render: () =>
+    String(html`<div class="content">${topBar(t('library.title'), t('library.count', { n: EXERCISES.length }))}
 <div class="mt12">${filters()}</div>
 <div class="card list mt12">${filtered().map((e) => exRow(e, `data-go="exercise/${e.id}"`))}</div></div>`),
   actions: filterActions,

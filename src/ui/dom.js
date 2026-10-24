@@ -19,7 +19,10 @@ export class Safe {
 
 /** Escape text for HTML. @param {unknown} v */
 export const esc = (v) =>
-  String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+  String(v).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c,
+  );
 
 /** Mark a string as trusted HTML. @param {string} s */
 export const raw = (s) => new Safe(s);
@@ -34,7 +37,8 @@ const part = (v) =>
  * @param {...any} vals
  * @returns {Safe}
  */
-export const html = (strings, ...vals) => new Safe(strings.reduce((a, s, i) => a + s + (i < vals.length ? part(vals[i]) : ''), ''));
+export const html = (strings, ...vals) =>
+  new Safe(strings.reduce((a, s, i) => a + s + (i < vals.length ? part(vals[i]) : ''), ''));
 
 /**
  * Replace an element's content, restoring focus/selection of an element with an id.
@@ -80,7 +84,9 @@ async function run(fn, el, ev, refresh = true) {
  */
 export function bindActions(root, getView) {
   root.addEventListener('click', (ev) => {
-    const t = /** @type {HTMLElement|null} */ (/** @type {HTMLElement} */ (ev.target).closest('[data-act],[data-go],[data-back]'));
+    const t = /** @type {HTMLElement|null} */ (
+      /** @type {HTMLElement} */ (ev.target).closest('[data-act],[data-go],[data-back]')
+    );
     if (!t || !root.contains(t) || t.matches(':disabled,[aria-disabled="true"]')) return;
     if (t.dataset.go != null) return emit('nav', { path: t.dataset.go });
     if (t.dataset.back != null) return emit('nav', { back: t.dataset.back || 'home' });

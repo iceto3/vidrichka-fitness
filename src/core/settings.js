@@ -8,10 +8,10 @@ import { emit } from './bus.js';
 
 /** @typedef {typeof DEFAULTS} Settings */
 export const DEFAULTS = {
-  lang: '',            // '' = detect from the device on first run
-  theme: 'auto',       // 'light' | 'dark' | 'auto'
+  lang: '', // '' = detect from the device on first run
+  theme: 'auto', // 'light' | 'dark' | 'auto'
   userName: '',
-  otterName: '',       // '' = localized default ("Vidrichka" / "Видричка")
+  otterName: '', // '' = localized default ("Vidrichka" / "Видричка")
   weeklyGoal: 3,
   kcalGoal: 1800,
   proteinGoal: 120,

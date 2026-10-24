@@ -22,8 +22,7 @@ export const locale = () => LANGUAGES[lang]?.locale ?? 'en-GB';
  * Pick a supported language from a preference list (e.g. navigator.languages).
  * @param {readonly string[]} prefs
  */
-export const detectLang = (prefs) =>
-  prefs.map((p) => p.slice(0, 2).toLowerCase()).find((p) => p in LANGUAGES) ?? 'en';
+export const detectLang = (prefs) => prefs.map((p) => p.slice(0, 2).toLowerCase()).find((p) => p in LANGUAGES) ?? 'en';
 
 /**
  * Switch language (loads the dictionary on demand).
@@ -45,7 +44,7 @@ export async function setLang(code) {
 export function t(key, vars = {}) {
   let v = dict[key] ?? en[key];
   if (v === undefined) {
-    if (!missing.has(key)) console.warn(`[i18n] missing key: ${key}`), missing.add(key);
+    if (!missing.has(key)) (console.warn(`[i18n] missing key: ${key}`), missing.add(key));
     return key;
   }
   if (typeof v === 'object') v = pluralFor(Number(vars.n)) === 'one' ? v.one : v.other;
@@ -53,14 +52,15 @@ export function t(key, vars = {}) {
 }
 
 /** @param {number} n */
-const pluralFor = (n) => new Intl.PluralRules(locale()).select(n) === 'one' ? 'one' : 'other';
+const pluralFor = (n) => (new Intl.PluralRules(locale()).select(n) === 'one' ? 'one' : 'other');
 
 /**
  * Localized "multilingual value": `{en, bg}` objects or plain strings.
  * @param {string|Record<string,string>|undefined} v
  * @returns {string}
  */
-export const L = (v) => /** @type {string} */ (v && typeof v === 'object' ? (v[lang] ?? v.en ?? Object.values(v)[0]) : (v ?? ''));
+export const L = (v) =>
+  /** @type {string} */ (v && typeof v === 'object' ? (v[lang] ?? v.en ?? Object.values(v)[0]) : (v ?? ''));
 
 /**
  * Format a date with Intl options in the active locale.

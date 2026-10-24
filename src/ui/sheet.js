@@ -34,7 +34,10 @@ export function openSheet(view) {
   stack.push(entry);
   layer?.append(el);
   bindActions(el, () => entry.view);
-  el.addEventListener('click', (e) => /** @type {HTMLElement} */ (e.target).matches('.overlay,[data-close]') && closeSheet());
+  el.addEventListener(
+    'click',
+    (e) => /** @type {HTMLElement} */ (e.target).matches('.overlay,[data-close]') && closeSheet(),
+  );
   render(entry);
   view.mount?.(el);
   whenSettled(() => history.pushState({ sheet: stack.length }, '')); // after any pending back()
@@ -46,8 +49,12 @@ export function openSheet(view) {
 
 /** @param {{view: SheetView, el: HTMLElement}} e */
 const render = (e) =>
-  swap(e.el, html`<div class="overlay"></div><div class="panel" role="dialog" aria-modal="true" tabindex="-1">${
-    e.view.kind === 'dialog' || e.view.kind === 'full' ? '' : html`<div class="grab"></div>`}${raw(String(e.view.render()))}</div>`);
+  swap(
+    e.el,
+    html`<div class="overlay"></div><div class="panel" role="dialog" aria-modal="true" tabindex="-1">${
+      e.view.kind === 'dialog' || e.view.kind === 'full' ? '' : html`<div class="grab"></div>`
+    }${raw(String(e.view.render()))}</div>`,
+  );
 
 /**
  * Close a sheet (default: the top one).
@@ -61,7 +68,7 @@ export function closeSheet(entry = stack[stack.length - 1], fromPop = false) {
   entry.view.unmount?.();
   entry.el.remove();
   if (!stack.length) document.body.classList.remove('locked');
-  if (!fromPop) skipPop++, history.back();
+  if (!fromPop) (skipPop++, history.back());
   entry.view.onClose?.();
 }
 

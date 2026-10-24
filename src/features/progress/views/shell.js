@@ -19,7 +19,11 @@ export default (id, inner) => ({
   tab: 'progress',
   render: () => html`<div class="content progress">
 <div class="row between"><h1 class="h1">${t('progress.title')}</h1><button class="iconbtn" data-act="share" aria-label="${t('partner.share')}">${ic('share', 20)}</button></div>
-<div class="mt12">${seg(registry.progressTabs.map((p) => ({ value: p.id, label: t(p.label) })), id, 'ptab')}</div>
+<div class="mt12">${seg(
+    registry.progressTabs.map((p) => ({ value: p.id, label: t(p.label) })),
+    id,
+    'ptab',
+  )}</div>
 ${inner.render()}</div>`,
   mount: (el) => inner.mount?.(el),
   unmount: () => inner.unmount?.(),

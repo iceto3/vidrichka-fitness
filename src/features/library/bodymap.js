@@ -14,8 +14,10 @@ const REGIONS = {
   triceps: '<path d="M20 64 L24 60 L27 80 L20 84Z"/><path d="M100 64 L96 60 L93 80 L100 84Z"/>',
   core: '<path d="M42 68 Q60 74 78 68 L78 92 Q60 96 42 92Z"/>',
   glutes: '<ellipse cx="45" cy="112" rx="16" ry="13"/><ellipse cx="75" cy="112" rx="16" ry="13"/>',
-  quads: '<path d="M33 126 Q42 123 56 126 L52 156 Q42 160 35 156Z"/><path d="M87 126 Q78 123 64 126 L68 156 Q78 160 85 156Z"/>',
-  hamstrings: '<path d="M36 130 Q44 128 54 131 L51 154 Q44 157 38 154Z"/><path d="M84 130 Q76 128 66 131 L69 154 Q76 157 82 154Z"/>',
+  quads:
+    '<path d="M33 126 Q42 123 56 126 L52 156 Q42 160 35 156Z"/><path d="M87 126 Q78 123 64 126 L68 156 Q78 160 85 156Z"/>',
+  hamstrings:
+    '<path d="M36 130 Q44 128 54 131 L51 154 Q44 157 38 154Z"/><path d="M84 130 Q76 128 66 131 L69 154 Q76 157 82 154Z"/>',
   calves: '<ellipse cx="41" cy="172" rx="6" ry="10"/><ellipse cx="79" cy="172" rx="6" ry="10"/>',
 };
 

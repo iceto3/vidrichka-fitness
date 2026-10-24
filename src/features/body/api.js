@@ -8,10 +8,14 @@ import { all } from '../../core/store.js';
 export const DEFAULT_WEIGHT = 65;
 
 /** Measurements, oldest first. @returns {any[]} */
-export const measurements = () => all('measurements').sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.ts - b.ts));
+export const measurements = () =>
+  all('measurements').sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.ts - b.ts));
 
 /** Latest value of a field (e.g. 'weight') or undefined. @param {string} field */
-export const latest = (field) => measurements().reverse().find((m) => m[field] != null)?.[field];
+export const latest = (field) =>
+  measurements()
+    .reverse()
+    .find((m) => m[field] != null)?.[field];
 
 /** Latest body weight or the default. */
 export const bodyWeight = () => Number(latest('weight')) || DEFAULT_WEIGHT;

@@ -4,7 +4,11 @@
  */
 import { register } from '../../core/registry.js';
 
-register('routes',
+register(
+  'routes',
   { pattern: 'library', load: async () => (await import('./views/list.js')).default() },
-  { pattern: 'exercise/:id', load: async (p) => (await import('./views/detail.js')).default(/** @type {{id: string}} */ (p)) },
+  {
+    pattern: 'exercise/:id',
+    load: async (p) => (await import('./views/detail.js')).default(/** @type {{id: string}} */ (p)),
+  },
 );

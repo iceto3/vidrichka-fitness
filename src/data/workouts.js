@@ -10,8 +10,12 @@
 /** @type {Plan[]} */
 export const PLANS = [
   {
-    id: 'plan_leg_day', builtin: true, place: 'gym', days: [0, 3],
-    name: { en: 'Leg Day', bg: 'Ден за крака' }, sub: { en: 'Glutes & Legs', bg: 'Седалище и крака' },
+    id: 'plan_leg_day',
+    builtin: true,
+    place: 'gym',
+    days: [0, 3],
+    name: { en: 'Leg Day', bg: 'Ден за крака' },
+    sub: { en: 'Glutes & Legs', bg: 'Седалище и крака' },
     items: [
       { exId: 'hip_thrust', sets: 3, reps: 10, weight: 60, rest: 90 },
       { exId: 'bulgarian_split_squat', sets: 3, reps: 12, weight: 0, rest: 75 },
@@ -22,8 +26,12 @@ export const PLANS = [
     ],
   },
   {
-    id: 'plan_upper_body', builtin: true, place: 'gym', days: [2],
-    name: { en: 'Upper Body', bg: 'Горна част' }, sub: { en: 'Back, Chest & Arms', bg: 'Гръб, гърди и ръце' },
+    id: 'plan_upper_body',
+    builtin: true,
+    place: 'gym',
+    days: [2],
+    name: { en: 'Upper Body', bg: 'Горна част' },
+    sub: { en: 'Back, Chest & Arms', bg: 'Гръб, гърди и ръце' },
     items: [
       { exId: 'lat_pulldown', sets: 3, reps: 10, weight: 35, rest: 90 },
       { exId: 'db_bench_press', sets: 3, reps: 10, weight: 10, rest: 90 },
@@ -34,8 +42,12 @@ export const PLANS = [
     ],
   },
   {
-    id: 'plan_home_full', builtin: true, place: 'home', days: [5],
-    name: { en: 'Home Full Body', bg: 'Цяло тяло у дома' }, sub: { en: 'Bodyweight only', bg: 'Само със собствено тегло' },
+    id: 'plan_home_full',
+    builtin: true,
+    place: 'home',
+    days: [5],
+    name: { en: 'Home Full Body', bg: 'Цяло тяло у дома' },
+    sub: { en: 'Bodyweight only', bg: 'Само със собствено тегло' },
     items: [
       { exId: 'bodyweight_squat', sets: 3, reps: 15, weight: 0, rest: 45 },
       { exId: 'push_up', sets: 3, reps: 10, weight: 0, rest: 60 },
