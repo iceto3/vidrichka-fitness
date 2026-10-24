@@ -305,7 +305,11 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
   const closePrompts = async () => {
     for (let quiet = 0, i = 0; quiet < 5 && i < 60; i++) {
       if (await layer.locator('.dprompt').count()) {
-        await layer.locator('[data-close]').first().click();
+        await layer
+          .locator('[data-close]')
+          .first()
+          .click({ timeout: 2000 })
+          .catch(() => {}); // the locator handler may have closed it already
         quiet = 0;
       } else quiet++;
       await page.waitForTimeout(500);
@@ -332,6 +336,9 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
   await page.locator('.yes').click();
   await page.locator('.cel .toastc').waitFor();
   console.log('  ✔ morning → protein yes → small celebration');
+  // From here on, answer "Later" whenever a reminder prompt pops up in the way (on a slow CI
+  // runner one can appear between steps, exactly as it would for a person).
+  await page.addLocatorHandler(layer.locator('.dprompt'), (l) => l.locator('[data-close]').click());
   await clearCel();
   await closePrompts();
 
