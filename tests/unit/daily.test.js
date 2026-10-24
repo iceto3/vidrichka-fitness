@@ -159,3 +159,7 @@ test('service worker carries an identical dueSlots()', () => {
     assert.deepEqual(swDue(slots, now, { [D]: rec }), dueSlots(slots, now, { [D]: rec }), time);
   }
 });
+
+test('protein countdown never shows more than 30 minutes, even if the clock moved back', () => {
+  assert.equal(proteinState({ proteinStart: 1_000_000 }, 1_000_000 - 5000).left, 30 * 60_000);
+});

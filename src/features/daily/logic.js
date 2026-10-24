@@ -100,7 +100,8 @@ export const proteinOnTime = (rec) =>
 export function proteinState(rec, now) {
   if (!rec?.proteinStart) return { state: 'idle', left: 0 };
   if (rec.proteinAt) return { state: 'done', left: 0, onTime: proteinOnTime(rec) };
-  const left = rec.proteinStart + PROTEIN_WINDOW * MIN - now;
+  // Clamped: a clock that moved back (time sync, time-zone change) must not show 30:01.
+  const left = Math.min(PROTEIN_WINDOW * MIN, rec.proteinStart + PROTEIN_WINDOW * MIN - now);
   return left > 0 ? { state: 'running', left } : { state: 'late', left: 0 };
 }
 

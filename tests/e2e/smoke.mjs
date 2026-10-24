@@ -17,6 +17,7 @@
  * Exits non-zero on the first failed assertion or any page error.
  */
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 import { existsSync, mkdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium, webkit, devices } from 'playwright-core';
@@ -26,7 +27,13 @@ const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
 const DIR = opt('--dir', '.');
 const ONLY = opt('--only', '');
 const SHOTS = args.includes('--shots');
-const PORT = 8790 + Math.floor(Math.random() * 100);
+// A port the OS says is free (a fixed or random one can collide with other local services).
+const PORT = await new Promise((resolve) => {
+  const srv = createServer().listen(0, '127.0.0.1', () => {
+    const { port } = /** @type {import('node:net').AddressInfo} */ (srv.address());
+    srv.close(() => resolve(port));
+  });
+});
 const BASE = `http://localhost:${PORT}/`;
 const CHROME = process.env.CHROME_PATH ?? ['/usr/bin/google-chrome', '/usr/bin/chromium'].find((p) => existsSync(p));
 
@@ -321,7 +328,7 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
   assert.equal(await page.locator('#nav').isVisible(), false, 'morning page is full-screen');
   await page.reload();
   await page.locator('.pclock').waitFor({ timeout: 8000 });
-  assert.match(await page.locator('.pclock').innerText(), /2\d:\d\d|30:00/, 'countdown survives a reload');
+  assert.match(await page.locator('.pclock').innerText(), /^(2\d:\d\d|30:00)$/, 'countdown survives a reload');
   await page.locator('.yes').click();
   await page.locator('.cel .toastc').waitFor();
   console.log('  ✔ morning → protein yes → small celebration');
