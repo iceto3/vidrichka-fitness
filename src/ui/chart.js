@@ -4,7 +4,12 @@
  */
 import { html, raw } from './dom.js';
 
-let gid = 0;
+/** Stable id from the chart's content, so re-renders produce identical markup. @param {string} s */
+const gid = (s) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+};
 
 /**
  * Line chart.
@@ -35,7 +40,7 @@ export function lineChart(pts, o = {}) {
   const last = pts.length - 1,
     lx = X(last),
     ly = Y(pts[last].y),
-    id = `ag${++gid}`;
+    id = `ag${gid(d + color)}`;
   const tag = `${fmt(pts[last].y)}${o.unit ? ' ' + o.unit : ''}`,
     tw = tag.length * 6.4 + 14;
   return html`<svg class="chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${o.label ?? ''}">
@@ -62,7 +67,7 @@ export function sparkline(vals, color = '#1FB46B') {
     H = 42,
     lo = Math.min(...vals),
     hi = Math.max(...vals) || 1,
-    id = `sg${++gid}`;
+    id = `sg${gid(vals.join() + color)}`;
   const pts = vals.map((v, i) => [(i * W) / (vals.length - 1), 4 + ((hi - v) / (hi - lo || 1)) * (H - 10)]);
   const d = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
   const [ex, ey] = pts[pts.length - 1];

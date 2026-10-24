@@ -5,7 +5,7 @@
  */
 import { on } from '../core/bus.js';
 import { t } from '../core/i18n.js';
-import { bindActions, html, raw, swap } from './dom.js';
+import { bindActions, html, morph, raw, swap } from './dom.js';
 
 /** @typedef {import('../core/registry.js').View & {kind?: 'sheet'|'dialog'|'full', onClose?: () => void}} SheetView */
 
@@ -47,18 +47,25 @@ export function openSheet(view) {
   return { close: () => closeSheet(entry), el };
 }
 
-/** @param {{view: SheetView, el: HTMLElement}} e */
+/**
+ * Render a sheet. The first render builds the overlay + panel (their open animations run
+ * once); later renders only morph the panel's content, so taps inside a sheet never
+ * restart those animations (this was the "+ button flicker").
+ * @param {{view: SheetView, el: HTMLElement, hid?: number}} e
+ */
 const render = (e) => {
-  swap(
-    e.el,
-    html`<div class="overlay"></div><div class="panel" role="dialog" aria-modal="true" tabindex="-1">${
-      e.view.kind === 'dialog' || e.view.kind === 'full' ? '' : html`<div class="grab"></div>`
-    }${raw(String(e.view.render()))}</div>`,
-  );
+  const body = html`${e.view.kind === 'dialog' || e.view.kind === 'full' ? '' : html`<div class="grab"></div>`}${raw(String(e.view.render()))}`;
+  const open = e.el.querySelector(':scope > .panel');
+  if (open) morph(open, body);
+  else
+    swap(
+      e.el,
+      html`<div class="overlay"></div><div class="panel" role="dialog" aria-modal="true" tabindex="-1">${body}</div>`,
+    );
   // Name the dialog after its first heading (or the page title) for screen readers.
   const panel = e.el.querySelector('.panel');
   const h = panel?.querySelector('h1, h2, h3, .h2, .h3');
-  if (h) panel.setAttribute('aria-labelledby', (h.id ||= `dlg-h-${++headingSeq}`));
+  if (h) panel.setAttribute('aria-labelledby', (h.id ||= `dlg-h-${(e.hid ||= ++headingSeq)}`));
   else panel?.setAttribute('aria-label', document.title);
 };
 let headingSeq = 0;

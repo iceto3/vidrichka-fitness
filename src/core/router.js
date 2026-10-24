@@ -5,7 +5,7 @@
  */
 import { registry } from './registry.js';
 import { on, emit } from './bus.js';
-import { bindActions, swap } from '../ui/dom.js';
+import { bindActions, morph, swap } from '../ui/dom.js';
 import { renderNav } from '../ui/nav.js';
 
 /** @type {{view: import('./registry.js').View|null, path: string}} */
@@ -73,16 +73,19 @@ async function show() {
 
 /**
  * Re-render the current page and the bottom nav.
- * @param {boolean} [top] Scroll to top (new page) instead of preserving scroll.
+ * A new page (`top`) is rendered from scratch and scrolled to the top; any other refresh
+ * (after a tap, a data change…) is morphed in place, so existing nodes are kept and the
+ * screen does not flicker or jump.
+ * @param {boolean} [top] New page: rebuild and scroll to top.
  */
 export function refresh(top = false) {
   if (!cur.view || !pageEl || !navEl) return;
-  const y = top ? 0 : scrollY;
-  swap(pageEl, cur.view.render());
+  if (top) swap(pageEl, cur.view.render());
+  else morph(pageEl, cur.view.render());
   navEl.hidden = !!cur.view.hideNav;
   document.body.classList.toggle('no-nav', !!cur.view.hideNav);
-  swap(navEl, renderNav(cur.view.tab));
-  scrollTo(0, y);
+  morph(navEl, renderNav(cur.view.tab));
+  if (top) scrollTo(0, 0);
 }
 
 /**

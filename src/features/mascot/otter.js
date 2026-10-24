@@ -11,7 +11,6 @@ const O = '#8A5A3B',
   L = '#F2D7B6',
   ACC = '#14A3A8',
   ACCD = '#0B7F86';
-let n = 0;
 
 const limb = (/** @type {string} */ d) =>
   `<path d="${d}" stroke="${O}" stroke-width="20" stroke-linecap="round" fill="none"/>`;
@@ -29,7 +28,7 @@ const ARMS = {
   bust: '',
 };
 
-/** @param {string} mood @param {number} id */
+/** @param {string} mood @param {string} id */
 function face(mood, id) {
   const eyes =
     mood === 'sleepy'
@@ -53,7 +52,7 @@ ${eyes}<ellipse cx="64" cy="94" rx="7" ry="4.5" fill="#F28C7C" opacity=".55"/><e
 <g stroke="#5A3622" stroke-width="1.8" stroke-linecap="round" opacity=".75"><path d="M80 101 L50 95 M80 106 L51 110"/><path d="M120 101 L150 95 M120 106 L149 110"/></g>${zzz}${sparkle}<!--${id}-->`;
 }
 
-/** @param {Set<string>} gear @param {number} id */
+/** @param {Set<string>} gear @param {string} id */
 const body = (gear, id) =>
   `<path d="M134 176 Q184 184 190 140 Q191 126 182 122 Q176 160 130 158 Z" fill="${D}"/>
 <ellipse cx="100" cy="152" rx="46" ry="42" fill="${O}"/>` +
@@ -65,7 +64,7 @@ const body = (gear, id) =>
     ? `<path d="M86 124 L100 146 L114 124" stroke="#E5484D" stroke-width="5" fill="none"/><circle cx="100" cy="150" r="9" fill="#F5B935" stroke="#E3A21A" stroke-width="2"/><path d="M100 145 l1.6 3.2 3.4.5 -2.5 2.4 .6 3.4 -3.1-1.6 -3.1 1.6 .6-3.4 -2.5-2.4 3.4-.5z" fill="#fff"/>`
     : '');
 
-/** @param {Set<string>} gear @param {number} id */
+/** @param {Set<string>} gear @param {string} id */
 const head = (gear, id) =>
   `<circle cx="52" cy="58" r="11" fill="${O}"/><circle cx="53" cy="58" r="5.5" fill="${D}"/>
 <circle cx="148" cy="58" r="11" fill="${O}"/><circle cx="147" cy="58" r="5.5" fill="${D}"/>
@@ -86,9 +85,10 @@ const head = (gear, id) =>
  */
 export function otterSvg(o = {}) {
   const size = o.size ?? 120,
-    pose = o.pose ?? 'wave',
-    id = ++n;
+    pose = o.pose ?? 'wave';
   const gear = new Set(o.gear ?? ['headband']);
+  // Deterministic clip-path ids (same gear ⇒ same geometry), so re-renders are identical.
+  const id = [...gear].sort().join('-') || 'plain';
   const bust = pose === 'bust';
   const h = bust ? Math.round((size * 124) / 160) : size;
   return (
