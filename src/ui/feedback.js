@@ -42,6 +42,46 @@ export function beep(notes = [880, 1175, 1568]) {
   }
 }
 
+/** @type {Map<string, Promise<AudioBuffer|null>>} */
+const buffers = new Map();
+
+/** Fetch + decode a sound once (served from the service-worker precache when offline). @param {string} url */
+export function loadSound(url) {
+  if (!ctx) return Promise.resolve(null);
+  if (!buffers.has(url))
+    buffers.set(
+      url,
+      fetch(url)
+        .then((r) => r.arrayBuffer())
+        .then((b) => /** @type {AudioContext} */ (ctx).decodeAudioData(b))
+        .catch(() => null),
+    );
+  return /** @type {Promise<AudioBuffer|null>} */ (buffers.get(url));
+}
+
+/**
+ * Play a short sound file through the shared (tap-unlocked) audio context.
+ * Silently does nothing before the first tap, or without an audio device.
+ * @param {string} url
+ * @param {number} [delay] Seconds from now.
+ * @param {number} [volume]
+ */
+export async function playSound(url, delay = 0, volume = 0.9) {
+  const buf = await loadSound(url);
+  if (!buf || !ctx || ctx.state === 'closed') return;
+  if (ctx.state !== 'running') ctx.resume().catch(() => {}); // iOS suspends it in the background
+  try {
+    const s = ctx.createBufferSource(),
+      g = ctx.createGain();
+    g.gain.value = volume;
+    s.buffer = buf;
+    s.connect(g).connect(ctx.destination);
+    s.start(ctx.currentTime + delay);
+  } catch {
+    /* no audio device */
+  }
+}
+
 /** Whether vibration is supported (false on iOS Safari). */
 export const canVibrate = () => typeof navigator.vibrate === 'function';
 

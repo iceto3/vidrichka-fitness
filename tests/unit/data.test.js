@@ -35,7 +35,7 @@ test('migrations chain runs every step in order', () => {
     let out = { app: APP_ID, version: 1, stores: { plans: [{ id: 'p' }] } };
     for (let v = out.version; v < MIGRATIONS.length + 1; v++) out = { ...MIGRATIONS[v - 1](out), version: v + 1 };
     assert.deepEqual(out.stores.plans, [{ id: 'p', notes: '' }]);
-    assert.equal(out.version, 2);
+    assert.equal(out.version, MIGRATIONS.length + 1);
   } finally {
     MIGRATIONS.pop();
   }
@@ -79,4 +79,49 @@ test('exactly three example workouts, all using known exercises', () => {
   assert.equal(PLANS.length, 3);
   const ids = new Set(EXERCISES.map((e) => e.id));
   for (const p of PLANS) for (const it of p.items) assert.ok(ids.has(it.exId), `${p.id}: ${it.exId}`);
+});
+
+test('1.0 → 1.1 migration keeps every existing row and adds the days store', () => {
+  const v1 = {
+    app: APP_ID,
+    version: 1,
+    stores: {
+      kv: [{ id: 'settings', value: { userName: 'Vidi', waterGoal: 8 } }],
+      plans: [{ id: 'p1', items: [] }],
+      sessions: [{ id: 's1', endedAt: 1 }],
+      food: [{ id: 'water_2026-10-20', glasses: 5 }],
+    },
+  };
+  const m = migrate(v1);
+  assert.equal(m.version, DATA_VERSION);
+  for (const k of Object.keys(v1.stores)) assert.deepEqual(m.stores[k], v1.stores[k], k);
+  assert.deepEqual(m.stores.days, []);
+  // A newer backup that already has days keeps them.
+  const withDays = migrate({ ...v1, stores: { ...v1.stores, days: [{ id: '2026-10-20', wake: 1 }] } });
+  assert.deepEqual(withDays.stores.days, [{ id: '2026-10-20', wake: 1 }]);
+});
+
+test('IndexedDB schema: upgrading v1 → v2 only adds `days`, a fresh install gets every store once', async () => {
+  const { SCHEMA, STORES, DB_VERSION } = await import('../../src/core/db.js');
+  const fakeDb = (names) => {
+    const created = [];
+    return {
+      created,
+      objectStoreNames: { contains: (n) => names.includes(n) || created.includes(n) },
+      createObjectStore: (n) => {
+        if (names.includes(n) || created.includes(n)) throw new Error(`ConstraintError: ${n} exists`);
+        created.push(n);
+      },
+      deleteObjectStore: () => assert.fail('never delete stores'),
+    };
+  };
+  const upgrade = (db, from) => {
+    for (let v = from; v < DB_VERSION; v++) SCHEMA[v](db, /** @type {any} */ ({}));
+  };
+  const old = fakeDb(['kv', 'plans', 'sessions', 'measurements', 'food', 'meals', 'foods', 'photos']);
+  upgrade(old, 1);
+  assert.deepEqual(old.created, ['days']);
+  const fresh = fakeDb([]);
+  upgrade(fresh, 0);
+  assert.deepEqual([...fresh.created].sort(), [...STORES].sort());
 });

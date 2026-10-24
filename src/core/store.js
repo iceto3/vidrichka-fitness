@@ -4,7 +4,7 @@
  * persist in the background. Falls back to memory-only mode if IndexedDB is unavailable.
  * @module core/store
  */
-import { STORES, getAll, write } from './db.js';
+import { STORES, getAll, getMany, write } from './db.js';
 import { APP_ID, DATA_VERSION, migrate } from './migrations.js';
 import { emit } from './bus.js';
 
@@ -56,6 +56,28 @@ export function put(store, row) {
   emit(`store:${store}`, row);
   emit('store:any', store);
   return row;
+}
+
+/**
+ * Re-read rows from IndexedDB into the cache — used after the service worker changed them
+ * (e.g. "+1 glass" or "Yes, I ate" tapped on a notification while the app was closed).
+ * @param {string} store
+ * @param {string[]} ids
+ */
+export async function reload(store, ids) {
+  if (!persistent) return;
+  const rows = await getMany(store, ids).catch(() => null);
+  if (!rows) return;
+  let changed = false;
+  rows.forEach((r, i) => {
+    const old = cache[store].get(ids[i]);
+    if (JSON.stringify(old) === JSON.stringify(r)) return;
+    if (r) cache[store].set(r.id, r);
+    else cache[store].delete(ids[i]);
+    changed = true;
+    emit(`store:${store}`, r ?? { id: ids[i], removed: true });
+  });
+  if (changed) emit('store:any', store);
 }
 
 /** Delete a row. @param {string} store @param {string} id */

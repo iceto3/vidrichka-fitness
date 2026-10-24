@@ -3,7 +3,8 @@
  * the reward engine, reminders and the service worker (with an update prompt).
  * @module main
  */
-import { load } from './core/store.js';
+import { kv, load, setKv } from './core/store.js';
+import { WHATS_NEW } from './core/version.js';
 import { settings, setSettings } from './core/settings.js';
 import { detectLang, getLang, setLang, t } from './core/i18n.js';
 import { applyTheme, watchTheme } from './core/theme.js';
@@ -14,7 +15,7 @@ import { closeAll, closeSheet, initSheets, openSheet, whenSettled } from './ui/s
 import { unlockAudio } from './ui/feedback.js';
 import { ic } from './ui/icons.js';
 import { seg, stepper } from './ui/components.js';
-import { startMotivation } from './features/index.js';
+import { startCelebrations, startDaily, startMotivation } from './features/index.js';
 import { seedPlans } from './features/workouts/api.js';
 import { otter } from './features/mascot/api.js';
 import { stats } from './features/motivation/api.js';
@@ -73,6 +74,28 @@ function onboarding() {
   });
 }
 
+/** "What's new in 1.1" — shown once to people who used an earlier version. */
+function whatsNew() {
+  if (kv('seenWhatsNew', '') === WHATS_NEW) return;
+  setKv('seenWhatsNew', WHATS_NEW);
+  const items = /** @type {const} */ ([
+    ['sun', 'whatsNew.morning'],
+    ['drop', 'whatsNew.water'],
+    ['heart', 'whatsNew.checkins'],
+    ['moon', 'whatsNew.goodnight'],
+    ['gift', 'whatsNew.celebrations'],
+  ]);
+  openSheet({
+    kind: 'dialog',
+    render:
+      () => html`<div class="center">${otter({ size: 110, pose: 'cheer' })}<h1 class="h2 mt8">${t('whatsNew.title', { v: WHATS_NEW })}</h1></div>
+<div class="col gap10 mt12 whatsnew">${items.map(([i, k]) => html`<div class="row gap10"><span class="sq acc">${ic(i, 18, 2.3)}</span><span class="f1 b small">${t(k)}</span></div>`)}</div>
+<p class="muted xs b mt12">${t('whatsNew.times')}</p>
+<div class="row gap10 mt12"><button class="btn sec f1" data-act="times">${t('whatsNew.setTimes')}</button><button class="btn f1" data-close>${t('whatsNew.ok')}</button></div>`,
+    actions: { times: () => (emit('nav', { path: 'profile/reminders' }), false) },
+  });
+}
+
 /** Register the service worker and offer updates. */
 function startServiceWorker() {
   if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
@@ -113,8 +136,8 @@ function startServiceWorker() {
 
 /** Reminders: schedule what the platform supports, and check while the app is open. */
 async function startReminders() {
-  const r = await import('./features/profile/reminders.js');
-  const check = () => r.checkDue(stats().workedOutToday);
+  const [r, daily] = await Promise.all([import('./features/profile/reminders.js'), import('./features/daily/api.js')]);
+  const check = () => (r.checkDue(stats().workedOutToday), daily.checkDaily());
   r.scheduleReminders().catch(() => {});
   check();
   setInterval(check, 30_000);
@@ -144,12 +167,15 @@ async function start() {
   });
   addEventListener('pointerdown', unlockAudio, { once: true });
   startMotivation();
+  startCelebrations();
   await startRouter($id('page'), $id('nav'));
   document.documentElement.classList.add('ready');
   if (!persistent) emit('toast', { key: 'common.noStorage' });
   if (new URLSearchParams(location.search).has('cheer')) (await import('./features/partner/api.js')).handleCheer();
-  else if (!settings().onboarded) onboarding();
+  else if (!settings().onboarded) (setKv('seenWhatsNew', WHATS_NEW), onboarding());
+  else whatsNew();
   startServiceWorker();
+  startDaily();
   startReminders();
 }
 

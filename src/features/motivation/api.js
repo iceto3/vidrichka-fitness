@@ -63,6 +63,7 @@ export function stats() {
     food: all('food'),
     measurements: all('measurements'),
     photos: all('photos'),
+    days: all('days'),
     goalAt,
     waterGoal: settings().waterGoal,
     level: level().level,

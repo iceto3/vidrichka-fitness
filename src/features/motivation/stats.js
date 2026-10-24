@@ -12,6 +12,7 @@ import { weeklyStreak } from './streak.js';
  * @property {any[]} food          Food diary rows ({date, meal, type}).
  * @property {any[]} measurements  ({date}).
  * @property {any[]} photos        ({date}).
+ * @property {any[]} [days]        Daily-rhythm rows ({id: day, wake, proteinStart, proteinAt, bed…}).
  * @property {(week: string) => number} goalAt
  * @property {number} waterGoal
  * @property {number} [level]
@@ -77,6 +78,8 @@ export function computeStats(i) {
     measuredToday: lastMeasure?.date === today,
     daysSinceMeasure: lastMeasure ? daysBetween(parseDay(lastMeasure.date), now) : null,
     photos: i.photos.length,
+    /** Today's daily-rhythm record (wake, protein, check-ins) or null. */
+    dayRec: (i.days ?? []).find((d) => d.id === today) ?? null,
     monthWorkouts: perMonth[month] ?? 0,
     monthTarget: target(month),
     challengesDone: Object.entries(perMonth).filter(([m, n]) => n >= target(m)).length,

@@ -17,6 +17,7 @@ import { canVibrate } from '../../../ui/feedback.js';
 import { GEAR_LEVELS, OUTFITS, otter, otterName } from '../../mascot/api.js';
 import { badges, level, recordGoal, stats } from '../../motivation/api.js';
 import { canInstall, installApp, isIOS } from '../install.js';
+import { APP_VERSION } from '../../../core/version.js';
 
 /** Settings row. @param {string} icon @param {string} cls @param {any} title @param {any} sub @param {any} right @param {string} [attrs] */
 const srow = (icon, cls, title, sub, right, attrs = '') =>
@@ -128,6 +129,7 @@ ${srow(
 ${srow('target', 'teal', t('profile.weeklyGoal'), t('profile.weeklyGoalSub'), stepper({ act: 'goal', value: s.weeklyGoal, label: t('profile.weeklyGoal') }))}
 <button class="srow" data-act="nutrition"><span class="sic green">${ic('food', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.nutrition')}</span><span class="muted xs b">${s.kcalGoal} kcal · P ${s.proteinGoal} · C ${s.carbsGoal} · F ${s.fatGoal} · ${t('profile.waterN', { n: s.waterGoal })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${srow('timer', 'blue', t('profile.restAlert'), canVibrate() ? t('profile.restAlertSub') : t('profile.noVibrate'), html`<div class="row gap8"><span class="muted">${ic('volume', 17, 2.2)}</span>${toggle(s.restSound, 'tg', t('profile.sound'), { k: 'restSound' })}${canVibrate() ? html`<span class="muted">${ic('vibrate', 17, 2.2)}</span>${toggle(s.restVibrate, 'tg', t('profile.vibration'), { k: 'restVibrate' })}` : ''}</div>`)}
+${srow('gift', 'gold', t('profile.celebrationSounds'), t('profile.celebrationSoundsSub'), toggle(s.celebrationSounds, 'tg', t('profile.celebrationSounds'), { k: 'celebrationSounds' }))}
 ${srow(
   'dumbbell',
   'teal',
@@ -153,7 +155,7 @@ ${srow(
 ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic teal">${ic('download', 19, 2.2)}</span><span class="t left"><span class="st block">${t('install.cta')}</span><span class="muted xs b">${isIOS() ? t('install.iosShort') : t('install.cardBody')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>` : ''}
 </div>
 <button class="btn sec danger-t w100 mt16" data-act="reset">${ic('trash', 18)}${t('profile.reset')}</button>
-<p class="muted xs b center mt12">Vidrichka Fitness v${raw(String(/** @type {any} */ (globalThis).__APP_VERSION__ ?? '1.0.0'))} · ${t('profile.local')}</p>
+<p class="muted xs b center mt12">Vidrichka Fitness v${APP_VERSION} · ${t('profile.local')}</p>
 </div>`;
   },
   actions: {
@@ -171,7 +173,7 @@ ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic t
       if (v !== cur) (recordGoal(v), setSettings({ weeklyGoal: v }));
     },
     tg: (el) => {
-      const k = /** @type {'restSound'|'restVibrate'} */ (el.dataset.k);
+      const k = /** @type {'restSound'|'restVibrate'|'celebrationSounds'} */ (el.dataset.k);
       setSettings({ [k]: !settings()[k] });
     },
     wstep: (el) => void setSettings({ weightStep: Number(el.dataset.v) }),

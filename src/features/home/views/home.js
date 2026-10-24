@@ -6,16 +6,60 @@
  */
 import { esc, html, raw } from '../../../ui/dom.js';
 import { L, fmtDate, t, weekdayName } from '../../../core/i18n.js';
-import { settings } from '../../../core/settings.js';
+import { dailySettings, settings } from '../../../core/settings.js';
 import { kv, setKv } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { addDays, dayKey, monthKey, startOfWeek } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { bar, ring } from '../../../ui/components.js';
-import { messageFor, moodFor, otter } from '../../mascot/api.js';
+import { messageFor, moodFor, otter, otterName } from '../../mascot/api.js';
 import { level, quests, stats } from '../../motivation/api.js';
 import { activeWorkout, nextPlan, planFor, planMinutes, planName, sessions, startWorkout } from '../../workouts/api.js';
 import { backupDue, canInstall, installApp } from '../../profile/api.js';
+import { day, goodnight, isEvening, morningPending, proteinState, tuckedIn } from '../../daily/api.js';
+
+/** Daily-rhythm cards: good morning, protein countdown, check-ins, goodnight moon. */
+function dailyCards() {
+  const now = Date.now(),
+    cfg = dailySettings(),
+    rec = day(),
+    ps = proteinState(rec, now),
+    hm = new Date(now).toTimeString().slice(0, 5);
+  const card = (
+    /** @type {string} */ cls,
+    /** @type {string} */ attrs,
+    /** @type {string} */ icon,
+    /** @type {string} */ title,
+    /** @type {string} */ sub,
+  ) =>
+    html`<button class="card mt12 daycard ${cls}" ${raw(attrs)}><span class="sq">${ic(icon, 22, 2.3)}</span><span class="f1"><span class="b block">${title}</span><span class="xs b op8">${sub}</span></span>${ic('right', 18, 2.4)}</button>`;
+  const out = [];
+  if (cfg.morning && morningPending(now))
+    out.push(card('sunrise', 'data-go="morning"', 'sun', t('home.goodMorning'), t('home.goodMorningSub')));
+  if (ps.state === 'running' || ps.state === 'late')
+    out.push(
+      card(
+        'sunrise',
+        'data-go="morning"',
+        'clock',
+        t('home.proteinTitle'),
+        ps.state === 'running'
+          ? t('home.proteinUntil', {
+              time: fmtDate(rec.proteinStart + 30 * 60_000, { hour: '2-digit', minute: '2-digit' }),
+            })
+          : t('home.proteinLate'),
+      ),
+    );
+  if (cfg.checkinAm.on && !rec.mood && hm >= cfg.checkinAm.time && hm < '18:00')
+    out.push(card('', 'data-go="checkin/morning"', 'heart', t('home.checkinAm'), t('home.checkinAmSub')));
+  if (cfg.checkinPm.on && !rec.energy && hm >= cfg.checkinPm.time)
+    out.push(card('', 'data-go="checkin/evening"', 'bolt', t('home.checkinPm'), t('home.checkinPmSub')));
+  if (isEvening(now) && !tuckedIn(now))
+    out.push(
+      card('night', 'data-act="tuck"', 'moon', t('goodnight.cta', { otter: otterName() }), t('home.goodnightSub')),
+    );
+  return out;
+}
 
 /** Render `**bold**` segments of a translated string as highlighted spans. @param {string} s */
 const hl = (s) => raw(esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="warm-t">$1</span>'));
@@ -89,6 +133,7 @@ export default () => ({
 <button class="iconbtn" data-go="profile/reminders" aria-label="${t('profile.reminders')}">${ic('bell', 21)}${set.reminders.enabled ? '' : raw('<i class="nub" aria-hidden="true"></i>')}</button></div>
 <div class="row gap8 mt8 otterrow"><div class="otter-wrap">${otter({ size: 112, pose: s.workedOutToday ? 'cheer' : 'wave', mood })}</div>
 <div class="bubble" role="status">${hl(t(msg.key, msg.vars))}</div></div>
+${dailyCards()}
 ${a ? html`<button class="card resume row gap12" data-go="workout"><span class="live"><i></i></span><span class="f1 b">${t('home.resume', { plan: planName(a) })}</span>${ic('right', 18, 2.4)}</button>` : ''}
 <div class="row gap12 stretch mt4">
  <div class="card f1 pad14" role="group" aria-label="${t('home.weeklyStreak')}"><div class="row gap8"><div class="sq warm">${ic('flame', 20, 2.2)}</div>
@@ -127,6 +172,11 @@ ${
     recap: (el) => {
       setKv('recapSeen', el.dataset.m);
       emit('nav', { path: `recap/${el.dataset.m}` });
+      return false;
+    },
+    tuck: () => {
+      goodnight();
+      emit('nav', { path: 'goodnight' });
       return false;
     },
     install: () => installApp(),

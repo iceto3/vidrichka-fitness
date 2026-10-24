@@ -13,8 +13,9 @@
 /** `MIGRATIONS[i]` turns data version i+1 into i+2 (version 1 is the first release). */
 /** @type {((s: Snapshot) => Snapshot)[]} */
 export const MIGRATIONS = [
-  // Example for the future:
-  // (s) => ({ ...s, stores: { ...s.stores, plans: s.stores.plans.map((p) => ({ ...p, notes: '' })) } }),
+  // 1 -> 2 (1.1.0): add the `days` store (wake/bed, protein, check-ins). Every existing row
+  // is kept as is; a backup that already has `days` keeps them.
+  (s) => ({ ...s, stores: { ...s.stores, days: s.stores.days ?? [] } }),
 ];
 
 export const DATA_VERSION = MIGRATIONS.length + 1;

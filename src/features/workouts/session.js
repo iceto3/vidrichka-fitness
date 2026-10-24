@@ -3,6 +3,7 @@
  * finished session with stats, PRs, calories and XP.
  * @module features/workouts/session
  */
+import { emit } from '../../core/bus.js';
 import { put, setKv } from '../../core/store.js';
 import { exById } from '../library/api.js';
 import { bodyWeight } from '../body/api.js';
@@ -46,7 +47,8 @@ export const setReps = (i, j, value) => edit((w) => (w.items[i].sets[j].r = Math
  * @param {number} i @param {number} j
  */
 export function toggleDone(i, j) {
-  let rest = 0;
+  let rest = 0,
+    /** @type {{done: number, total: number}|null} */ done = null;
   edit((w) => {
     const s = w.items[i].sets[j];
     s.done = !s.done;
@@ -54,7 +56,12 @@ export function toggleDone(i, j) {
     const remaining = w.items.some((/** @type {WItem} */ it) => it.sets.some((x) => !x.done));
     rest = s.done && remaining ? w.items[i].rest : 0;
     w.rest = rest ? { endAt: Date.now() + rest * 1000, total: rest } : null;
+    if (s.done && remaining) {
+      const all = w.items.flatMap((/** @type {WItem} */ it) => it.sets);
+      done = { done: all.filter((x) => x.done).length, total: all.length };
+    }
   });
+  if (done) emit('set:done', done); // → small celebration (not for the last set: the workout ends)
   return rest;
 }
 
@@ -114,6 +121,7 @@ export function finish() {
   };
   put('sessions', session);
   setKv('active', null);
+  emit('workout:finished', session); // → medium celebration (queued before any level-up)
   award(`session:${session.id}`, xp);
   return session;
 }

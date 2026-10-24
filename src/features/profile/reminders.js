@@ -1,5 +1,6 @@
 /**
- * Workout reminders. Web apps cannot schedule reliable alarms everywhere, so this uses,
+ * Workout reminders (plus the periodic-sync registration shared with the daily-rhythm
+ * reminders of features/daily/notify.js). Web apps cannot schedule reliable alarms everywhere, so this uses,
  * best first: Notification Triggers (if the browser has them), Periodic Background Sync
  * (installed Chrome/Android, best-effort), and in-app checks while the app is open.
  * On iPhone notifications need iOS 16.4+, the app added to the Home Screen and
@@ -12,6 +13,7 @@ import { dayKey, weekdayMon } from '../../core/dates.js';
 import { t } from '../../core/i18n.js';
 import { notify } from '../../ui/feedback.js';
 import { isIOS, isStandalone } from './install.js';
+import { dailyEnabled, syncDaily } from '../daily/api.js';
 
 /** What the current device supports. */
 export function support() {
@@ -50,8 +52,13 @@ export async function scheduleReminders() {
   const s = support();
   if (s.periodic) {
     try {
-      if (settings().reminders.enabled)
-        await /** @type {any} */ (reg).periodicSync.register('reminder', { minInterval: 60 * 60 * 1000 });
+      // Daily-rhythm reminders need frequent wake-ups; Chrome decides the real interval
+      // (from site engagement), so this is a wish, not a promise.
+      const daily = dailyEnabled();
+      if (settings().reminders.enabled || daily)
+        await /** @type {any} */ (reg).periodicSync.register('reminder', {
+          minInterval: (daily ? 15 : 60) * 60 * 1000,
+        });
       else await /** @type {any} */ (reg).periodicSync.unregister('reminder');
     } catch {
       /* not installed or not allowed */
@@ -64,6 +71,7 @@ export async function scheduleReminders() {
     body: t('reminder.body'),
     lastShown: kv('reminderShown', ''),
   });
+  await syncDaily();
   if (s.triggers && s.permission === 'granted') {
     const when = nextReminder();
     (await reg.getNotifications({ tag: 'reminder', includeTriggered: false } /** @type {any} */)).forEach((n) =>

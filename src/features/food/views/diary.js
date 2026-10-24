@@ -3,6 +3,7 @@
  * by time of day with timestamps.
  * @module features/food/views/diary
  */
+import { emit } from '../../../core/bus.js';
 import { html, raw } from '../../../ui/dom.js';
 import { fmtDate, fmtNum, t } from '../../../core/i18n.js';
 import { settings } from '../../../core/settings.js';
@@ -44,6 +45,14 @@ function openMeal(meal) {
 /** @returns {import('../../../core/registry.js').View} */
 export default () => ({
   tab: 'food',
+  // Opened from a water reminder (#/food?water): jump to today's water tracker.
+  mount: () => {
+    if (!/[?&]water/.test(location.hash)) return;
+    if (view.date !== dayKey()) ((view.date = dayKey()), emit('ui:refresh'));
+    const card = document.querySelector('.food .water');
+    card?.scrollIntoView({ block: 'center' });
+    card?.classList.add('flash');
+  },
   render: () => {
     const s = settings(),
       rows = dayRows(view.date),

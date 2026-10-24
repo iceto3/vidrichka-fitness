@@ -4,6 +4,7 @@
  * @module features/food/api
  */
 import { all, get, kv, put, remove, setKv, uid } from '../../core/store.js';
+import { emit } from '../../core/bus.js';
 import { L } from '../../core/i18n.js';
 import { dayKey, hhmm } from '../../core/dates.js';
 import { FOODS, FOOD_CATEGORIES, QUICK_PICKS } from '../../data/foods.js';
@@ -31,9 +32,16 @@ export const dayRows = (date) =>
 /** Glasses of water on a day. @param {string} date */
 export const water = (date) => get('food', `water_${date}`)?.glasses ?? 0;
 
-/** Set glasses of water. @param {string} date @param {number} glasses */
-export const setWater = (date, glasses) =>
-  put('food', { id: `water_${date}`, type: 'water', date, glasses: Math.max(0, glasses) });
+/**
+ * Set glasses of water. Adding to today's count emits `water:added` (small celebration).
+ * @param {string} date @param {number} glasses
+ */
+export function setWater(date, glasses) {
+  const before = water(date),
+    n = Math.max(0, glasses);
+  put('food', { id: `water_${date}`, type: 'water', date, glasses: n });
+  if (n > before && date === dayKey()) emit('water:added', { glasses: n, before });
+}
 
 /**
  * Log a portion of a food.

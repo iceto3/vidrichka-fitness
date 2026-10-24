@@ -72,6 +72,7 @@ const latinFont = relative(
 
 await cp(join(root, 'assets/icons'), join(out, 'assets/icons'), { recursive: true });
 await cp(join(root, 'assets/vendor'), join(out, 'assets/vendor'), { recursive: true });
+await cp(join(root, 'assets/sounds'), join(out, 'assets/sounds'), { recursive: true }); // celebration sounds (precached)
 await cp(join(root, 'manifest.json'), join(out, 'manifest.json'));
 
 let index = await readFile(join(root, 'index.html'), 'utf8');

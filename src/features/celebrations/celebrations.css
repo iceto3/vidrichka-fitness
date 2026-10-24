@@ -1,0 +1,314 @@
+/* Celebrations (ported from the approved mockup, mockups/celebrations). Everything is
+   scoped under .cel so it never clashes with app classes. The medium/big scenes are laid
+   out on the mockup's 390×844 frame, scaled to fit the screen (--s set from JS). */
+.cel {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.cel:empty {
+  display: none;
+}
+.cel .live {
+  pointer-events: auto;
+}
+.cel .abs {
+  position: absolute;
+}
+.otter-svg {
+  display: block;
+  overflow: visible;
+}
+.otter-svg * {
+  transform-box: view-box;
+}
+.cel .frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 390px;
+  height: 844px;
+  margin: -422px 0 0 -195px;
+  transform: scale(var(--s, 1));
+}
+.cel .spark {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+}
+.cel .cf {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.cel .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: var(--soft);
+  color: var(--text);
+  white-space: nowrap;
+}
+.cel .chip.warm {
+  background: var(--warm-soft);
+  color: var(--warm-t);
+}
+.cel .chip.ok {
+  background: var(--ok-soft);
+  color: var(--ok-t);
+}
+.cel .chip.accent {
+  background: var(--accent-soft);
+  color: var(--accent-d);
+}
+
+/* small */
+.cel .toastc {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  max-width: 448px;
+  margin: 0 auto;
+  bottom: calc(var(--nav-h) + 20px);
+  height: 84px;
+  background: var(--card);
+  color: var(--text);
+  border-radius: 22px;
+  box-shadow: 0 10px 30px rgba(19, 35, 44, 0.16);
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 104px;
+}
+.cel .toastc .oslot {
+  position: absolute;
+  left: 4px;
+  bottom: 6px;
+  width: 100px;
+  height: 108px;
+}
+.cel .toastc .t1 {
+  font-weight: 800;
+  font-size: 16px;
+}
+.cel .toastc .t2 {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 1px;
+}
+.cel .drop {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--blue-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  margin-left: 8px;
+}
+.cel .drop.ok {
+  background: var(--ok-soft);
+}
+.cel .drop.night {
+  background: #e6e3ff;
+}
+.cel .pbar {
+  height: 7px;
+  border-radius: 99px;
+  background: var(--soft);
+  margin-top: 7px;
+  overflow: hidden;
+}
+.cel .pbar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--blue);
+}
+
+/* medium */
+.cel .dim {
+  position: absolute;
+  inset: 0;
+  opacity: 1; /* the app's .dim helper would fade it */
+  background: rgba(19, 35, 44, 0.38);
+}
+.cel .mcard {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 196px;
+  background: var(--card);
+  color: var(--text);
+  border-radius: 28px;
+  box-shadow: 0 20px 50px rgba(19, 35, 44, 0.25);
+  padding: 118px 20px 22px;
+  text-align: center;
+}
+.cel .mcard .halo {
+  position: absolute;
+  left: 50%;
+  top: -78px;
+  width: 180px;
+  height: 180px;
+  margin-left: -90px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, #fff 0%, #ddf3f3 62%, #c9ecec 100%);
+  box-shadow: 0 10px 30px rgba(11, 143, 150, 0.22);
+}
+.cel .mcard .oslot {
+  position: absolute;
+  left: 50%;
+  top: -70px;
+  width: 180px;
+  height: 166px;
+  margin-left: -90px;
+}
+.cel .mtitle {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.cel .msub {
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 4px;
+}
+.cel .mchips {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+/* big */
+.cel .bigbg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 70% at 50% 38%, #1cb3b8 0%, #0b8f96 45%, #076d72 100%);
+  overflow: hidden;
+}
+.cel .rays {
+  position: absolute;
+  left: 50%;
+  top: 330px;
+  width: 1100px;
+  height: 1100px;
+  margin: -550px 0 0 -550px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.1) 0deg 9deg,
+    rgba(255, 255, 255, 0) 9deg 22.5deg
+  );
+  -webkit-mask: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.6) 35%, transparent 62%);
+  mask: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.6) 35%, transparent 62%);
+}
+.cel .glow {
+  position: absolute;
+  left: 50%;
+  top: 330px;
+  width: 300px;
+  height: 300px;
+  margin: -150px 0 0 -150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 240, 200, 0.75) 0%, rgba(255, 220, 150, 0.25) 45%, transparent 70%);
+}
+.cel .bslot {
+  position: absolute;
+  left: 50%;
+  top: 205px;
+  width: 250px;
+  height: 231px;
+  margin-left: -125px;
+  perspective: 700px;
+}
+.cel .bslot > div {
+  width: 100%;
+  height: 100%;
+}
+.cel .btexts {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 452px;
+  text-align: center;
+  color: #fff;
+  padding: 0 16px;
+}
+.cel .lvup {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: #ffe6a6;
+  text-transform: uppercase;
+}
+.cel .lvtitle {
+  font-size: 62px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin-top: 2px;
+  text-shadow:
+    0 4px 0 #e3a21a,
+    0 10px 24px rgba(4, 60, 64, 0.35);
+  color: #fff;
+}
+.cel .lvsub {
+  font-size: 15.5px;
+  font-weight: 600;
+  opacity: 0.95;
+  margin-top: 10px;
+  line-height: 1.4;
+}
+.cel .lvchips {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.cel .lvchips .chip {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+.cel .lvchips .chip.g {
+  background: #fff4d6;
+  color: #a36a00;
+}
+.cel .tapbtn {
+  position: absolute;
+  left: 32px;
+  right: 32px;
+  top: 680px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 54px;
+  border-radius: 18px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 16px;
+  border: 0;
+  background: #fff;
+  color: #077179;
+  box-shadow: 0 10px 24px rgba(4, 60, 64, 0.25);
+  cursor: pointer;
+}
+.cel .star {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+}

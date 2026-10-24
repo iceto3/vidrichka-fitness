@@ -1,0 +1,346 @@
+/**
+ * Daily rhythm: morning page (sunrise + protein countdown), goodnight ritual (night sky,
+ * blanket, Zzz), check-in scales, sleep bars, Home cards and in-app prompts.
+ */
+.mauto {
+  margin: 0 auto;
+}
+.center-row {
+  justify-content: center;
+}
+.btn.big {
+  height: 64px;
+  font-size: 18px;
+  border-radius: 22px;
+}
+.mt24 {
+  margin-top: 24px;
+}
+
+/* morning */
+.morning {
+  min-height: 100dvh;
+  padding-bottom: calc(24px + var(--sab));
+  background: linear-gradient(180deg, #ffe7c7 0%, #fff4e6 38%, var(--bg) 70%);
+  position: relative;
+  overflow: hidden;
+}
+.dark .morning {
+  background: linear-gradient(180deg, #4a2c1a 0%, #2a1d17 40%, var(--bg) 75%);
+}
+.morning .sun {
+  position: absolute;
+  top: calc(var(--sat) + 30px);
+  left: 50%;
+  width: 220px;
+  height: 220px;
+  margin-left: -110px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 196, 92, 0.75), rgba(255, 196, 92, 0) 70%);
+  pointer-events: none;
+}
+.morning .motter,
+.morning h1,
+.morning p,
+.morning .pcard,
+.morning .btn {
+  position: relative;
+}
+.pcard {
+  margin-top: 18px;
+  background: var(--card);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+.pcard.done {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pring {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  margin: 0 auto;
+}
+.pring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.pring circle {
+  fill: none;
+  stroke-width: 14;
+}
+.pring .trk {
+  stroke: var(--soft);
+}
+.pring .arc {
+  stroke: var(--warm);
+  stroke-linecap: round;
+  transition: stroke-dasharray 1s linear;
+}
+.pring .pin {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.pclock {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+.btn.yes {
+  background: var(--ok-t);
+  box-shadow: 0 6px 16px rgba(18, 128, 74, 0.3);
+}
+
+/* goodnight */
+.goodnight {
+  min-height: 100dvh;
+  padding-bottom: calc(24px + var(--sab));
+  background: linear-gradient(180deg, #0e1530 0%, #1b2450 55%, #2c2a5a 100%);
+  color: #eef1ff;
+  position: relative;
+  overflow: hidden;
+}
+.goodnight .iconbtn {
+  color: #eef1ff;
+}
+.goodnight .dim {
+  color: #b8c0e6;
+}
+.goodnight .chip {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.goodnight .btn.sec {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow: none;
+}
+.goodnight .linkbtn {
+  color: #b8c0e6;
+}
+.rel {
+  position: relative;
+}
+.moonbtn {
+  background: #f5d76e;
+  color: #1b2450;
+  box-shadow:
+    0 0 0 6px rgba(245, 215, 110, 0.15),
+    0 10px 28px rgba(245, 215, 110, 0.35);
+}
+.stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 14%, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 28% 32%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 74% 10%, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 86% 28%, #fff 50%, transparent 51%),
+    radial-gradient(1.6px 1.6px at 58% 22%, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 40% 8%, #fff 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 92% 48%, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 6% 44%, #fff 50%, transparent 51%);
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  to {
+    opacity: 0.55;
+  }
+}
+.gn-stage {
+  display: grid;
+  place-items: center;
+  min-height: 250px;
+  margin-top: 8px;
+}
+.gn-stage > * {
+  grid-area: 1 / 1;
+  position: relative;
+}
+.gn-stage .o-breathe {
+  animation: breathe 3.6s ease-in-out infinite;
+}
+@keyframes breathe {
+  50% {
+    transform: scale(1.025, 1.04);
+  }
+}
+.zzz {
+  position: absolute;
+  top: 0;
+  left: 30%;
+  font-weight: 900;
+  color: #cfd6ff;
+  pointer-events: none;
+}
+.zzz i {
+  position: absolute;
+  font-style: normal;
+  opacity: 0;
+  animation: zfloat 3.6s ease-out infinite;
+}
+.zzz i:nth-child(1) {
+  font-size: 18px;
+}
+.zzz i:nth-child(2) {
+  font-size: 24px;
+  animation-delay: 1.2s;
+}
+.zzz i:nth-child(3) {
+  font-size: 32px;
+  animation-delay: 2.4s;
+}
+@keyframes zfloat {
+  0% {
+    opacity: 0;
+    transform: translate(0, 40px);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(40px, -40px) rotate(-12deg);
+  }
+}
+
+/* check-ins */
+.scale {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.scale button {
+  height: 56px;
+  border-radius: 16px;
+  font-size: 28px;
+  background: var(--soft);
+  transition: transform 0.15s;
+}
+.scale button.on {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 3px var(--accent);
+  transform: scale(1.06);
+}
+.chips .chip.on {
+  background: var(--accent-d);
+  color: #fff;
+}
+
+/* progress › sleep */
+.sbars {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 4px;
+  height: 120px;
+  align-items: end;
+}
+.sbars .sb {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.sbars .sb i {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(180deg, #7c5cff, #2f80ed);
+}
+.sbars .sb.est i {
+  opacity: 0.45;
+}
+.sbars .sb span {
+  margin-top: 4px;
+}
+
+/* home */
+.daycard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+}
+.daycard.sunrise {
+  background: linear-gradient(120deg, #ffe2b8, #ffd0a1);
+  color: #5a2e0e;
+}
+.daycard.night {
+  background: linear-gradient(120deg, #1b2450, #3b3478);
+  color: #eef1ff;
+}
+.daycard .sq {
+  background: rgba(255, 255, 255, 0.55);
+  color: inherit;
+}
+.daycard.night .sq {
+  background: rgba(255, 255, 255, 0.14);
+  color: #f5d76e;
+}
+
+/* food › water: arriving from a water reminder */
+.water.flash {
+  animation: flash 1.2s ease-out 2;
+}
+@keyframes flash {
+  30% {
+    box-shadow: 0 0 0 4px var(--accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stars,
+  .zzz i,
+  .gn-stage .o-breathe,
+  .water.flash {
+    animation: none;
+  }
+  .zzz i {
+    opacity: 0.8;
+  }
+  .zzz i:nth-child(2) {
+    transform: translate(18px, -18px);
+  }
+  .zzz i:nth-child(3) {
+    transform: translate(36px, -36px);
+  }
+  .pring .arc {
+    transition: none;
+  }
+}
+.op8 {
+  opacity: 0.8;
+}
+
+/* profile › reminders › daily rhythm */
+.drow .tinput {
+  width: 104px;
+  flex: none;
+  text-align: center;
+  padding: 8px;
+  height: 44px;
+}
+.drow .tinput:disabled {
+  opacity: 0.45;
+}
+.drow .tgph {
+  width: 48px;
+  flex: none;
+}
+.whatsnew .sq {
+  flex: none;
+}

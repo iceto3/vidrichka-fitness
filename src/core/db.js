@@ -17,12 +17,18 @@ export const STORES = /** @type {const} */ ([
   'meals',
   'foods',
   'photos',
+  'days', // v2 (1.1.0): one row per day – wake/bed times, protein, check-ins
 ]);
 
 /** @type {((db: IDBDatabase, tx: IDBTransaction) => void)[]} */
 export const SCHEMA = [
-  // v0 -> v1: initial stores.
-  (db) => STORES.forEach((s) => db.createObjectStore(s, { keyPath: 'id' })),
+  // v0 -> v1 (1.0.0): initial stores. Frozen list – never derive old steps from STORES.
+  (db) =>
+    ['kv', 'plans', 'sessions', 'measurements', 'food', 'meals', 'foods', 'photos'].forEach((s) =>
+      db.createObjectStore(s, { keyPath: 'id' }),
+    ),
+  // v1 -> v2 (1.1.0): daily rhythm records. Existing stores and rows are untouched.
+  (db) => db.objectStoreNames.contains('days') || db.createObjectStore('days', { keyPath: 'id' }),
 ];
 
 export const DB_VERSION = SCHEMA.length;
@@ -53,7 +59,11 @@ export function openDb() {
       const tx = /** @type {IDBTransaction} */ (req.transaction);
       for (let v = e.oldVersion; v < DB_VERSION; v++) SCHEMA[v](req.result, tx);
     };
-    req.onsuccess = () => res(req.result);
+    req.onsuccess = () => {
+      // Let a newer version (another tab, or the service worker) upgrade without blocking.
+      req.result.onversionchange = () => (req.result.close(), (dbp = null));
+      res(req.result);
+    };
     req.onerror = () => rej(req.error);
     req.onblocked = () => rej(new Error('Database upgrade blocked by another open tab'));
   });
@@ -68,6 +78,17 @@ export function openDb() {
 export async function getAll(store) {
   const db = await openDb();
   return done(db.transaction(store).objectStore(store).getAll());
+}
+
+/**
+ * Read some records by id (missing ones are `undefined`).
+ * @param {string} store
+ * @param {string[]} ids
+ * @returns {Promise<any[]>}
+ */
+export async function getMany(store, ids) {
+  const os = (await openDb()).transaction(store).objectStore(store);
+  return Promise.all(ids.map((id) => done(os.get(id))));
 }
 
 /**
