@@ -1,0 +1,24 @@
+/**
+ * Monthly "Wrapped" recap: full-screen, scroll-snapped colourful cards.
+ */
+.wrapped { height: 100dvh; overflow-y: auto; scroll-snap-type: y mandatory; position: relative; }
+.wr { min-height: 100dvh; scroll-snap-align: start; display: flex; flex-direction: column; justify-content: center; padding: calc(var(--sat) + 60px) 28px calc(var(--sab) + 40px); color: #fff; position: relative; }
+.wr.c1 { background: linear-gradient(160deg, #0b8f96, #076d72); }
+.wr.c2 { background: linear-gradient(160deg, #ff7a2f, #e2551a); }
+.wr.c3 { background: linear-gradient(160deg, #7c5cff, #5a3ee0); }
+.wr.c4 { background: linear-gradient(160deg, #f5b935, #e08a0b); color: #2a1a00; }
+.wr.c5 { background: linear-gradient(160deg, #1fb46b, #12804a); }
+.wr.c6 { background: linear-gradient(160deg, #13232c, #0c1418); }
+.wrk { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; }
+.wrh { font-size: 30px; font-weight: 800; line-height: 1.15; margin-top: 8px; }
+.wrbig { font-size: 76px; font-weight: 800; line-height: 1; margin-top: 10px; letter-spacing: -0.02em; }
+.wrl { font-size: 18px; font-weight: 800; margin-top: 4px; }
+.wrp { font-size: 16px; font-weight: 600; line-height: 1.45; margin-top: 14px; opacity: 0.92; }
+.wrchip { display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; margin-top: 16px; padding: 8px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.2); font-weight: 800; font-size: 14px; }
+.wrlist { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.wrlist > * { background: rgba(255, 255, 255, 0.16); border-radius: 14px; padding: 10px 14px; font-weight: 700; display: flex; justify-content: space-between; gap: 10px; }
+.wrclose { position: fixed; top: calc(var(--sat) + 12px); right: max(12px, calc(50% - 228px)); z-index: 5; background: rgba(255, 255, 255, 0.22) !important; color: #fff !important; box-shadow: none !important; }
+.wrhint { position: absolute; bottom: calc(var(--sab) + 18px); left: 50%; transform: translateX(-50%); opacity: 0.8; animation: bob 1.6s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translate(-50%, 6px); } }
+.wrshare { background: #fff !important; color: #13232c !important; margin-top: 24px; }
+@media (prefers-reduced-motion: reduce) { .wrhint { animation: none; } }
