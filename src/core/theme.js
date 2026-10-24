@@ -13,6 +13,11 @@ let mode = 'auto';
  */
 export function applyTheme(m) {
   mode = m;
+  try {
+    localStorage.setItem('vf-theme', JSON.stringify(m)); // read by index.html before first paint
+  } catch {
+    /* private mode */
+  }
   const dark = m === 'dark' || (m === 'auto' && media().matches);
   document.documentElement.classList.toggle('dark', dark);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0C1418' : '#F4F7F8');

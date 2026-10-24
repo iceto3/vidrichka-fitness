@@ -18,7 +18,7 @@ export function ring(size, sw, pct, o = {}) {
   const r = (size - sw) / 2, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, pct || 0));
   return html`<div class="ring" style="width:${size}px;height:${size}px" role="img" aria-label="${o.label ?? Math.round(p * 100) + '%'}">
 <svg width="${size}" height="${size}" aria-hidden="true"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${o.track ?? 'var(--soft)'}" stroke-width="${sw}"/>
-<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${o.color ?? 'var(--accent)'}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${c * p} ${c}"/></svg>
+${p > 0 ? html`<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${o.color ?? 'var(--accent)'}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${c * p} ${c}"/>` : ''}</svg>
 <div class="ring-in">${o.inner ?? ''}</div></div>`;
 }
 

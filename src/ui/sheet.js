@@ -94,6 +94,7 @@ export const confirmDialog = (o) =>
  * @param {string} text
  */
 export function toast(text) {
+  document.querySelectorAll('.toast').forEach((old) => old.remove()); // one at a time, newest wins
   const el = document.createElement('div');
   el.className = 'toast';
   el.setAttribute('role', 'status');
