@@ -138,7 +138,7 @@ export const EXERCISES = [
   },
   {
     id: 'db_shoulder_press', name: { en: 'Dumbbell Shoulder Press', bg: 'Раменна преса с дъмбели' }, equipment: 'dumbbell', place: ['gym', 'home'], weighted: true,
-    primary: ['shoulders'], secondary: ['triceps', 'core'], rest: 90, met: 5, fig: 'press',
+    primary: ['shoulders'], secondary: ['triceps', 'core'], rest: 90, met: 5, fig: 'overhead',
     steps: [{ en: 'Dumbbells at shoulders', bg: 'Дъмбели при раменете' }, { en: 'Press overhead', bg: 'Избутай над глава' }, { en: 'Lower with control', bg: 'Спусни контролирано' }],
     tips: [
       { en: 'Brace your core and avoid leaning back.', bg: 'Стегни корема и не се накланяй назад.' },

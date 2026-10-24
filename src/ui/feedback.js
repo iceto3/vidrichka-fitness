@@ -11,7 +11,7 @@ let ctx = null;
 export function unlockAudio() {
   try {
     ctx ??= new (window.AudioContext || /** @type {any} */ (window).webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   } catch {
     ctx = null;
   }
@@ -22,7 +22,8 @@ export function unlockAudio() {
  * @param {number[]} [notes] Frequencies in Hz, played in sequence.
  */
 export function beep(notes = [880, 1175, 1568]) {
-  if (!ctx) return;
+  if (!ctx || ctx.state === 'closed') return;
+  try {
   const t0 = ctx.currentTime;
   notes.forEach((f, i) => {
     const o = /** @type {AudioContext} */ (ctx).createOscillator(), g = /** @type {AudioContext} */ (ctx).createGain();
@@ -35,6 +36,9 @@ export function beep(notes = [880, 1175, 1568]) {
     o.start(t0 + i * 0.16);
     o.stop(t0 + i * 0.16 + 0.3);
   });
+  } catch {
+    /* no audio device (e.g. headless, or another app owns audio) */
+  }
 }
 
 /** Whether vibration is supported (false on iOS Safari). */
