@@ -215,6 +215,9 @@
   padding: 0 14px;
   font-weight: 700;
 }
+.field.hl.bad {
+  border-color: var(--red);
+}
 .field.hl input {
   flex: 1;
   font-weight: 700;

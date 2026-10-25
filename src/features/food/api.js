@@ -105,6 +105,32 @@ export function editRow(id, change) {
 /** Saved regular meals, most used first. */
 export const savedMeals = () => all('meals').sort((a, b) => (b.uses ?? 0) - (a.uses ?? 0));
 
+/** Name as compared for duplicates (trimmed, single spaces, case-insensitive). @param {string} n */
+const nameKey = (n) => n.trim().replace(/\s+/g, ' ').toLocaleLowerCase('bg');
+
+/**
+ * Why a combination name can't be used: 'food.comboNeedName' (empty) or 'food.comboNameTaken'
+ * (another combination has it), else null.
+ * @param {string} name
+ * @param {string} [selfId] The combination being renamed (its own name is fine).
+ * @returns {string|null}
+ */
+export function comboNameError(name, selfId) {
+  const k = nameKey(name ?? '');
+  if (!k) return 'food.comboNeedName';
+  return all('meals').some((m) => m.id !== selfId && nameKey(m.name ?? '') === k) ? 'food.comboNameTaken' : null;
+}
+
+/**
+ * Rename a combination (the caller validates with {@link comboNameError}).
+ * @param {string} id @param {string} name
+ * @returns {any} The updated combination, or null if it no longer exists.
+ */
+export function renameMeal(id, name) {
+  const m = get('meals', id);
+  return m ? put('meals', { ...m, name: name.trim().replace(/\s+/g, ' ') }) : null;
+}
+
 /**
  * Save a regular meal (combination) from diary rows, with each item's grams and nutrition.
  * @param {string} name

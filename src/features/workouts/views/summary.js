@@ -4,7 +4,7 @@
  * @module features/workouts/views/summary
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, fmtVolume, t } from '../../../core/i18n.js';
+import { fmtDate, fmtKg, fmtVolume, t } from '../../../core/i18n.js';
 import { get } from '../../../core/store.js';
 import { durationMin } from '../../../core/dates.js';
 import { settings } from '../../../core/settings.js';
@@ -44,8 +44,8 @@ ${s.prs.map(
   (
     /** @type {any} */ p,
   ) => html`<div class="card pr-card mt12 row gap12"><div class="trophy">${ic('trophy', 26, 2.2)}</div>
-<div class="f1"><div class="xs xb caps prt">${t('summary.newRecord')}</div><div class="h3 xb">${exName(p.exId)} · ${p.w ? `${p.w} kg × ${p.r}` : t('summary.repsN', { n: p.r })}</div>
-<div class="small b prsub">${p.w ? t('summary.prevBest', { prev: `${p.prevW} kg`, diff: `+${Math.round((p.w - p.prevW) * 100) / 100 || 0} kg` }) : t('summary.prevBest', { prev: p.prevR, diff: `+${p.r - p.prevR}` })}</div></div></div>`,
+<div class="f1"><div class="xs xb caps prt">${t('summary.newRecord')}</div><div class="h3 xb">${exName(p.exId)} · ${p.w ? `${fmtKg(p.w)} × ${p.r}` : t('summary.repsN', { n: p.r })}</div>
+<div class="small b prsub">${p.w ? t('summary.prevBest', { prev: fmtKg(p.prevW), diff: `+${fmtKg(Math.round((p.w - p.prevW) * 100) / 100 || 0)}` }) : t('summary.prevBest', { prev: p.prevR, diff: `+${p.r - p.prevR}` })}</div></div></div>`,
 )}
 ${s.partial ? html`<p class="muted xs b mt12 center partialnote">${t('summary.partialNote')}</p>` : ''}
 <p class="muted xs mt8 center">${t('summary.kcalNote')}</p>
@@ -68,7 +68,7 @@ ${s.partial ? html`<p class="muted xs b mt12 center partialnote">${t('summary.pa
           ['XP', `+${s.xp}`],
         ],
         highlight: s.prs[0]
-          ? `🏆 ${exName(s.prs[0].exId)} ${s.prs[0].w ? `${s.prs[0].w} kg × ${s.prs[0].r}` : `× ${s.prs[0].r}`}`
+          ? `🏆 ${exName(s.prs[0].exId)} ${s.prs[0].w ? `${fmtKg(s.prs[0].w)} × ${s.prs[0].r}` : `× ${s.prs[0].r}`}`
           : '',
         footer: 'Vidrichka Fitness',
       });

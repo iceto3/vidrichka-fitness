@@ -308,6 +308,7 @@ test('1.3.1 prompt: named meal wins, Bulgarian names, always grams, split dishes
   assert.match(SYSTEM, /лютеница ≈ 260 g/);
   assert.match(SYSTEM, /Split mixed dishes/);
   assert.match(SYSTEM, /salt = salt \(not sodium\)/);
+  assert.match(SYSTEM, /"салмона" → "сьомга"/);
   const item = SCHEMA.properties.entries.items;
   for (const k of ['fiber', 'salt', 'meal_named']) assert.ok(item.required.includes(k), k);
   assert.equal(item.properties.meal_named.type, 'boolean');

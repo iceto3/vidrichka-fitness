@@ -3,6 +3,7 @@
  * @module ui/chart
  */
 import { html, raw } from './dom.js';
+import { fmtNum } from '../core/i18n.js';
 
 /** Stable id from the chart's content, so re-renders produce identical markup. @param {string} s */
 const gid = (s) => {
@@ -94,4 +95,4 @@ export function sparkline(vals, color = '#1FB46B') {
 }
 
 /** @param {number} n */
-const fmt = (n) => String(Math.round(n * 10) / 10);
+const fmt = (n) => fmtNum(n, 1);

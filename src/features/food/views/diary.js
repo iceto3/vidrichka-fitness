@@ -10,8 +10,7 @@ import { settings } from '../../../core/settings.js';
 import { addDays, dayKey, parseDay } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { bar, ring } from '../../../ui/components.js';
-import { closeSheet, openSheet } from '../../../ui/sheet.js';
-import { undoEdit } from '../../../ui/undo.js';
+import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
 import { trashList } from '../../../core/trash.js';
 import { dayRows, foodName, setWater, view, water } from '../api.js';
 import { MEALS, known, mealFor, totals } from '../logic.js';
@@ -27,8 +26,8 @@ export const MEAL_STYLE = {
 /** Fiber / salt of a row as a short suffix (only known values). @param {any} r */
 const extras = (r) =>
   [
-    known(r.fib) ? `${t('food.fiberShort')} ${fmtNum(r.fib, 1)} g` : '',
-    known(r.salt) ? `${t('food.saltShort')} ${fmtNum(r.salt, 1)} g` : '',
+    known(r.fib) ? `${t('food.fiberShort')} ${fmtNum(r.fib, 1)} ${t('unit.g')}` : '',
+    known(r.salt) ? `${t('food.saltShort')} ${fmtNum(r.salt, 1)} ${t('unit.g')}` : '',
   ]
     .filter(Boolean)
     .map((x) => ` · ${x}`)
@@ -42,7 +41,7 @@ function openMeal(meal) {
       return html`<div class="row between"><h2 class="h2">${t(`meal.${meal}`)}</h2><span class="b num">${fmtNum(totals(rows).kcal)} kcal</span></div>
 <div class="list mt8 mealitems">${rows.map(
         (r) =>
-          html`<div class="lrow"><button class="f1 row gap10 left itembtn" data-act="edit" data-id="${r.id}" aria-label="${t('food.editItem')}: ${foodName(r)}"><span class="fic">${r.emoji ?? '🍽️'}</span><span class="f1 minw0"><span class="b block">${foodName(r)}</span><span class="muted xs b">${r.time} · ${r.grams} g${extras(r)}</span></span>
+          html`<div class="lrow"><button class="f1 row gap10 left itembtn" data-act="edit" data-id="${r.id}" aria-label="${t('food.editItem')}: ${foodName(r)}"><span class="fic">${r.emoji ?? '🍽️'}</span><span class="f1 minw0"><span class="b block">${foodName(r)}</span><span class="muted xs b">${r.time} · ${r.grams} ${t('unit.g')}${extras(r)}</span></span>
 <span class="b num small">${r.kcal}</span></button><button class="iconbtn flat sm" data-act="del" data-id="${r.id}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('trash', 18)}</button></div>`,
       )}</div>
 <div class="row gap10 mt12"><button class="btn sec f1 savecombo" data-act="combo">${ic('star', 18, 2.2)}${t('food.saveCombo')}</button></div>
@@ -114,8 +113,8 @@ export default () => ({
       inner: html`<div class="xs b muted caps">${t('food.eaten')}</div><div class="xb num big24">${fmtNum(tot.kcal)}</div><div class="small b muted num">/ ${fmtNum(s.kcalGoal)} kcal</div>`,
     })}
 <div class="f1"><div class="chip ${leftK < 0 ? 'warm' : 'accent'}">${leftK < 0 ? t('food.over', { n: fmtNum(-leftK) }) : t('food.left', { n: fmtNum(leftK) })}</div>
-${macros.map(([k, v, g, c], i) => html`<div class="macro ${i ? 'mt8' : 'mt10'}"><div class="row between small b"><span>${t(`food.${k}`)}</span><span class="muted num">${Math.round(Number(v))} / ${g} g</span></div>${bar(Number(v) / Number(g), String(c))}</div>`)}
-<div class="row gap12 mt10 small b fibsalt"><span>${t('food.fiber')} <span class="num muted">${tot.fibN ? `${fmtNum(tot.fib, 1)} g` : '—'}</span></span><span>${t('food.salt')} <span class="num muted">${tot.saltN ? `${fmtNum(tot.salt, 1)} g` : '—'}</span></span></div></div></div>
+${macros.map(([k, v, g, c], i) => html`<div class="macro ${i ? 'mt8' : 'mt10'}"><div class="row between small b"><span>${t(`food.${k}`)}</span><span class="muted num">${Math.round(Number(v))} / ${g} ${t('unit.g')}</span></div>${bar(Number(v) / Number(g), String(c))}</div>`)}
+<div class="row gap12 mt10 small b fibsalt"><span>${t('food.fiber')} <span class="num muted">${tot.fibN ? `${fmtNum(tot.fib, 1)} ${t('unit.g')}` : '—'}</span></span><span>${t('food.salt')} <span class="num muted">${tot.saltN ? `${fmtNum(tot.salt, 1)} ${t('unit.g')}` : '—'}</span></span></div></div></div>
 <div class="card mt12 row gap10 water"><div class="mic blue sm">${ic('drop', 20, 2.2)}</div>
 <div class="f1"><div class="b">${t('food.water')}</div><div class="muted xs b">${t('food.glasses', { n: w, goal: s.waterGoal, l: fmtNum((w * s.glassMl) / 1000, 2) })}</div></div>
 <div class="row gap4 glasses" role="group" aria-label="${t('food.water')}">${Array.from({ length: Math.max(s.waterGoal, w) }, (_, k) => html`<button class="glass${k < w ? ' on' : ''}" data-act="water" data-n="${k < w && k === w - 1 ? k : k + 1}" aria-label="${t('food.setGlasses', { n: k + 1 })}"></button>`)}</div>
@@ -130,7 +129,7 @@ ${macros.map(([k, v, g, c], i) => html`<div class="macro ${i ? 'mt8' : 'mt10'}">
 <span class="muted small b ellip block">${items.map((r) => foodName(r)).join(', ')}</span></span><span class="b num nowrap">${fmtNum(totals(items).kcal)} <span class="muted xs">kcal</span></span></button>`;
     })}</div>
 <button class="btn w100 mt12" data-go="food/add/${mealFor()}">${ic('plus', 20, 2.8)}${t('food.add')}</button>
-<div class="row center-j mt12"><button class="link trashlink" data-go="trash">${ic('trash', 16, 2.2)} ${t('trash.title')}${trashList().length ? ` (${trashList().length})` : ''}</button></div>
+<div class="row center-j mt12"><button class="link trashlink" data-go="food/trash">${ic('trash', 16, 2.2)} ${t('trash.title')}${trashList().length ? ` (${trashList().length})` : ''}</button></div>
 </div>`;
   },
   actions: {
@@ -142,7 +141,7 @@ ${macros.map(([k, v, g, c], i) => html`<div class="macro ${i ? 'mt8' : 'mt10'}">
         before = water(date),
         n = Number(el.dataset.n);
       setWater(date, n);
-      if (n < before) undoEdit(t('food.waterRemoved', { n: Math.max(0, n) }), [], () => setWater(date, before));
+      if (n < before) toast(t('food.waterRemoved', { n: Math.max(0, n) }));
     },
     meal: (el) => (openMeal(el.dataset.m ?? 'snack'), false),
   },

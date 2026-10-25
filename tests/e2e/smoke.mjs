@@ -115,7 +115,8 @@ async function run(name, browser, P) {
   );
   const shot = async (/** @type {string} */ n, full = false, keepToast = false) => {
     if (!SHOTS) return;
-    if (!keepToast) await page.evaluate(() => document.querySelectorAll('.toast').forEach((e) => e.remove()));
+    if (!keepToast)
+      await page.evaluate(() => document.querySelectorAll('.toast, .undopill').forEach((e) => e.remove()));
     await page.screenshot({ path: `screenshots/${P.prefix}${n}.png`, fullPage: full });
   };
   const layer = page.locator('#layer');
@@ -335,6 +336,7 @@ async function run(name, browser, P) {
   await photos121(page, h, name);
   await voice13(page, h);
   await v131(page, h);
+  await v132(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -886,6 +888,17 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   await settle();
   console.log('  ✔ timeline, pose compare, editable date re-sorts both');
 
+  // 1.3.2: Progress › Body lists every session (newest first) with the count, not only the latest
+  await go('progress/body');
+  await page.locator('.psessions').waitFor();
+  assert.equal(await page.locator('.psessions .psession').count(), 2, 'both sessions listed');
+  assert.match(await page.locator('#page').innerText(), /2 sessions/);
+  assert.equal((await page.locator('.psessions .psession img').count()) >= 2, true, 'with their photos');
+  await page.locator('.psessions').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(500);
+  await shot('photo-sessions');
+  console.log('  ✔ 1.3.2 Body: session count + all sessions');
+
   // 2 → 3 migration: an old-style photo row (no session) survives a reload as a Front session
   await page.evaluate(
     () =>
@@ -1104,16 +1117,18 @@ async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
   await page.waitForTimeout(700);
   await shot('voice-sheet');
   await layer.locator('[data-act="parse"]').click();
-  // 1.3.1: no confirm step — saved at once, the sheet closes, an Undo snackbar lists what was added
+  // 1.3.1: no confirm step — saved at once, the sheet closes; 1.3.2: a short toast lists what
+  // was added (adds and edits have no Undo any more – only deletions do)
   await layer.locator('#vtext').waitFor({ state: 'detached' });
-  await page.locator('.toast.snack').waitFor();
+  await page.locator('.toast').waitFor();
   assert.equal(sent.length, 1);
   assert.deepEqual(Object.keys(sent[0]).sort(), ['ct', 'lang', 'text', 'time', 'today', 'tz']);
   assert.match(sent[0].ct, /^text\/plain/, 'simple request (no CORS preflight)');
   assert.equal(sent[0].tz, 'Europe/Sofia');
   await settle();
-  const snackTxt = await page.locator('.toast.snack .snacktxt').innerText();
+  const snackTxt = await page.locator('.toast').innerText();
   assert.match(snackTxt, /Added to breakfast: Oats 60 g, Banana 120 g, \+2 glasses of water/);
+  assert.equal(await page.locator('.toast button, .undopill').count(), 0, 'no Undo for an add');
   const byName = (/** @type {any[]} */ l) => [...l].sort((a, b) => a.name.localeCompare(b.name));
   let saved = byName((await voiceRows()).slice(r0));
   assert.equal(saved.length, 2);
@@ -1125,11 +1140,8 @@ async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
     ],
   );
   assert.equal(await glasses(), w0 + 2, 'two glasses of water added');
-  // Undo takes all of it back
-  await page.locator('.toast.snack .snackbtn').click();
-  await settle();
-  assert.equal((await voiceRows()).length, r0, 'undo removes the voice rows');
-  assert.equal(await glasses(), w0, 'undo restores the water');
+  const r0b = (await voiceRows()).length,
+    w0b = await glasses();
   await clearCel();
 
   // The meal named in the sentence wins over the screen's meal (Food › Add dinner), in Bulgarian
@@ -1140,9 +1152,9 @@ async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
   await page.locator('#page [data-act="voice"]').click();
   await layer.locator('#vtext').fill('запиши в закуска две кебапчета, половин буркан лютеница и една сода');
   await layer.locator('[data-act="parse"]').click();
-  await page.locator('.toast.snack').waitFor();
+  await page.locator('.toast').waitFor();
   await settle();
-  saved = byName((await voiceRows()).slice(r0));
+  saved = byName((await voiceRows()).slice(r0b));
   assert.deepEqual(
     saved.map((r) => [r.name, r.grams, r.meal, r.fib, r.salt]),
     [
@@ -1151,9 +1163,9 @@ async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
     ],
     'named meal (breakfast), not the screen meal (dinner); fiber and salt saved',
   );
-  assert.equal(await glasses(), w0 + 1, 'the сода (sparkling water) counts as water');
+  assert.equal(await glasses(), w0b + 1, 'the сода (sparkling water) counts as water');
   assert.match(
-    await page.locator('.toast.snack .snacktxt').innerText(),
+    await page.locator('.toast').innerText(),
     /Добавено в закуска: кебапчета 120 г, лютеница 130 г, \+1 чаша вода/,
   );
   await page.waitForTimeout(1500); // let the micro animation finish
@@ -1185,7 +1197,9 @@ async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
   await go('home');
   await settle();
   assert.equal(await page.locator('[data-act="voice"]').count(), 0, 'hidden again without a server');
-  console.log('  ✔ 1.3 voice: hidden until configured, saved at once with Undo, named meal wins, errors in the sheet');
+  console.log(
+    '  ✔ 1.3 voice: hidden until configured, saved at once with a toast, named meal wins, errors in the sheet',
+  );
   await page.removeLocatorHandler(layer.locator('.dprompt'));
 }
 
@@ -1257,7 +1271,8 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   assert.match(await layer.locator('.extra').innerText(), /Фибри/i, 'grams sheet shows fiber/salt');
   await layer.locator('[data-act="done"]').click();
   await settle();
-  assert.match(await page.locator('.toast.snack').innerText(), /Добавено: Баница · 100 г[\s\S]*Отмени/, 'add has Undo');
+  assert.match(await page.locator('.toast').innerText(), /Добавено: Баница · 100 г/);
+  assert.equal(await page.locator('.toast button, .undopill').count(), 0, '1.3.2: an add has no Undo');
   let b = await banica();
   assert.deepEqual([b.grams, b.kcal, b.fib, b.salt, b.meal], [100, 300, 1.5, 1.2, 'breakfast']);
   await page.locator('.cat').first().click();
@@ -1275,7 +1290,7 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   const sum = async (/** @type {string} */ k) =>
     String(Math.round((await dayFood()).reduce((a, r) => a + (r[k] ?? 0), 0) * 10) / 10).replace('.', ',');
   const fs = await page.locator('.fibsalt').innerText();
-  const want = new RegExp(`Фибри\\s+${await sum('fib')} g[\\s\\S]*Сол\\s+${await sum('salt')} g`);
+  const want = new RegExp(`Фибри\\s+${await sum('fib')} г[\\s\\S]*Сол\\s+${await sum('salt')} г`);
   assert.match(fs, want, 'daily fiber/salt totals');
   console.log('  ✔ 1.3.1 fiber & salt: manual fields (optional), saved, daily totals');
 
@@ -1297,27 +1312,95 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   await settle();
   b = await banica();
   assert.deepEqual([b.grams, b.kcal, b.p, b.salt, b.meal], [150, 450, 12, 1.8, 'lunch']);
-  assert.match(await page.locator('.toast.snack').innerText(), /Баница: 150 г → Обяд/);
+  assert.match(await page.locator('.toast').innerText(), /Баница: 150 г → Обяд/);
+  assert.equal(await page.locator('.toast button, .undopill').count(), 0, '1.3.2: an edit has no Undo');
   await closeAll();
-  await page.waitForTimeout(300);
-  await shot('undo-snackbar', false, true);
-  await page.locator('.toast.snack .snackbtn').click();
+  // …and the Food page behind the sheet is already up to date (1.3.2: no reload needed)
+  assert.match(await page.locator('#page .meal[data-m="lunch"]').innerText(), /Баница/);
+  // Move it back the same way
+  await page.locator('.meal[data-m="lunch"]').click();
+  await layer.locator('.itembtn', { hasText: 'Баница' }).click();
+  await layer.locator('#egrams').fill('100');
+  await layer.locator('#egrams').dispatchEvent('change');
+  await layer.locator('.mealseg [data-v="breakfast"]').click();
   await settle();
+  await layer.locator('.itemedit [data-act="save"]').click();
+  await settle();
+  await closeAll();
   b = await banica();
-  assert.deepEqual([b.grams, b.kcal, b.salt, b.meal], [100, 300, 1.2, 'breakfast'], 'Undo restores the item');
-  console.log('  ✔ 1.3.1 meal edit: grams + move, Undo');
+  assert.deepEqual([b.grams, b.kcal, b.salt, b.meal], [100, 300, 1.2, 'breakfast'], 'edited back');
+  console.log('  ✔ 1.3.1 meal edit: grams + move (1.3.2: toast only, page refreshed)');
 
-  // 3) Delete → Undo snackbar → "Наскоро изтрити" (Food diary and Profile) → restore
+  // 3) Delete → small „Отмени“ pill above the sheet → Undo; the page behind refreshes at once
+  const box = (/** @type {import('playwright-core').Locator} */ l) => l.boundingBox();
+  const overlaps = (/** @type {any} */ a, /** @type {any} */ c) =>
+    a.x < c.x + c.width && c.x < a.x + a.width && a.y < c.y + c.height && c.y < a.y + a.height;
+  /** The pill must not sit on any button you can tap (behind an open sheet only the sheet's). */
+  const pillClear = async () => {
+    const p = await box(page.locator('.undopill'));
+    const sel = (await layer.locator('.panel').count())
+      ? '#layer .panel button:visible'
+      : '#page button:visible, #nav button:visible';
+    for (const btn of await page.locator(sel).all()) {
+      const q = await box(btn);
+      if (q && q.width && overlaps(p, q)) return `covers ${await btn.evaluate((e) => e.outerHTML.slice(0, 120))}`;
+    }
+    return '';
+  };
   await page.locator('.meal[data-m="breakfast"]').click();
   await layer.locator('.mealitems').waitFor();
   await layer.locator('.lrow', { hasText: 'Баница' }).locator('[data-act="del"]').click();
   await settle();
   assert.equal(await banica(), undefined);
-  assert.match(await page.locator('.toast.snack').innerText(), /Изтрито: Баница/);
-  await closeAll();
+  const pill = page.locator('.undopill');
+  assert.equal((await pill.innerText()).trim(), 'Отмени');
+  assert.match(String(await pill.getAttribute('aria-label')), /Изтрито: Баница/);
+  assert.equal(await page.locator('.toast.snack').count(), 0, 'no old snackbar');
+  const pb = await box(pill),
+    panel = await box(layer.locator('.panel').last());
+  assert.ok(pb && panel && pb.y + pb.height <= panel.y + 1, 'the pill sits above the sheet');
+  assert.equal(await pillClear(), '', 'the pill covers no button');
+  assert.match(await page.locator('.trashlink').innerText(), /\(1\)/, 'the page behind already counts it');
   await page.evaluate(() => document.querySelectorAll('.toast').forEach((e) => e.remove()));
+  await shot('undo-pill-meal-sheet', false, true);
+  await pill.click();
+  await settle();
+  b = await banica();
+  assert.deepEqual([b.grams, b.fib, b.meal], [100, 1.5, 'breakfast'], 'Undo puts it back');
+  assert.match(await layer.locator('.mealitems').innerText(), /Баница/, 'the open sheet shows it again');
+  assert.match(await page.locator('#page .meal[data-m="breakfast"]').innerText(), /Баница/, 'and the page');
+  assert.doesNotMatch(await page.locator('.trashlink').innerText(), /\(\d+\)/, 'bin count back to 0');
+  // The pill hides by itself after 4 s
+  await layer.locator('.lrow', { hasText: 'Баница' }).locator('[data-act="del"]').click();
+  await pill.waitFor();
+  await closeAll();
+  await page.waitForTimeout(400);
+  const pd = await box(pill),
+    nav = await box(page.locator('#nav'));
+  assert.ok(pd && nav && pd.y + pd.height <= nav.y, 'without a sheet: just above the nav');
+  assert.equal(await pillClear(), '', 'on the Food page the pill covers no button');
+  await page.evaluate(() => document.querySelectorAll('.toast').forEach((e) => e.remove()));
+  await shot('undo-pill-food-diary', false, true);
+  await pill.waitFor({ state: 'detached', timeout: 5000 });
+  console.log('  ✔ 1.3.2 delete: Undo pill above the sheet / nav, covers no button, page refreshes, hides after 4 s');
+
+  // Toasts and the pill do not follow you to another page (1.3.2)
+  await page.evaluate(() => {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.dataset.born = String(Date.now() - 5000);
+    el.textContent = 'old';
+    document.body.append(el);
+  });
+  await go('progress');
+  assert.equal(await page.locator('.toast, .undopill').count(), 0, 'cleared on navigation');
+
+  // "Наскоро изтрити" from Food keeps the Food tab highlighted; from Profile, Profile
+  await go('food');
   await page.locator('.trashlink').click();
   await page.locator('.trashlist').waitFor();
+  assert.match(page.url(), /#\/food\/trash$/);
+  assert.equal(await page.locator('#nav .t.on').getAttribute('data-go'), 'food', 'Food tab stays on');
   const trow = page.locator('.trow', { hasText: 'Баница' });
   assert.match(await trow.innerText(), /Храна[\s\S]*7 дни/);
   await page.waitForTimeout(300);
@@ -1327,10 +1410,12 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   b = await banica();
   assert.deepEqual([b.grams, b.fib, b.meal], [100, 1.5, 'breakfast'], 'restored as it was');
   await go('profile');
-  assert.ok(await page.locator('[data-go="trash"]').count(), 'reachable from Profile');
-  console.log('  ✔ 1.3.1 delete with Undo, Recently deleted (diary + profile), restore');
+  await page.locator('[data-go="trash"]').click();
+  await page.locator('.trash').waitFor();
+  assert.equal(await page.locator('#nav .t.on').getAttribute('data-go'), 'profile', 'Profile tab from Profile');
+  console.log('  ✔ 1.3.1 Recently deleted (diary + profile), restore; 1.3.2 right tab, toasts cleared on navigation');
 
-  // 4) "Запази като комбинация" in the meal sheet, name pre-selected
+  // 4) "Запази като комбинация" in the meal sheet, name pre-selected, required and unique
   await go('food');
   await page.locator('.meal[data-m="breakfast"]').click();
   await layer.locator('.savecombo').click();
@@ -1338,39 +1423,137 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   await page.waitForTimeout(500);
   assert.ok(await nameSelected(), 'default name selected');
   await shot('save-as-combo');
-  await page.keyboard.type('Закуска с баница');
+  await layer.locator('#mealname').fill('');
   await layer.locator('[data-act="save"]').click();
   await settle();
-  assert.match(await page.locator('.toast.snack').innerText(), /Закуска с баница/);
+  assert.equal(await layer.locator('#nameerr').innerText(), 'Дай име на комбинацията.', 'an empty name is refused');
+  assert.ok(await layer.locator('#mealname').count(), 'the dialog stays open');
+  await layer.locator('#mealname').fill('Закуска с баница');
+  await layer.locator('[data-act="save"]').click();
+  await settle();
+  assert.match(await page.locator('.toast').innerText(), /Закуска с баница/);
   await closeAll();
   const combo = /** @type {any[]} */ (await rows('meals')).find((m) => m.name === 'Закуска с баница');
   assert.ok(combo && combo.items.some((/** @type {any} */ i) => i.name === 'Баница' && i.fib === 1.5));
-  console.log('  ✔ 1.3.1 save as combination from the meal sheet');
+  await page.locator('.meal[data-m="breakfast"]').click();
+  await layer.locator('.savecombo').click();
+  await layer.locator('#mealname').fill(' закуска  с БАНИЦА ');
+  await layer.locator('[data-act="save"]').click();
+  await settle();
+  assert.equal(await layer.locator('#nameerr').innerText(), 'Вече имаш комбинация с това име.', 'no duplicates');
+  await closeAll();
+  assert.equal((await rows('meals')).length, 1, 'nothing saved twice');
+  console.log('  ✔ 1.3.1 save as combination; 1.3.2 the name is required and unique');
 
-  // 5) Combination chips: first tap selects, second adds to the meal (with Undo)
-  await go('food/add/lunch');
-  const chip = page.locator('.chips.combos .chip', { hasText: 'Закуска с баница' });
-  const lunch0 = (await dayFood()).filter((r) => r.meal === 'lunch').length;
+  // 4b) Rename a combination in "Редовни хранения"
+  await go('food/meals');
+  await page.locator('[data-act="rename"]').first().click();
+  await layer.locator('#mealname').waitFor();
+  await page.waitForTimeout(400);
+  assert.ok(await nameSelected(), 'current name selected');
+  await page.keyboard.type('Баница сутрин');
+  await page.waitForTimeout(200);
+  await shot('combo-rename');
+  await layer.locator('[data-act="save"]').click();
+  await settle();
+  assert.match(await page.locator('.toast').innerText(), /Преименувано: Баница сутрин/);
+  assert.match(await page.locator('#page').innerText(), /Баница сутрин/, 'the list shows the new name at once');
+  assert.equal((await rows('meals')).find((m) => m.id === combo.id)?.name, 'Баница сутрин');
+  console.log('  ✔ 1.3.2 combination rename');
+
+  // 5) Combination chips: first tap selects, second adds to the meal (a toast, no Undo)
+  await go('food');
+  await go('food/add/snack');
+  const chip = page.locator('.chips.combos .chip', { hasText: 'Баница сутрин' });
+  const snack0 = (await dayFood()).filter((r) => r.meal === 'snack').length;
   await chip.click();
   await settle();
   assert.equal(await chip.getAttribute('aria-pressed'), 'true');
-  assert.match(await page.locator('.combohint').innerText(), /Баница 100 g[\s\S]*Докосни пак, за да добавиш към обяд/);
-  assert.equal((await dayFood()).filter((r) => r.meal === 'lunch').length, lunch0, 'first tap only selects');
+  assert.match(
+    await page.locator('.combohint').innerText(),
+    /Баница 100 г[\s\S]*Докосни пак, за да добавиш към междинното хранене/,
+  );
+  assert.equal((await dayFood()).filter((r) => r.meal === 'snack').length, snack0, 'first tap only selects');
   await page.waitForTimeout(300);
   await shot('combo-chips');
   await chip.click();
   await page.waitForURL(/#\/food$/);
   await settle();
-  const lunch1 = (await dayFood()).filter((r) => r.meal === 'lunch');
-  assert.equal(lunch1.length, lunch0 + combo.items.length, 'second tap adds the whole combination');
-  assert.match(await page.locator('.toast.snack').innerText(), /Добавено в обяд/);
-  await page.locator('.toast.snack .snackbtn').click();
+  const snack1 = (await dayFood()).filter((r) => r.meal === 'snack');
+  assert.equal(snack1.length, snack0 + combo.items.length, 'second tap adds the whole combination');
+  assert.match(
+    await page.locator('.toast').innerText(),
+    /Добавено в междинно/,
+    'the toast survives its own navigation',
+  );
+  assert.equal(await page.locator('.undopill').count(), 0, 'no Undo for an add');
+  console.log('  ✔ 1.3.1 combination chips: select, add (1.3.2: toast only)');
+
+  // 6) Set weight: 0–500 kg, also with the + button
+  await go('workouts');
+  await page.locator('[data-act="start"]').first().click();
+  await page.locator('.step input[data-change="w"]').first().waitFor();
+  const wIn = page.locator('.step input[data-change="w"]').first();
+  await wIn.fill('9999');
+  await wIn.dispatchEvent('change');
   await settle();
-  assert.equal((await dayFood()).filter((r) => r.meal === 'lunch').length, lunch0, 'Undo removes it again');
-  console.log('  ✔ 1.3.1 combination chips: select, add, Undo');
+  assert.equal(await wIn.inputValue(), '500', 'typed weight capped at 500');
+  assert.match(await page.locator('.toast').innerText(), /Най-много 500 кг за серия/);
+  await page.locator('.sb[data-act="w"][data-d="1"]').first().click();
+  await settle();
+  assert.equal(await wIn.inputValue(), '500', '+ stops at 500');
+  await wIn.fill('42,5');
+  await wIn.dispatchEvent('change');
+  await settle();
+  assert.equal(await wIn.inputValue(), '42,5', 'Bulgarian decimal comma');
+  assert.match(await page.locator('.step small').first().innerText(), /кг/);
+  console.log('  ✔ 1.3.2 set weight limited to 0–500 kg, numbers in the Bulgarian format');
+  await go('home');
 
   await go('profile');
   await page.locator('.lang [data-v="en"]').click();
   await settle();
   await page.removeLocatorHandler(layer.locator('.dprompt'));
+}
+
+/**
+ * 1.3.2: "What's new" after an update from 1.3.1 – in Bulgarian, only the 1.3.2 items.
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function v132(page, { go, settle, shot, clearCel, layer }) {
+  await clearCel();
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
+  // Pretend this install last saw 1.3.1, then open the app again
+  await page.evaluate(
+    () =>
+      new Promise((res, rej) => {
+        const r = indexedDB.open('vidrichka-fitness');
+        r.onerror = () => rej(r.error);
+        r.onsuccess = () => {
+          const tx = r.result.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put({ id: 'seenWhatsNew', value: '1.3.1' });
+          tx.oncomplete = () => (r.result.close(), res(null));
+        };
+      }),
+  );
+  await page.reload();
+  await page.locator('#nav .t').first().waitFor();
+  await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
+  const txt = await layer.innerText();
+  assert.match(txt, /Какво ново в 1\.3\.2/);
+  assert.match(txt, /Отмени/, 'the pill item');
+  assert.match(txt, /преименуваш/, 'the rename item');
+  assert.doesNotMatch(txt, /What's new|Undo|Rename/, 'no English');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 3, 'only the 1.3.2 items');
+  await page.waitForTimeout(700);
+  await shot('whats-new-132');
+  await layer.locator('[data-close]').first().click();
+  await settle();
+  await go('profile');
+  await page.locator('.lang [data-v="en"]').click();
+  await settle();
+  console.log("  ✔ 1.3.2 What's new in Bulgarian after an update from 1.3.1");
 }

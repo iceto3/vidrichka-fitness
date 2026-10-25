@@ -5,33 +5,29 @@
  * @module features/workouts/views/active
  */
 import { html, num, $ } from '../../../ui/dom.js';
-import { t } from '../../../core/i18n.js';
+import { fmtKg, fmtNum, t } from '../../../core/i18n.js';
 import { settings } from '../../../core/settings.js';
 import { clock } from '../../../core/dates.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { ring, stepper } from '../../../ui/components.js';
-import { confirmDialog } from '../../../ui/sheet.js';
+import { confirmDialog, toast } from '../../../ui/sheet.js';
 import { beep, keepAwake, notify, releaseAwake, unlockAudio, vibrate } from '../../../ui/feedback.js';
 import { exById, exName, exThumb, muscleTags, repsLabel } from '../../library/api.js';
 import { activeWorkout, planName, sessions } from '../api.js';
-import { activeSet, lastSets, suggest } from '../logic.js';
+import { MAX_KG, activeSet, lastSets, suggest } from '../logic.js';
 import * as S from '../session.js';
 
 /** @typedef {import('../logic.js').WItem} WItem */
-
-const fmtKg = (/** @type {number} */ v) => String(Math.round(v * 100) / 100);
 
 /** "Last time" hint row for an exercise. @param {WItem} it @param {boolean} weighted */
 function lastHint(it, weighted) {
   const last = lastSets(sessions(), it.exId);
   if (!last.length) return '';
   const tip = suggest(last, it.target.reps, weighted, settings().weightStep);
-  const txt = weighted
-    ? `${fmtKg(last[0].w)} kg × ${last.map((s) => s.r).join(', ')}`
-    : last.map((s) => s.r).join(', ');
+  const txt = weighted ? `${fmtKg(last[0].w)} × ${last.map((s) => s.r).join(', ')}` : last.map((s) => s.r).join(', ');
   return html`<div class="row gap8 mt12 small lasttime"><span class="muted b">${t('workout.lastTime')}</span><span class="b num">${txt}</span>
-${tip ? html`<span class="chip warm nudge">${tip.kind === 'weight' ? t('workout.tryKg', { n: fmtKg(tip.value) }) : t('workout.tryReps', { n: tip.value })}</span>` : ''}</div>`;
+${tip ? html`<span class="chip warm nudge">${tip.kind === 'weight' ? t('workout.tryKg', { n: fmtNum(tip.value, 2) }) : t('workout.tryReps', { n: tip.value })}</span>` : ''}</div>`;
 }
 
 /** One exercise card. @param {WItem} it @param {number} i @param {[number, number]|null} act */
@@ -49,7 +45,7 @@ ${it.sets.map((s, j) => {
   const on = act?.[0] === i && act?.[1] === j;
   const lbl = t('workout.setN', { n: j + 1 });
   return html`<div class="set${cols}${s.done ? ' done' : ''}${on ? ' active' : ''}"><div class="slabel">${t('workout.set')}<br>${j + 1}</div>
-${weighted ? stepper({ act: 'w', value: fmtKg(s.w), unit: 'kg', data: { i, j }, label: `${lbl} ${t('workout.weight')}`, disabled: s.done }) : ''}
+${weighted ? stepper({ act: 'w', value: fmtNum(s.w, 2), unit: t('unit.kg'), data: { i, j }, label: `${lbl} ${t('workout.weight')}`, disabled: s.done }) : ''}
 ${stepper({ act: 'r', value: s.r, data: { i, j }, label: `${lbl} ${repsLabel(it.exId)}`, disabled: s.done })}
 <button class="done-b${s.done ? ' ok' : on ? ' go' : ''}" data-act="done" data-i="${i}" data-j="${j}" aria-pressed="${String(s.done)}" aria-label="${s.done ? t('workout.undo', { n: j + 1 }) : t('workout.markDone', { n: j + 1 })}">${s.done ? ic('check', 20, 3) : t('workout.done')}</button></div>`;
 })}
@@ -135,13 +131,12 @@ ${w.rest ? restBar(w.rest) : ''}`;
         const i = num(el, 'i'),
           j = num(el, 'j'),
           cur = activeWorkout().items[i].sets[j].w;
-        S.setWeight(
-          i,
-          j,
+        const v =
           ev.type === 'change'
-            ? parseFloat(/** @type {HTMLInputElement} */ (el).value.replace(',', '.')) || 0
-            : cur + num(el, 'd') * step(),
-        );
+            ? parseFloat(/** @type {HTMLInputElement} */ (el).value.replace(/\s/g, '').replace(',', '.')) || 0
+            : cur + num(el, 'd') * step();
+        if (v > MAX_KG) toast(t('workout.maxKg', { n: MAX_KG }));
+        S.setWeight(i, j, v);
       },
       r: (el, ev) => {
         const i = num(el, 'i'),

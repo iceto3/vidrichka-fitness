@@ -12,8 +12,7 @@ import { fmtDate, getLang, t } from '../../../core/i18n.js';
 import { settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
-import { closeSheet, openSheet, whenSettled } from '../../../ui/sheet.js';
-import { undoEdit } from '../../../ui/undo.js';
+import { closeSheet, openSheet, toast, whenSettled } from '../../../ui/sheet.js';
 import { logRows, setWater, water } from '../../food/api.js';
 import { mealFor } from '../../food/logic.js';
 import { isIOS } from '../../profile/api.js';
@@ -130,9 +129,7 @@ export function saveEntries(parsed, screenMeal = '', now = new Date()) {
     setWater(date, before[date] + n);
   }
   const text = summary(list, saved, today);
-  undoEdit(text, [{ store: 'food', added: saved.map((r) => r.id) }], () => {
-    for (const [date, n] of Object.entries(before)) setWater(date, n);
-  });
+  toast(text);
   return { rows: saved, water: before, text };
 }
 

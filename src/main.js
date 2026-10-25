@@ -95,20 +95,28 @@ const genderRow = () =>
 function whatsNew() {
   const seen = /** @type {string} */ (kv('seenWhatsNew', ''));
   if (seen === WHATS_NEW) return;
-  // Coming from 1.3.0: only the 1.3.1 items; from 1.2.1 also the 1.3 ones; from 1.2.0 ("1.2")
-  // also the 1.2.1 ones; from older, the 1.2 items and the gender choice too. Voice items
-  // only once the voice server is set.
+  // Coming from 1.3.1: only the 1.3.2 items; from 1.3.0 also the 1.3.1 ones; from 1.2.1 also
+  // the 1.3 ones; from 1.2.0 ("1.2") also the 1.2.1 ones; from older, the 1.2 items and the
+  // gender choice too. Voice items only once the voice server is set. (The 1.3.1 Undo item is
+  // replaced by the 1.3.2 pill.) Shown in the app language, which is loaded before this runs.
+  const had131 = /^1\.3\.[1-9]/.test(seen);
   const had13 = seen.startsWith('1.3');
   const had12 = had13 || seen === '1.2' || seen.startsWith('1.2.');
   const had121 = had13 || /^1\.2\.[1-9]/.test(seen);
   const push = !had12 && !!pushUrl(); // push items only once the server is deployed
   const voice = !!voiceUrl();
   const items = /** @type {[string, string][]} */ ([
-    ...(voice ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.voiceMeal']]) : []),
-    ['food', 'whatsNew.fiberSalt'],
-    ['edit', 'whatsNew.mealEdit'],
-    ['undo', 'whatsNew.undo'],
-    ['star', 'whatsNew.combos'],
+    ['undo', 'whatsNew.undoPill'],
+    ['star', 'whatsNew.comboRename'],
+    ['check', 'whatsNew.fixes132'],
+    ...(had131
+      ? []
+      : /** @type {[string, string][]} */ ([
+          ...(voice ? [['mic', 'whatsNew.voiceMeal']] : []),
+          ['food', 'whatsNew.fiberSalt'],
+          ['edit', 'whatsNew.mealEdit'],
+          ['star', 'whatsNew.combos'],
+        ])),
     ...(voice && !had13 ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.voice']]) : []),
     ...(had121
       ? []
@@ -218,6 +226,24 @@ async function start() {
     if ('gender' in patch) setGender(settings().gender);
     if ('theme' in patch) applyTheme(settings().theme);
     if ('lang' in patch || 'theme' in patch || 'gender' in patch) emit('ui:refresh');
+  });
+  // Any data change (an edit, Undo, a restore from the bin, a notification action…) re-renders
+  // the page and the open sheets once, so no view shows stale data until a reload. Changes
+  // made while that refresh renders are ignored, so a view writing during render cannot loop.
+  let queued = false,
+    painting = false;
+  on('store:any', () => {
+    if (queued || painting) return;
+    queued = true;
+    setTimeout(() => {
+      queued = false;
+      painting = true;
+      try {
+        emit('ui:refresh');
+      } finally {
+        painting = false;
+      }
+    }, 0);
   });
   on('store:replaced', async () => {
     await applySettings();

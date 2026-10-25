@@ -5,8 +5,8 @@
  * @module features/body/views/body
  */
 import { html } from '../../../ui/dom.js';
-import { L, fmtDate, t } from '../../../core/i18n.js';
-import { addDays, dayKey, parseDay } from '../../../core/dates.js';
+import { L, fmtDate, locale, t, unitText } from '../../../core/i18n.js';
+import { dayKey, parseDay } from '../../../core/dates.js';
 import { put, uid } from '../../../core/store.js';
 import { emit, on } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
@@ -16,6 +16,7 @@ import { closeSheet, confirmDialog, openSheet, whenSettled } from '../../../ui/s
 import { deleteWithUndo } from '../../../ui/undo.js';
 import { MEASURE_FIELDS, checkMeasure } from '../../../data/measurements.js';
 import { measurements } from '../api.js';
+import { latestAndBase } from '../trend.js';
 import { openCompare, openSession, openTimeline, photoSection } from './photos.js';
 
 /** Tiles: single fields or L/R pairs. */
@@ -29,21 +30,12 @@ const TILES = MEASURE_FIELDS.filter((f) => f.id !== 'weight').reduce(
   [],
 );
 
-const fmt1 = (/** @type {number|undefined} */ v) => (v == null ? '–' : (Math.round(v * 10) / 10).toFixed(1));
-
-/** Latest value and the value ~4 weeks before it. @param {any[]} rows @param {string} f */
-function latestAndBase(rows, f) {
-  const has = rows.filter((r) => r[f] != null);
-  const last = has[has.length - 1];
-  if (!last) return { v: undefined, base: undefined, date: '' };
-  const cut = dayKey(addDays(parseDay(last.date), -28));
-  const base = [...has].reverse().find((r) => r.date <= cut) ?? has[0];
-  return { v: Number(last[f]), base: base === last ? undefined : Number(base[f]), date: last.date };
-}
+const fmt1 = (/** @type {number|undefined} */ v) =>
+  v == null ? '–' : new Intl.NumberFormat(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v);
 
 /** Chart sheet for one field. @param {string} f */
 function openChart(f) {
-  const unit = MEASURE_FIELDS.find((x) => x.id === f)?.unit ?? '';
+  const unit = unitText(MEASURE_FIELDS.find((x) => x.id === f)?.unit ?? '');
   // Two entries on one day → one point (the latest).
   const pts = mergeSameX(
     measurements()
@@ -104,11 +96,13 @@ export function openMeasureForm(focus = '') {
 <p class="muted small b mt4">${t('body.addHint')}</p>
 <label class="field mt12"><span>${t('body.date')}</span><input class="input" type="date" id="mdate" data-input="v" data-k="date" value="${v.date}" max="${dayKey()}"></label>
 ${MEASURE_FIELDS.map(
-  (f) => html`<label class="field mt10"><span>${t(`measure.${f.id}`)} <small class="muted">(${f.unit})</small></span>
+  (
+    f,
+  ) => html`<label class="field mt10"><span>${t(`measure.${f.id}`)} <small class="muted">(${unitText(f.unit)})</small></span>
 <input class="input${bad[f.id] ? ' bad' : ''}" id="m_${f.id}" inputmode="decimal" data-input="v" data-k="${f.id}" value="${v[f.id] ?? ''}" placeholder="${last[f.id] != null ? fmt1(last[f.id]) : ''}" aria-describedby="h_${f.id}" aria-invalid="${String(!!bad[f.id])}">
 ${
   bad[f.id]
-    ? html`<small class="ferr" id="h_${f.id}" role="alert">${t(String(bad[f.id].error), { min: bad[f.id].range?.[0] ?? '', max: bad[f.id].range?.[1] ?? '', unit: f.unit })}</small>`
+    ? html`<small class="ferr" id="h_${f.id}" role="alert">${t(String(bad[f.id].error), { min: bad[f.id].range?.[0] ?? '', max: bad[f.id].range?.[1] ?? '', unit: unitText(f.unit) })}</small>`
     : html`<small class="hint" id="h_${f.id}">${L(f.hint)}</small>`
 }</label>`,
 )}
@@ -159,8 +153,8 @@ export default () => {
       const lastDate = rows.length ? rows[rows.length - 1].date : '';
       return html`<button class="card mt12 row between weightcard" data-act="chart" data-f="weight">
 <div class="left"><div class="row gap6 muted xs b caps">${ic('scale', 15, 2.2)}${t('body.latestWeight')}${w.date ? ` · ${w.date === dayKey() ? t('common.today') : fmtDate(parseDay(w.date), { day: 'numeric', month: 'short' })}` : ''}</div>
-<div class="row gap8 mt6 base"><span class="xb num big32">${fmt1(w.v)}</span><span class="muted b">kg</span></div>
-<div class="row gap6 mt8">${w.base != null && w.v != null ? html`${delta(w.v - w.base, 'kg')}<span class="muted xs b">${t('body.vs4w')}</span>` : html`<span class="muted xs b">${t('body.noWeight')}</span>`}</div></div>
+<div class="row gap8 mt6 base"><span class="xb num big32">${fmt1(w.v)}</span><span class="muted b">${t('unit.kg')}</span></div>
+<div class="row gap6 mt8">${w.base != null && w.v != null ? html`${delta(w.v - w.base, t('unit.kg'))}<span class="muted xs b">${t('body.vs4w')}</span>` : html`<span class="muted xs b">${t(w.v != null ? 'body.vs4wSoon' : 'body.noWeight')}</span>`}</div></div>
 ${sparkline(weights)}</button>
 <div class="section-title"><h2 class="h3">${t('body.measurements')}</h2><span class="muted xs b">${lastDate ? t('body.vsDate', { date: fmtDate(parseDay(lastDate), { day: 'numeric', month: 'short' }) }) : ''}</span></div>
 <div class="mgrid">${TILES.map((tile) => {
@@ -168,7 +162,7 @@ ${sparkline(weights)}</button>
         const d = vals.every((x) => x.v != null && x.base != null)
           ? vals.reduce((s, x) => s + (Number(x.v) - Number(x.base)), 0) / vals.length
           : null;
-        return html`<button class="m" data-act="chart" data-f="${tile.fields[0]}"><div class="left"><div class="n">${t(`measure.${tile.id}`)}</div><div class="v num">${vals.map((x) => fmt1(x.v)).join(' / ')} <small>${tile.unit}</small></div></div>${d != null ? delta(d, '') : ''}</button>`;
+        return html`<button class="m" data-act="chart" data-f="${tile.fields[0]}"><div class="left"><div class="n">${t(`measure.${tile.id}`)}</div><div class="v num">${vals.map((x) => fmt1(x.v)).join(' / ')} <small>${unitText(tile.unit)}</small></div></div>${d != null ? delta(d, '') : ''}</button>`;
       })}<button class="m addm" data-act="add">${ic('plus', 20, 2.8)}${t('body.add')}</button></div>
 ${photoSection()}`;
     },

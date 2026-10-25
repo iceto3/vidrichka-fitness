@@ -12,7 +12,7 @@ import { dayKey, parseDay } from '../../../core/dates.js';
 import { all } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
-import { closeSheet, openSheet } from '../../../ui/sheet.js';
+import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
 import {
   FOODS,
   categoriesByUse,
@@ -27,7 +27,6 @@ import {
 import { signature, timesEaten, totals } from '../logic.js';
 import { openGrams } from './grams.js';
 import { deleteFoodRow } from './item.js';
-import { undoEdit } from '../../../ui/undo.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 
 /** One food result row. @param {any} f */
@@ -56,10 +55,7 @@ export default ({ meal }) => {
     openGrams(food, (g) => {
       const row = logFood(food, g, meal);
       basket.push(row);
-      undoEdit(t('food.added', { name: foodName(food), g }), [{ store: 'food', added: [row.id] }], () => {
-        const i = basket.indexOf(row);
-        if (i >= 0) (basket.splice(i, 1), emit('ui:refresh'));
-      });
+      toast(t('food.added', { name: foodName(food), g }));
       emit('ui:refresh');
     });
 
@@ -139,7 +135,7 @@ ${voiceReady() ? html`<button class="iconbtn flat sm" data-act="voice" aria-labe
 ${
   basket.length
     ? html`<div class="card mt12 basket"><div class="row between"><span class="xs xb muted caps">${t('food.inMeal', { n: basket.length })}</span><span class="b num small">${totals(basket).kcal} kcal</span></div>
-<div class="row gap6 wrap mt8">${basket.map((r, i) => html`<span class="chip">${r.emoji} ${foodName(r)} · ${r.grams} g<button class="x" data-act="undo" data-i="${i}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('close', 14, 2.6)}</button></span>`)}</div></div>`
+<div class="row gap6 wrap mt8">${basket.map((r, i) => html`<span class="chip">${r.emoji} ${foodName(r)} · ${r.grams} ${t('unit.g')}<button class="x" data-act="undo" data-i="${i}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('close', 14, 2.6)}</button></span>`)}</div></div>`
     : ''
 }
 ${protein ? html`<div class="card mt12 row gap10 phint" role="note"><span class="sq">🍳</span><span class="f1 b small">${t('food.proteinHint')}</span></div>` : ''}
@@ -155,7 +151,7 @@ ${
 ${(() => {
   const m = meals.find((x) => x.id === picked);
   return m
-    ? html`<div class="combohint muted small b mt6" role="status">${m.items.map((/** @type {any} */ i) => `${foodName(i)} ${i.grams} g`).join(' · ')}<br><span class="acc">${t('food.tapAgain', { meal: t(`meal.${meal}`).toLowerCase() })}</span></div>`
+    ? html`<div class="combohint muted small b mt6" role="status">${m.items.map((/** @type {any} */ i) => `${foodName(i)} ${i.grams} ${t('unit.g')}`).join(' · ')}<br><span class="acc">${t('food.tapAgain', { meal: t(`mealTo.${meal}`) })}</span></div>`
     : '';
 })()}`
     : ''

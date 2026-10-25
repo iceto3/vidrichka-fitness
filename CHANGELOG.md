@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.2] – 2026-10-25
+
+### Changed
+
+- **Undo is a small „Отмени“ pill**, only after a deletion. It sits bottom-right above the nav (or above an open sheet), moves up so it never covers a button, shows a 4-second countdown ring and can be swiped away. Adds and edits (food, moves, combinations, voice logging) now show only a short toast with no button.
+- Toasts and the pill are cleared when you go to another page.
+- **Combinations need a name** (an empty name is no longer silently replaced) and names must be unique (case and spaces ignored). Combinations can be **renamed** in **Редовни хранения**.
+- **Units are consistent** in the Bulgarian UI: г, кг, см, т everywhere (food lists, steppers, workouts, progress, charts), with Bulgarian number formatting.
+- Wording: „Докосни пак, за да добавиш към междинното хранене“ (and закуската / обяда / вечерята), „Стойността не може да е над 100 г в 100 г продукт.“
+- The voice server tells the AI to use correct standard Bulgarian food names (e.g. „сьомга“, never „салмона“).
+- A **Какво ново в 1.3.2** note (in the app language).
+
+### Fixed
+
+- After an edit, a deletion, Undo or a restore, every view (the page behind an open sheet included) re-renders at once; no reload needed.
+- **Наскоро изтрити** opened from the Food diary keeps the Food tab highlighted.
+- Set weight is limited to 0–500 kg, for typed values and the **+** button.
+- „спрямо преди 4 седмици“ compares with the newest entry that is at least 28 days older, not with an earlier entry from the same day.
+- Progress › Body lists every photo session (newest first) with the session count, not only the latest one.
+
 ## [1.3.1] – 2026-10-25
 
 ### Added

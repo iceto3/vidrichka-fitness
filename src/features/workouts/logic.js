@@ -8,6 +8,12 @@
 /** @typedef {{exId: string, rest: number, target: {reps: number, weight: number}, sets: WSet[]}} WItem */
 /** @typedef {{id: string, endedAt: number, items: WItem[]}} WSession */
 
+/** Heaviest weight a set can have (kg); typed values and the + button stop here. */
+export const MAX_KG = 500;
+
+/** A set weight rounded to 0.25 kg and kept within 0…{@link MAX_KG}. @param {number} v */
+export const clampKg = (v) => Math.min(MAX_KG, Math.max(0, Math.round((Number(v) || 0) * 4) / 4));
+
 /** Default MET for strength training when exercises have none. */
 export const DEFAULT_MET = 5;
 

@@ -18,9 +18,12 @@ const when = (ts) => {
   return `${dayKey(d) === dayKey() ? t('common.today') : fmtDate(d, { day: 'numeric', month: 'short' })} ${fmtHM(hhmm(d))}`;
 };
 
-/** @returns {import('../../../core/registry.js').View} */
-export default () => ({
-  tab: 'profile',
+/**
+ * @param {string} [tab] The bottom-nav tab to highlight (where the bin was opened from).
+ * @returns {import('../../../core/registry.js').View}
+ */
+export default (tab = 'profile') => ({
+  tab,
   render: () => {
     const list = trashList();
     return html`<div class="content trash">${topBar(t('trash.title'), t('trash.sub', { n: KEEP_DAYS }))}

@@ -1,5 +1,5 @@
 /**
- * Progress photos UI (1.2.1): the Body tab's photo section (monthly 4-pose set, latest session,
+ * Progress photos UI (1.2.1): the Body tab's photo section (monthly 4-pose set, every session,
  * entry points), the session editor (4 pose slots, camera/gallery per slot, "add several",
  * move, delete, editable date), the chronological timeline and the per-pose before/after.
  * Pure rules live in ../photo-logic.js; storage in ../photos.js.
@@ -50,19 +50,23 @@ ${st.current ? html`<span class="chip warm chip-sm">🔥 ${t('photo.streak', { n
 const miniSlots = (s) =>
   html`<div class="pslots mini">${POSES.map((p) => {
     const ph = s.slots[p];
-    return html`<span class="pslot${ph ? '' : ' empty'}">${ph ? html`<img src="${photoUrl(/** @type {any} */ (ph))}" alt="${t(`pose.${p}`)}">` : SIL}<span class="lb">${t(`pose.${p}`)}</span></span>`;
+    return html`<span class="pslot${ph ? '' : ' empty'}">${ph ? html`<img src="${photoUrl(/** @type {any} */ (ph))}" alt="${t(`pose.${p}`)}" loading="lazy">` : SIL}<span class="lb">${t(`pose.${p}`)}</span></span>`;
   })}</div>`;
 
 /** The Body tab's photos section. */
 export function photoSection() {
-  const ss = photoSessions(),
-    last = ss[ss.length - 1];
+  const ss = photoSessions();
   return html`<div class="section-title"><h2 class="h3">${t('body.photos')}</h2>${ss.length ? html`<span class="muted xs b">${t('photo.sessions', { n: ss.length })}</span>` : ''}</div>
 ${monthlyCard()}
 ${
-  last
-    ? html`<button class="card mt10 psession" data-act="psEdit" data-id="${last.id}"><div class="row between"><span class="xb small">${when(last)}</span><span class="muted xs b">${ic('edit', 14, 2.2)}${t('photo.edit')}</span></div>
-<div class="muted xs b mt2">${addedAt(last.ts)}</div>${miniSlots(last)}</button>`
+  ss.length
+    ? // Every session, newest first (1.3.2: not only the latest one).
+      html`<div class="psessions">${[...ss].reverse().map(
+        (
+          s,
+        ) => html`<button class="card mt10 psession" data-act="psEdit" data-id="${s.id}"><div class="row between"><span class="xb small">${when(s)}</span><span class="muted xs b">${ic('edit', 14, 2.2)}${t('photo.edit')}</span></div>
+<div class="muted xs b mt2">${addedAt(s.ts)}</div>${miniSlots(s)}</button>`,
+      )}</div>`
     : html`<div class="card mt10 center pempty">${SIL}<p class="muted b small mt8 lh">${t('photo.empty')}</p></div>`
 }
 <button class="btn w100 mt10" data-act="psNew">${ic('camera', 20, 2.4)}${t('photo.newSession')}</button>

@@ -4,7 +4,7 @@
  * @module features/progress/views/lifts
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, fmtNum, t } from '../../../core/i18n.js';
+import { fmtDate, fmtKg, fmtNum, t } from '../../../core/i18n.js';
 import { addDays, dayKey } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { delta, empty, seg } from '../../../ui/components.js';
@@ -73,7 +73,7 @@ export default () => ({
       .filter((p) => p != null);
     pts = mergeSameX(pts, 'max'); // two workouts on one day → one point (the best)
     const best = pts.length ? Math.max(...pts.map((p) => p.y)) : 0;
-    const unit = weighted ? 'kg' : t('unit.repsShort');
+    const unit = weighted ? t('unit.kg') : t('unit.repsShort');
     const hm = heatmap();
     const prs = all
       .flatMap((s) => s.prs.map((/** @type {any} */ p) => ({ ...p, at: s.endedAt })))
@@ -95,7 +95,7 @@ ${
   prs.length
     ? prs.map(
         (p, i) =>
-          html`<div class="pr"><div class="sq soft" style="color:${colors[i % 3]}">${ic('trophy', 19, 2.2)}</div><div class="f1"><div class="b">${exName(p.exId)}</div><div class="muted xs b">${dayKey(p.at) === dayKey() ? t('common.today') : fmtDate(p.at, { day: 'numeric', month: 'short' })}</div></div><div class="xb num">${p.w ? `${p.w} kg × ${p.r}` : `× ${p.r}`}</div></div>`,
+          html`<div class="pr"><div class="sq soft" style="color:${colors[i % 3]}">${ic('trophy', 19, 2.2)}</div><div class="f1"><div class="b">${exName(p.exId)}</div><div class="muted xs b">${dayKey(p.at) === dayKey() ? t('common.today') : fmtDate(p.at, { day: 'numeric', month: 'short' })}</div></div><div class="xb num">${p.w ? `${fmtKg(p.w)} × ${p.r}` : `× ${p.r}`}</div></div>`,
       )
     : html`<p class="muted small b pad10">${t('progress.noPrs')}</p>`
 }</div>

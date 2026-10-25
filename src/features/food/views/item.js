@@ -8,8 +8,8 @@ import { fmtDate, t } from '../../../core/i18n.js';
 import { get } from '../../../core/store.js';
 import { ic } from '../../../ui/icons.js';
 import { seg, stepper } from '../../../ui/components.js';
-import { closeSheet, openSheet } from '../../../ui/sheet.js';
-import { deleteWithUndo, undoEdit } from '../../../ui/undo.js';
+import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
+import { deleteWithUndo } from '../../../ui/undo.js';
 import { editRow, foodName } from '../api.js';
 import { MEALS, scaleRow } from '../logic.js';
 import { GRAM_STEP, extraLine, macroLine } from './grams.js';
@@ -24,10 +24,10 @@ export function deleteFoodRow(r) {
     [{ store: 'food', row: r }],
     {
       label: foodName(r),
-      sub: `${t(`meal.${r.meal}`)} · ${fmtDate(`${r.date}T12:00`, { day: 'numeric', month: 'short' })} · ${r.grams} g`,
+      sub: `${t(`meal.${r.meal}`)} · ${fmtDate(`${r.date}T12:00`, { day: 'numeric', month: 'short' })} · ${r.grams} ${t('unit.g')}`,
       emoji: r.emoji ?? '🍽️',
     },
-    t('undo.deleted', { name: `${foodName(r)} · ${r.grams} g` }),
+    t('undo.deleted', { name: `${foodName(r)} · ${r.grams} ${t('unit.g')}` }),
   );
 }
 
@@ -45,7 +45,7 @@ export function openItemEdit(id) {
       const n = scaleRow(row, g || 1);
       return html`<div class="itemedit"><div class="row gap12"><div class="fic lg">${row.emoji ?? '🍽️'}</div>
 <div class="f1 minw0"><h2 class="h2">${foodName(row)}</h2><div class="muted small b">${row.time} · ${t('food.editItem')}</div></div></div>
-<div class="mt14">${stepper({ act: 'g', value: g, unit: 'g', label: t('food.grams'), big: true, id: 'egrams' })}</div>
+<div class="mt14">${stepper({ act: 'g', value: g, unit: t('unit.g'), label: t('food.grams'), big: true, id: 'egrams' })}</div>
 <div class="row between mt14 px4"><div class="num kcalbig">${n.kcal} <small>kcal</small></div>${macroLine(n)}</div>
 ${extraLine(n)}
 <div class="xs xb muted caps mt16">${t('food.moveTo')}</div>
@@ -90,7 +90,7 @@ ${extraLine(n)}
             : before.grams === after.grams
               ? t('food.movedTo', { name, meal: to })
               : t('food.itemChanged', { name, g: after.grams, meal: to });
-        undoEdit(what, [{ store: 'food', before: [before] }]);
+        toast(what);
         return false;
       },
     },

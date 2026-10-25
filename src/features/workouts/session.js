@@ -11,7 +11,7 @@ import { exById } from '../library/api.js';
 import { bodyWeight } from '../body/api.js';
 import { award, isCompleteWorkout, setAward, xpForWorkout } from '../motivation/api.js';
 import { activeWorkout, planName, sessions } from './api.js';
-import { detectPRs, estimateKcal, recomputeAfterDelete, sessionMet, summarize } from './logic.js';
+import { clampKg, detectPRs, estimateKcal, recomputeAfterDelete, sessionMet, summarize } from './logic.js';
 
 /** @typedef {import('./logic.js').WItem} WItem */
 
@@ -27,9 +27,6 @@ export function edit(fn) {
   return w;
 }
 
-/** Round to the nearest 0.25 and clamp at 0. @param {number} v */
-const clean = (v) => Math.max(0, Math.round(v * 4) / 4);
-
 /**
  * Change weight of set j of item i; later unfinished sets follow.
  * @param {number} i @param {number} j @param {number} value
@@ -37,7 +34,7 @@ const clean = (v) => Math.max(0, Math.round(v * 4) / 4);
 export const setWeight = (i, j, value) =>
   edit((w) => {
     const it = w.items[i],
-      v = clean(value);
+      v = clampKg(value);
     it.sets.forEach((/** @type {any} */ s, k) => (k === j || (k > j && !s.done)) && (s.w = v));
   });
 

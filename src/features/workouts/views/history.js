@@ -6,7 +6,7 @@
  * @module features/workouts/views/history
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, fmtNum, fmtVolume, t } from '../../../core/i18n.js';
+import { fmtDate, fmtKg, fmtVolume, t } from '../../../core/i18n.js';
 import { durationMin } from '../../../core/dates.js';
 import { get } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
@@ -19,8 +19,7 @@ import { planName } from '../api.js';
 import { deleteSession } from '../session.js';
 
 /** One set as text: "40 kg × 10" or "12 reps". @param {{w: number, r: number}} x @param {boolean} weighted */
-export const setText = (x, weighted) =>
-  weighted ? `${fmtNum(x.w, x.w % 1 ? 2 : 0)} kg × ${x.r}` : t('summary.repsN', { n: x.r });
+export const setText = (x, weighted) => (weighted ? `${fmtKg(x.w)} × ${x.r}` : t('summary.repsN', { n: x.r }));
 
 /**
  * @param {{id: string, tab?: 'progress'|'workouts'}} p

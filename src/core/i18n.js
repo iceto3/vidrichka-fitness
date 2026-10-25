@@ -104,6 +104,15 @@ export const fmtNum = (n, digits = 0) =>
   new Intl.NumberFormat(locale(), { maximumFractionDigits: digits }).format(n || 0);
 
 /**
+ * A unit code shown in the app language ("kg" → "кг", "cm" → "см", "g" → "г" in Bulgarian).
+ * @param {string} u
+ */
+export const unitText = (u) => (['kg', 'cm', 'g', 't'].includes(u) ? t(`unit.${u}`) : u);
+
+/** A weight with its unit, e.g. "42,5 кг" / "42.5 kg" (up to 2 decimals). @param {number} kg */
+export const fmtKg = (kg) => `${fmtNum(kg, 2)} ${t('unit.kg')}`;
+
+/**
  * A number with the locale's thousands separator even for 4 digits (Bulgarian CLDR leaves
  * "3960" ungrouped, which read inconsistently next to "12 400"). Falls back to inserting the
  * locale's group character where `useGrouping: 'always'` is not supported.
@@ -128,14 +137,14 @@ export const TONNE_FROM = 10000;
  * Lifted volume in one format everywhere (1.2.1): below 10 t in kg with a thousands
  * separator ("3 960 kg"), from 10 t in tonnes with one decimal ("12,4 t").
  * @param {number} kg
- * @returns {{value: string, unit: 'kg' | 't', text: string}}
+ * @returns {{value: string, unit: string, text: string}} Unit in the app language (кг / т in Bulgarian).
  */
 export function fmtVolume(kg) {
   const v = Math.round(kg || 0);
   const r =
     v >= TONNE_FROM
-      ? { value: fmtGrouped(Math.round(v / 100) / 10, 1), unit: /** @type {const} */ ('t') }
-      : { value: fmtGrouped(v), unit: /** @type {const} */ ('kg') };
+      ? { value: fmtGrouped(Math.round(v / 100) / 10, 1), unit: t('unit.t') }
+      : { value: fmtGrouped(v), unit: t('unit.kg') };
   return { ...r, text: `${r.value} ${r.unit}` };
 }
 

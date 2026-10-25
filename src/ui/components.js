@@ -4,7 +4,7 @@
  * @module ui/components
  */
 import { html, raw } from './dom.js';
-import { fmtHM, t } from '../core/i18n.js';
+import { fmtHM, fmtNum, t } from '../core/i18n.js';
 import { ic } from './icons.js';
 
 /**
@@ -108,7 +108,7 @@ export const topBar = (title, sub = '', right = html`<span class="iconbtn ghost"
 export function delta(d, unit = '', digits = 1) {
   const r = Math.round(d * 10 ** digits) / 10 ** digits;
   if (!r) return html`<span class="delta n">±0</span>`;
-  return html`<span class="delta ${r < 0 ? 'g' : 'u'}">${ic(r < 0 ? 'dn' : 'up', 11, 3)}${Math.abs(r).toFixed(digits).replace(/\.0+$/, '')}${unit ? ' ' + unit : ''}</span>`;
+  return html`<span class="delta ${r < 0 ? 'g' : 'u'}">${ic(r < 0 ? 'dn' : 'up', 11, 3)}${fmtNum(Math.abs(r), digits)}${unit ? ' ' + unit : ''}</span>`;
 }
 
 /** Empty-state block. @param {string} icon @param {string} text */

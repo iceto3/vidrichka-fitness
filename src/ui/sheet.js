@@ -68,6 +68,7 @@ const render = (e) => {
   const h = panel?.querySelector('h1, h2, h3, .h2, .h3');
   if (h) panel.setAttribute('aria-labelledby', (h.id ||= `dlg-h-${(e.hid ||= ++headingSeq)}`));
   else panel?.setAttribute('aria-label', document.title);
+  requestAnimationFrame(repositionPills); // the sheet's height may have changed
 };
 let headingSeq = 0;
 
@@ -85,6 +86,7 @@ export function closeSheet(entry = stack[stack.length - 1], fromPop = false) {
   if (!stack.length) document.body.classList.remove('locked');
   if (!fromPop) (skipPop++, history.back());
   entry.view.onClose?.();
+  repositionPills();
 }
 
 /** Number of open sheets. */
@@ -119,6 +121,7 @@ export function toast(text) {
   document.querySelectorAll('.toast').forEach((old) => old.remove()); // one at a time, newest wins
   const el = document.createElement('div');
   el.className = 'toast';
+  el.dataset.born = String(Date.now());
   el.setAttribute('role', 'status');
   el.textContent = text;
   document.body.append(el);
@@ -126,45 +129,118 @@ export function toast(text) {
   setTimeout(() => el.remove(), 3000);
 }
 
-/** How long an undo snackbar stays (ms). */
-export const SNACK_MS = 8000;
+/** How long the undo pill stays (ms). */
+export const SNACK_MS = 4000;
+
+/** Things on the page the undo pill must not cover. */
+const TAPPABLE = 'main button, main a[href], main input, main select, main textarea, main [data-go], main [data-act]';
 
 /**
- * Show an undo snackbar: the text plus an „Отмени“ button for {@link SNACK_MS}. Only one is
- * shown at a time (a newer toast or snackbar replaces it – deleted things stay in
- * "Recently deleted" anyway).
- * @param {string} text
+ * Where the undo pill sits: the right corner just above the bottom nav, or – while a bottom
+ * sheet is open – just above that sheet's top edge, so it never covers a sheet's buttons.
+ * @param {HTMLElement} el
+ */
+const placePill = (el) => {
+  const top = stack[stack.length - 1];
+  const panel = top && top.view.kind !== 'dialog' ? top.el.querySelector(':scope > .panel') : null;
+  el.style.bottom = panel ? `${Math.round(innerHeight - panel.getBoundingClientRect().top + 10)}px` : '';
+  if (panel) return;
+  // Never sit on anything tappable on the page (a button, a meal row, a link, a field):
+  // move up to the lowest free gap on the right; only if there is none, stay in the corner.
+  const r = el.getBoundingClientRect();
+  const hits = [...document.querySelectorAll(TAPPABLE)]
+    .map((b) => b.getBoundingClientRect())
+    .filter((q) => q.width && q.height && q.left < r.right + 4 && q.right > r.left - 4 && q.top < r.bottom + 4);
+  let y = r.bottom;
+  for (let i = 0; i < 60; i++) {
+    const hit = hits.find((q) => q.top < y + 4 && q.bottom > y - r.height - 4);
+    if (!hit) break;
+    y = hit.top - 6;
+    if (y - r.height < 8) return; // nowhere free: keep the corner
+  }
+  if (y !== r.bottom) el.style.bottom = `${Math.round(innerHeight - y)}px`;
+};
+
+/** Keep a visible undo pill clear of the (new) top sheet. */
+function repositionPills() {
+  document.querySelectorAll('.undopill').forEach((p) => placePill(/** @type {HTMLElement} */ (p)));
+}
+
+/**
+ * Undo for a deletion: a small „Отмени“ pill with a countdown ring in the bottom-right corner
+ * (above the nav, or above an open sheet). It hides after {@link SNACK_MS}, can be swiped
+ * away, and only one is shown at a time (deleted things stay in „Наскоро изтрити“ anyway).
+ * @param {string} text What was deleted (read by screen readers, shown as a tooltip).
  * @param {() => void} onUndo
  * @param {number} [ms]
  * @returns {HTMLElement}
  */
 export function snack(text, onUndo, ms = SNACK_MS) {
-  document.querySelectorAll('.toast').forEach((old) => old.remove());
-  const el = document.createElement('div');
-  el.className = 'toast snack';
-  el.setAttribute('role', 'status');
-  const msg = document.createElement('span');
-  msg.className = 'snacktxt';
-  msg.textContent = text;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'snackbtn';
-  btn.textContent = t('undo.undo');
-  let used = false;
-  btn.addEventListener('click', (e) => {
+  document.querySelectorAll('.undopill').forEach((old) => old.remove());
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = 'undopill';
+  el.dataset.born = String(Date.now());
+  el.title = text;
+  el.setAttribute('aria-label', `${text} – ${t('undo.undo')}`);
+  el.style.setProperty('--ms', `${ms}ms`);
+  el.innerHTML = `<svg class="ring" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle class="left" cx="12" cy="12" r="10"/></svg><span>${t('undo.undo')}</span>`;
+  let used = false,
+    x0 = 0,
+    y0 = 0,
+    dx = 0,
+    dy = 0,
+    drag = false;
+  const hide = () => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 220);
+  };
+  el.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (used) return;
+    if (used || drag) return;
     used = true;
     el.remove();
     onUndo();
     toast(t('undo.done'));
   });
-  el.append(msg, btn);
+  // Swipe away (sideways or down).
+  el.addEventListener(
+    'pointerdown',
+    (e) => ((x0 = e.clientX), (y0 = e.clientY), (drag = false), el.setPointerCapture(e.pointerId)),
+  );
+  el.addEventListener('pointermove', (e) => {
+    if (!el.hasPointerCapture(e.pointerId)) return;
+    dx = e.clientX - x0;
+    dy = Math.max(0, e.clientY - y0);
+    if (Math.abs(dx) + dy > 8) drag = true;
+    if (drag) el.style.transform = `translate(${dx}px, ${dy}px)`;
+  });
+  el.addEventListener('pointerup', () => {
+    if (drag && (Math.abs(dx) > 40 || dy > 30)) return void ((used = true), hide());
+    el.style.transform = '';
+    setTimeout(() => (drag = false), 0);
+  });
   document.body.append(el);
-  setTimeout(() => el.classList.add('out'), ms - 400);
-  setTimeout(() => el.remove(), ms);
+  placePill(el);
+  const onScroll = () => requestAnimationFrame(() => placePill(el));
+  addEventListener('scroll', onScroll, { passive: true });
+  new MutationObserver(
+    (_, mo) => !el.isConnected && (removeEventListener('scroll', onScroll), mo.disconnect()),
+  ).observe(document.body, { childList: true });
+  setTimeout(() => placePill(el), 260); // after a sheet re-render / open animation
+  setTimeout(() => !used && hide(), ms);
   return el;
 }
+
+/**
+ * Remove the toasts and undo pills that belong to the page being left. One created in the
+ * last moment (by the very tap that navigates, e.g. „Запиши“ in Regular meals) stays.
+ * @param {number} [fresh] Keep the ones younger than this (ms).
+ */
+export const clearToasts = (fresh = 1000) =>
+  document
+    .querySelectorAll('.toast, .undopill')
+    .forEach((e) => Date.now() - Number(/** @type {HTMLElement} */ (e).dataset.born ?? 0) >= fresh && e.remove());
 
 /**
  * Initialise the layer root and global listeners.
@@ -185,5 +261,6 @@ export function initSheets(root) {
     closeSheet();
   });
   on('ui:refresh', () => stack.forEach(render));
+  on('route:changed', () => clearToasts()); // a toast or Undo is about the page that was left
   on('toast', (/** @type {{key?: string, text?: string, vars?: any}} */ p) => toast(p.text ?? t(p.key ?? '', p.vars)));
 }

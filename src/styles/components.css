@@ -580,3 +580,60 @@ html[lang='bg'] .nav .t {
 .tbox:focus-within {
   border-color: var(--accent);
 }
+
+/* v1.3.2 mockup: small undo pill (deletions only) */
+.undopill {
+  position: fixed;
+  right: 14px;
+  bottom: calc(var(--nav-h) + 10px);
+  z-index: 62;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px 7px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: #13232c;
+  color: #7ee2c8;
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  touch-action: none;
+  animation: pillin 0.22s ease-out;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+.undopill.out {
+  opacity: 0;
+  transform: translateY(8px) scale(0.9);
+}
+.undopill .ring {
+  width: 22px;
+  height: 22px;
+  transform: rotate(-90deg);
+}
+.undopill .ring circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 3;
+}
+.undopill .ring .left {
+  stroke: #7ee2c8;
+  stroke-dasharray: 62.83;
+  stroke-dashoffset: 0;
+  stroke-linecap: round;
+  animation: pillring var(--ms, 4000ms) linear forwards;
+}
+@keyframes pillring {
+  to {
+    stroke-dashoffset: 62.83;
+  }
+}
+@keyframes pillin {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+}

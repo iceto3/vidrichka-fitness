@@ -15,7 +15,7 @@ export const GRAM_STEP = 10;
 
 /** Macro line (P / C / F). @param {{p: number, c: number, f: number}} n */
 export const macroLine = (n) =>
-  html`<span class="row gap12 small b num"><span><span class="cp">●</span> ${t('food.p')} ${Math.round(n.p)} g</span><span><span class="cc">●</span> ${t('food.c')} ${Math.round(n.c)} g</span><span><span class="cf">●</span> ${t('food.f')} ${Math.round(n.f)} g</span></span>`;
+  html`<span class="row gap12 small b num"><span><span class="cp">●</span> ${t('food.p')} ${Math.round(n.p)} ${t('unit.g')}</span><span><span class="cc">●</span> ${t('food.c')} ${Math.round(n.c)} ${t('unit.g')}</span><span><span class="cf">●</span> ${t('food.f')} ${Math.round(n.f)} ${t('unit.g')}</span></span>`;
 
 /**
  * Fiber / salt line – only the values that are known (empty when neither is).
@@ -23,8 +23,8 @@ export const macroLine = (n) =>
  */
 export const extraLine = (n) => {
   const parts = [];
-  if (known(n.fib)) parts.push(`${t('food.fiber')} ${fmtNum(/** @type {number} */ (n.fib), 1)} g`);
-  if (known(n.salt)) parts.push(`${t('food.salt')} ${fmtNum(/** @type {number} */ (n.salt), 1)} g`);
+  if (known(n.fib)) parts.push(`${t('food.fiber')} ${fmtNum(/** @type {number} */ (n.fib), 1)} ${t('unit.g')}`);
+  if (known(n.salt)) parts.push(`${t('food.salt')} ${fmtNum(/** @type {number} */ (n.salt), 1)} ${t('unit.g')}`);
   return parts.length ? html`<div class="muted small b num px4 mt6 extra">${parts.join(' · ')}</div>` : '';
 };
 
@@ -42,7 +42,7 @@ export function openGrams(food, onDone, initial) {
       const n = portion(food, g);
       return html`<div class="row gap12"><div class="fic lg" style="background:${cat?.bg ?? 'var(--soft)'}">${food.emoji ?? '🍽️'}</div>
 <div class="f1"><h2 class="h2">${foodName(food)}</h2><div class="muted small b">${cat ? `${t(`foodcat.${cat.id}`)} · ` : ''}${t('food.per100', { n: Math.round(food.kcal) })}</div></div></div>
-<div class="mt14">${stepper({ act: 'g', value: g, unit: 'g', label: t('food.grams'), big: true, id: 'grams' })}</div>
+<div class="mt14">${stepper({ act: 'g', value: g, unit: t('unit.g'), label: t('food.grams'), big: true, id: 'grams' })}</div>
 ${food.portion && food.portion !== g ? html`<div class="row center-j mt8"><button class="chip" data-act="portion">${t('food.portion', { n: food.portion })}</button></div>` : ''}
 <div class="row between mt14 px4"><div class="num kcalbig">${n.kcal} <small>kcal</small></div>${macroLine(n)}</div>
 ${extraLine(n)}

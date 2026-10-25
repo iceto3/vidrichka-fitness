@@ -277,13 +277,14 @@ test('small celebration variants never repeat twice in a row', () => {
 test('volume: one formatter, BG thousands separator, kg below 10 t, tonnes from 10 t', async () => {
   await setLang('bg');
   const sp = (s) => s.replace(/[\u00a0\u202f]/g, ' ');
-  assert.equal(sp(fmtVolume(3960).text), '3 960 kg');
-  assert.equal(sp(fmtVolume(999).text), '999 kg');
-  assert.equal(sp(fmtVolume(5800).text), '5 800 kg');
-  assert.equal(sp(fmtVolume(12400).text), '12,4 t');
-  assert.equal(sp(fmtVolume(1234567).text), '1 234,6 t');
-  assert.equal(fmtVolume(12400).unit, 't');
-  assert.equal(fmtVolume(9000).unit, 'kg');
+  // 1.3.2: units in Bulgarian too (кг / т), like „г“ for grams
+  assert.equal(sp(fmtVolume(3960).text), '3 960 кг');
+  assert.equal(sp(fmtVolume(999).text), '999 кг');
+  assert.equal(sp(fmtVolume(5800).text), '5 800 кг');
+  assert.equal(sp(fmtVolume(12400).text), '12,4 т');
+  assert.equal(sp(fmtVolume(1234567).text), '1 234,6 т');
+  assert.equal(fmtVolume(12400).unit, 'т');
+  assert.equal(fmtVolume(9000).unit, 'кг');
   await setLang('en');
   assert.equal(fmtVolume(3960).text, '3,960 kg');
   assert.equal(fmtVolume(12400).text, '12.4 t');
