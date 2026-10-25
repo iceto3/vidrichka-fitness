@@ -71,6 +71,18 @@ export function logFood(food, grams, meal, date = view.date) {
   return row;
 }
 
+/**
+ * Log ready-made diary rows (e.g. confirmed voice entries with their own nutrition, day,
+ * meal and time). One micro animation for the batch.
+ * @param {{date: string, meal: string, ts: number, time: string, name: string, emoji?: string,
+ *   grams: number, kcal: number, p: number, c: number, f: number, source?: string}[]} rows
+ */
+export function logRows(rows) {
+  const saved = rows.map((r) => put('food', { ...r, id: uid('f') }));
+  if (saved.length) emit('food:logged', { meal: saved[0].meal, emoji: saved[0].emoji ?? '🍽️' });
+  return saved;
+}
+
 /** Remove a diary row. @param {string} id */
 export const unlog = (id) => remove('food', id);
 

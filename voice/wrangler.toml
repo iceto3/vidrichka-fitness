@@ -1,0 +1,22 @@
+# Cloudflare Worker for Vidrichka voice/text logging (stateless: no D1, no KV).
+# The xAI key is NOT in this file — it is a Worker secret:
+#   printenv XAI_API_KEY | wrangler secret put XAI_API_KEY
+name = "vidrichka-voice"
+main = "src/index.js"
+compatibility_date = "2026-05-01"
+workers_dev = true
+
+[vars]
+ALLOWED_ORIGINS = "https://iceto3.github.io"
+XAI_MODEL = "grok-4.20-0309-non-reasoning"
+MAX_TEXT = "500"
+MAX_TOKENS = "700"
+
+# Workers Rate Limiting binding (free on all plans): 8 parses per minute per IP.
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "4711"
+simple = { limit = 8, period = 60 }
+
+[observability]
+enabled = true

@@ -30,6 +30,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm test --prefix server
+      - run: npm test --prefix voice
       - run: npm run build
       - name: Install WebKit for iPhone emulation
         run: npx playwright-core install --with-deps webkit

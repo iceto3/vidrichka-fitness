@@ -20,6 +20,7 @@ import { seedPlans } from './features/workouts/api.js';
 import { otter } from './features/mascot/api.js';
 import { stats } from './features/motivation/api.js';
 import { pushUrl } from './features/daily/push-config.js';
+import { voiceUrl } from './features/voice/config.js';
 import './features/profile/install.js'; // catch beforeinstallprompt early
 
 const $id = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -94,15 +95,26 @@ const genderRow = () =>
 function whatsNew() {
   const seen = /** @type {string} */ (kv('seenWhatsNew', ''));
   if (seen === WHATS_NEW) return;
-  setKv('seenWhatsNew', WHATS_NEW);
-  // Coming from 1.2.0 ("1.2" seen): only the 1.2.1 items; from older, the 1.2 items and the
-  // gender choice too.
+  // Coming from 1.2.1: only the 1.3 items; from 1.2.0 ("1.2") also the 1.2.1 ones; from older,
+  // the 1.2 items and the gender choice too. Voice items only once the voice server is set.
   const had12 = seen === '1.2' || seen.startsWith('1.2.');
+  const had121 = /^1\.2\.[1-9]/.test(seen);
   const push = !had12 && !!pushUrl(); // push items only once the server is deployed
+  const voice = !!voiceUrl();
   const items = /** @type {[string, string][]} */ ([
-    ['camera', 'whatsNew.photos'],
-    ['calendar', 'whatsNew.photoMonth'],
-    ['check', 'whatsNew.fixes121'],
+    ...(voice
+      ? /** @type {[string, string][]} */ ([
+          ['mic', 'whatsNew.voice'],
+          ['check', 'whatsNew.voiceConfirm'],
+        ])
+      : []),
+    ...(had121
+      ? []
+      : /** @type {[string, string][]} */ ([
+          ['camera', 'whatsNew.photos'],
+          ['calendar', 'whatsNew.photoMonth'],
+          ['check', 'whatsNew.fixes121'],
+        ])),
     ...(had12
       ? []
       : /** @type {[string, string][]} */ ([
@@ -118,6 +130,8 @@ function whatsNew() {
           ['drop', 'whatsNew.micro'],
         ])),
   ]);
+  if (!items.length) return; // nothing visible is new yet (e.g. voice not deployed): ask again next version
+  setKv('seenWhatsNew', WHATS_NEW);
   openSheet({
     kind: 'dialog',
     render:

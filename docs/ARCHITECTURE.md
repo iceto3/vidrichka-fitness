@@ -105,3 +105,24 @@ Features never import another feature's views, only its `api.js`. Removing a fea
   - **Streak:** the monthly streak is the number of consecutive complete months. The current month counts once it is complete, so the streak does not "break" on the 2nd.
 - **Celebrations:** the session sheet emits `photos:sessionStart` and `photos:sessionEnd`. While a session is open, level-ups, badges and the monthly set are held. On close, a SMALL toast plays first, with a random otter move (`wave`, `hop`, `spin` or `flash`, never the same twice in a row) and a random title. The held badges and level-ups follow as small tap-away toasts that do not block. The monthly-set BIG celebration comes last.
 - **Migration 2 → 3:** every existing photo becomes its own session with the photo in the Front slot. It keeps its date and blob, and gets `shot.source: 'upload'`. Rows that already have a session are left unchanged, so re-importing a 1.2.1 backup is a no-op.
+
+## Voice logging (1.3)
+
+- **Server** (`voice/`, the stateless Cloudflare Worker `vidrichka-voice`):
+  - `src/prompt.js` has the strict system prompt and the JSON schema.
+    - The user text is treated as data and never as instructions.
+    - Plain water is the only water; other drinks are food.
+    - Macros are for the whole portion, and dates are never in the future and at most 7 days back.
+  - `src/parse.js` validates the request (`text` ≤ 500 chars, `today`, `time`, `tz`, `lang`) and normalizes the model output. It clamps the numbers, falls back to the meal for the time of day and drops anything malformed.
+  - `src/app.js` is the HTTP layer:
+    - Origin allow-list and CORS, `GET /health` and `POST /parse` only.
+    - The rate limit: the `LIMITER` binding plus a per-isolate fallback.
+    - The xAI call with a 20 s timeout and a `max_tokens` cap.
+    - It logs only status codes.
+  - Tests mock xAI. `npm run smoke:live` makes two real calls with the key from the environment and never prints it.
+- **App** (`features/voice/`):
+  - `config.js › VOICE_URL` (on localhost, `localStorage['vf-voice-url']` can override it, which the e2e test uses).
+  - `api.js` checks `/health` at start and when the phone comes online. `voiceReady()` gates the buttons on Home and Food › Add. `parseText()` sends a `text/plain` POST (a simple request, so no CORS preflight).
+  - `logic.js` is pure. It builds the request body, scales grams and converts water to glasses, and builds the rows and the per-day water.
+  - `views/voice.js` has the dictation sheet and the confirm sheet.
+  - Saving calls `food/api.js › logRows()` (rows with `source: 'voice'`, one `food:logged`) and `setWater()`. Nothing is stored before **Save**.

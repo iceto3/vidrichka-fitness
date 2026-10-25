@@ -11,8 +11,8 @@ crons = ["* * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "vidrichka-push-db"
-# Filled in after `wrangler d1 create vidrichka-push-db`.
-database_id = "00000000-0000-0000-0000-000000000000"
+# Created with `wrangler d1 create vidrichka-push-db` (1.3.0).
+database_id = "320ced95-2c04-4122-b604-706479ba4ee6"
 migrations_dir = "migrations"
 
 [vars]

@@ -19,6 +19,9 @@ const GENDERED = [
   'photo.dateHint',
   'cel.photo2',
   'cel.photoSetSub',
+  // 1.3 voice
+  'voice.hint',
+  'whatsNew.voice',
 ];
 
 /** Every string variant of a dictionary value. @param {any} v @returns {string[]} */

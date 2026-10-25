@@ -98,6 +98,9 @@ async function run(name, browser, P) {
     timezoneId: 'Europe/Sofia',
     serviceWorkers: name === 'android' ? 'allow' : 'block',
   });
+  // The real push and voice Workers are never called from here: they look unreachable, so
+  // the voice buttons stay hidden; voice13() mocks its own server. (Real push: server/test/e2e.)
+  await ctx.route(/\.workers\.dev\//, (r) => r.abort());
   const page = await ctx.newPage();
   // Fixed, flowing clock (Sofia, UTC+3 until 25 Oct) so the daily reminders are deterministic.
   await page.clock.install({ time: new Date('2026-10-19T06:00:00+03:00') });
@@ -330,6 +333,7 @@ async function run(name, browser, P) {
   await daily(page, h);
   if (name === 'android') await fixes(page, h);
   await photos121(page, h, name);
+  await voice13(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -980,5 +984,131 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   await page.keyboard.press('Escape');
   await settle();
   console.log('  ✔ C1 latest weight, C2 partial, C4 empty weight card, C5 reset → welcome at once');
+  await page.removeLocatorHandler(layer.locator('.dprompt'));
+}
+
+/**
+ * 1.3: "Say it" voice logging against a mocked voice server: hidden until the server is
+ * configured, sentence → confirm sheet (edit grams, remove an item) → saved through the food
+ * API; nothing is saved before Save; errors show in the sheet.
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
+  await page.addLocatorHandler(layer.locator('.dprompt'), async (l) => {
+    await l
+      .locator('[data-close]')
+      .first()
+      .evaluate((b) => /** @type {HTMLElement} */ (b).click());
+  });
+  const URL = 'https://voice.test';
+  const cors = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
+  /** @type {any[]} */
+  const sent = [];
+  let status = 200;
+  await page.route(`${URL}/**`, async (route) => {
+    const req = route.request();
+    if (req.url().endsWith('/health'))
+      return route.fulfill({ headers: cors, body: JSON.stringify({ ok: true, configured: true, version: 'mock' }) });
+    const b = JSON.parse(req.postData() ?? '{}');
+    sent.push({ ...b, ct: req.headers()['content-type'] });
+    if (status !== 200) return route.fulfill({ status, headers: cors, body: JSON.stringify({ error: 'rate-limit' }) });
+    const food = (/** @type {any} */ o) => ({ type: 'food', meal: 'breakfast', date: b.today, time: b.time, ...o });
+    return route.fulfill({
+      headers: cors,
+      body: JSON.stringify({
+        entries: [
+          food({ name: 'Oats', amount: '1 bowl', grams: 60, kcal: 230, protein: 8, carbs: 40, fat: 4 }),
+          food({ name: 'Banana', amount: '1 medium', grams: 120, kcal: 105, protein: 1.3, carbs: 27, fat: 0.4 }),
+          { type: 'water', amount_ml: 500, meal: 'breakfast', date: b.today, time: null },
+        ],
+        model: 'mock',
+      }),
+    });
+  });
+  const voiceRows = async () => /** @type {any[]} */ (await rows('food')).filter((r) => r.source === 'voice');
+  const glasses = async () => {
+    const d = await page.evaluate(() => {
+      const n = new Date();
+      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+    });
+    return /** @type {any[]} */ (await rows('food')).find((r) => r.id === `water_${d}`)?.glasses ?? 0;
+  };
+
+  // Server unreachable → no button
+  await go('home');
+  assert.equal(await page.locator('[data-act="voice"]').count(), 0, 'no "Say it" without a reachable voice server');
+  // Configured (localhost override) → buttons on Home and Food › Add
+  await page.evaluate((u) => localStorage.setItem('vf-voice-url', u), URL);
+  await page.reload();
+  await page.locator('#nav .t').first().waitFor();
+  await go('home');
+  const btn = page.locator('#page [data-act="voice"]');
+  await btn.waitFor({ timeout: 8000 });
+  assert.match(await btn.innerText(), /Say it/);
+  await clearCel();
+  const w0 = await glasses(),
+    r0 = (await voiceRows()).length;
+
+  await btn.click();
+  await layer.locator('#vtext').waitFor();
+  assert.ok(await layer.locator('[data-act="parse"]').isDisabled(), 'nothing to read yet');
+  await layer.locator('#vtext').fill('I had a bowl of oats with a banana and two glasses of water');
+  assert.match(await layer.locator('#vcount').innerText(), /^59\/500$/);
+  await page.waitForTimeout(700);
+  await shot('voice-sheet');
+  await layer.locator('[data-act="parse"]').click();
+  await layer.locator('.vconfirm').waitFor();
+  assert.equal(sent.length, 1);
+  assert.deepEqual(Object.keys(sent[0]).sort(), ['ct', 'lang', 'text', 'time', 'today', 'tz']);
+  assert.match(sent[0].ct, /^text\/plain/, 'simple request (no CORS preflight)');
+  assert.equal(sent[0].tz, 'Europe/Sofia');
+  assert.equal(await layer.locator('.vitem').count(), 3);
+  assert.match(await layer.locator('.vitem.water').innerText(), /2 glasses · 500 ml/);
+  assert.equal((await voiceRows()).length, r0, 'nothing saved before Save');
+  await page.waitForTimeout(700);
+  await shot('voice-confirm');
+
+  // Edit: oats +10 g (scaled kcal), remove the banana, then save
+  await layer.locator('.vitem').first().locator('[data-act="grams"][data-d="1"]').click();
+  await settle();
+  assert.match(await layer.locator('.vitem').first().innerText(), /268 kcal/, '70 g of oats');
+  await layer.locator('.vitem').nth(1).locator('[data-act="del"]').click();
+  await settle();
+  assert.equal(await layer.locator('.vitem').count(), 2);
+  assert.match(await layer.locator('.vconfirm').innerText(), /268 kcal/, 'total');
+  await layer.locator('[data-act="save"]').click();
+  await layer.locator('.vconfirm').waitFor({ state: 'detached' });
+  await settle();
+  const saved = (await voiceRows()).slice(r0);
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].name, 'Oats');
+  assert.equal(saved[0].grams, 70);
+  assert.equal(saved[0].kcal, 268);
+  assert.equal(saved[0].meal, 'breakfast');
+  assert.equal(await glasses(), w0 + 2, 'two glasses of water added');
+  await clearCel();
+
+  // Errors stay in the sheet (rate limit); Food › Add has the button too
+  status = 429;
+  await go('food/add/lunch');
+  await page.locator('#page [data-act="voice"]').click();
+  await layer.locator('#vtext').fill('a coffee');
+  await layer.locator('[data-act="parse"]').click();
+  await layer.locator('.verr').waitFor();
+  assert.match(await layer.locator('.verr').innerText(), /Too many tries/);
+  await page.keyboard.press('Escape');
+  await settle();
+  assert.equal((await voiceRows()).length, r0 + 1, 'an error saves nothing');
+
+  // Server unreachable again → buttons hidden
+  await page.evaluate(() => localStorage.removeItem('vf-voice-url'));
+  await page.unroute(`${URL}/**`);
+  await page.reload();
+  await page.locator('#nav .t').first().waitFor();
+  await go('home');
+  await settle();
+  assert.equal(await page.locator('[data-act="voice"]').count(), 0, 'hidden again without a server');
+  console.log('  ✔ 1.3 voice: hidden until configured, sentence → confirm (edit/remove) → saved, errors in the sheet');
   await page.removeLocatorHandler(layer.locator('.dprompt'));
 }

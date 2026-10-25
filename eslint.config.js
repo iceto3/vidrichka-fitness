@@ -3,7 +3,17 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 export default [
-  { ignores: ['dist/', 'node_modules/', 'assets/vendor/', 'screenshots/', '.lighthouse/', 'server/.wrangler/'] },
+  {
+    ignores: [
+      'dist/',
+      'node_modules/',
+      'assets/vendor/',
+      'screenshots/',
+      '.lighthouse/',
+      'server/.wrangler/',
+      'voice/.wrangler/',
+    ],
+  },
   js.configs.recommended,
   {
     files: ['src/**/*.js'],
@@ -18,8 +28,8 @@ export default [
     languageOptions: { ecmaVersion: 2023, sourceType: 'module', globals: { ...globals.node, ...globals.browser } },
   },
   {
-    // The push server (a Cloudflare Worker) and its Node tests / e2e script.
-    files: ['server/**/*.{js,mjs}'],
+    // The push and voice servers (Cloudflare Workers) and their Node tests / scripts.
+    files: ['server/**/*.{js,mjs}', 'voice/**/*.{js,mjs}'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',

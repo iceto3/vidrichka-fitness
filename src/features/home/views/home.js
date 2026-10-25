@@ -27,6 +27,7 @@ import {
   tuckedIn,
 } from '../../daily/api.js';
 import { closeNotifications } from '../../daily/notify.js';
+import { openVoice, voiceReady } from '../../voice/api.js';
 
 /**
  * The protein-breakfast bar (1.2): a live mm:ss countdown with "Ate it" / "Skipped".
@@ -154,7 +155,7 @@ export default () => {
       return html`<div class="content home">
 <div class="row between"><div><div class="muted small b">${fmtDate(now, { weekday: 'long', day: 'numeric', month: 'long' })}</div>
 <h1 class="h1 mt2">${t(greetKey(now.getHours()))}${set.userName ? `, ${set.userName}` : ''}</h1></div>
-<button class="iconbtn" data-go="profile/reminders" aria-label="${t('profile.reminders')}">${ic('bell', 21)}${set.reminders.enabled ? '' : raw('<i class="nub" aria-hidden="true"></i>')}</button></div>
+<div class="row gap8">${voiceReady() ? html`<button class="btn sm sec voicebtn" data-act="voice">${ic('mic', 18, 2.4)}${t('voice.say')}</button>` : ''}<button class="iconbtn" data-go="profile/reminders" aria-label="${t('profile.reminders')}">${ic('bell', 21)}${set.reminders.enabled ? '' : raw('<i class="nub" aria-hidden="true"></i>')}</button></div></div>
 <div class="row gap8 mt8 otterrow"><div class="otter-wrap">${otter({ size: 112, pose: s.workedOutToday ? 'cheer' : 'wave', mood })}</div>
 <div class="bubble" role="status">${hl(t(msg.key, msg.vars))}</div></div>
 ${dailyCards()}
@@ -188,6 +189,7 @@ ${
 </div>`;
     },
     actions: {
+      voice: () => (openVoice(), false),
       start: (el) => {
         startWorkout(el.dataset.id ?? '');
         emit('nav', { path: 'workout' });

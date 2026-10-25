@@ -12,6 +12,7 @@ import './progress/index.js';
 import './body/index.js';
 import './profile/index.js';
 import './daily/index.js';
+import './voice/index.js';
 export { startMotivation } from './motivation/index.js';
 export { startCelebrations } from './celebrations/index.js';
 export { startDaily } from './daily/index.js';

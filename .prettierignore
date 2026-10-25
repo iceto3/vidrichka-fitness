@@ -6,3 +6,4 @@ screenshots/
 package-lock.json
 *.png
 server/.wrangler/
+voice/.wrangler/

@@ -28,6 +28,7 @@ import {
 } from '../api.js';
 import { signature, timesEaten, totals } from '../logic.js';
 import { openGrams } from './grams.js';
+import { openVoice, voiceReady } from '../../voice/api.js';
 
 /** One food result row. @param {any} f */
 const foodRow = (
@@ -145,7 +146,7 @@ ${!loc.length && q ? html`<button class="btn sec w100 mt10" data-act="manual">${
 <div class="center"><h1 class="h2">${t('food.add')}</h1><div class="muted xs b">${t('food.toMeal', { meal: t(`meal.${meal}`), day })}</div></div>
 ${basket.length ? html`<button class="btn sm" data-act="finish">${t('food.finishMeal')}</button>` : html`<span class="iconbtn ghost" aria-hidden="true"></span>`}</header>
 <label class="search mt14">${ic('search', 20, 2.2)}<input id="fq" class="bare f1" type="search" data-input="q" value="${q}" placeholder="${t('food.searchPh')}" autocomplete="off" enterkeyhint="search" aria-label="${t('food.search')}">
-<button class="iconbtn flat sm acc-bg" data-act="scan" aria-label="${t('food.scan')}">${ic('scan', 20, 2.2)}</button></label>
+${voiceReady() ? html`<button class="iconbtn flat sm" data-act="voice" aria-label="${t('voice.say')}">${ic('mic', 20, 2.2)}</button>` : ''}<button class="iconbtn flat sm acc-bg" data-act="scan" aria-label="${t('food.scan')}">${ic('scan', 20, 2.2)}</button></label>
 ${
   basket.length
     ? html`<div class="card mt12 basket"><div class="row between"><span class="xs xb muted caps">${t('food.inMeal', { n: basket.length })}</span><span class="b num small">${totals(basket).kcal} kcal</span></div>
@@ -191,6 +192,7 @@ ${
         if (!q || q.length === 1) emit('ui:refresh');
         return false;
       },
+      voice: () => (openVoice({ meal }), false),
       pick: (el) => (add(findFood(el.dataset.id ?? '')), false),
       cat: (el) => (openCategory(el.dataset.id ?? ''), false),
       recent: () => void (showRecent = !showRecent),

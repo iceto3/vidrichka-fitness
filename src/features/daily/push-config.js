@@ -3,8 +3,8 @@
  * @module features/daily/push-config
  */
 
-/** The deployed push server (Cloudflare Worker). Empty = not deployed yet: push stays off and hidden. */
-export const PUSH_URL = '';
+/** The deployed push server (Cloudflare Worker). Empty = not deployed: push stays off and hidden. */
+export const PUSH_URL = 'https://vidrichka-push.vidrichka.workers.dev';
 /** VAPID public key (the private one is a Worker secret). */
 export const VAPID_KEY = 'BO9JFEsnJLOmHpg2N_M9-ayXuGGZiPSJikbvjhPVEwtQjXtt3oLME6uWM3JBtmqywZrrrpB2QTC_v14cF-vqbuY';
 

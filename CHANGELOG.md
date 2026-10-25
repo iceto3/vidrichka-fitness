@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] – 2026-10-25
+
+### Added
+
+- **"Say it" voice logging** for food and water (**Кажи** in Bulgarian).
+  - A **Say it** button on Home and a mic button in Food › Add open a sheet with a text box. You dictate with the phone keyboard's mic (iOS and Android) or type, for example _"изядох купа овесени ядки с банан и изпих две чаши вода"_. On Android Chrome a **Dictate** button (the browser's speech recognition) is offered too; on iPhone the keyboard mic is used.
+  - The text, plus the phone's local date, time, time zone and app language, goes to a small Cloudflare Worker (`voice/`). The Worker asks xAI (`grok-4.20-0309-non-reasoning`, strict JSON schema, temperature 0) to turn it into food entries (name, meal, amount, grams, kcal, protein, carbs, fat, optional time and date) and water entries (ml). It understands Bulgarian and English, vague amounts ("a bowl", "две чаши") and relative times ("yesterday evening", "сутринта").
+  - A **confirm sheet** lists everything. You can change the grams (nutrition scales) or glasses, change the meal, or remove an item. **Nothing is saved until Save.** Saved foods go through the normal food API (quests, XP, the micro animation), and water is added to that day's glasses.
+  - Opened from Food › Add _meal_, today's foods go to that meal.
+  - The buttons stay hidden while the voice server isn't configured or reachable (like the push switch).
+- **Voice server** (`voice/`, the stateless Cloudflare Worker `vidrichka-voice`, free tier, no D1 or KV):
+  - It only accepts `POST /parse` from `https://iceto3.github.io` (and localhost for dev), with CORS for that origin only.
+  - It caps the text at 500 characters, the body at 4 KB and the reply at 700 tokens.
+  - It rate-limits each IP to 8 requests a minute with the free Workers Rate Limiting binding, plus a per-isolate fallback.
+  - It never logs the text or the key. The xAI key is a Worker secret (`wrangler secret put`) and is never in the app or the repo.
+  - A call costs about $0.0018 (around 1,050 input and 200 output tokens).
+- A **What's new in 1.3.0** note. Its voice items appear once the voice server is configured.
+
+### Deployed
+
+- **Push server live:** `https://vidrichka-push.vidrichka.workers.dev`. Its D1 database `vidrichka-push-db` has migration 0001 applied, and the VAPID private key is a Worker secret. **Profile › Reminders › Reminders on this phone** is now shown, and the push items of the 1.2 "What's new" appear for people coming from 1.1.
+- **Voice server live:** `https://vidrichka-voice.vidrichka.workers.dev`. The xAI key is a Worker secret, set with `wrangler secret put` from the environment.
+- The account's workers.dev subdomain is `vidrichka`.
+
 ## [1.2.1] – 2026-10-25
 
 ### Added
