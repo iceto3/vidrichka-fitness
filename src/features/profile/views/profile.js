@@ -13,6 +13,7 @@ import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { seg, stepper, toggle } from '../../../ui/components.js';
 import { closeSheet, confirmDialog, openSheet } from '../../../ui/sheet.js';
+import { KEEP_DAYS, trashList } from '../../../core/trash.js';
 import { canVibrate } from '../../../ui/feedback.js';
 import { GEAR_LEVELS, OUTFITS, otter, otterName } from '../../mascot/api.js';
 import { badges, level, recordGoal, stats } from '../../motivation/api.js';
@@ -164,6 +165,7 @@ ${srow(
     'mini',
   ),
 )}
+<button class="srow" data-go="trash"><span class="sic gray">${ic('trash', 19, 2.2)}</span><span class="t left"><span class="st block">${t('trash.title')}</span><span class="muted xs b">${trashList().length ? t('trash.count', { n: trashList().length }) : t('trash.sub', { n: KEEP_DAYS })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${srow(
   'cloud',
   'green',

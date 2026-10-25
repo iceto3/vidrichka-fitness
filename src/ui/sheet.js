@@ -44,7 +44,7 @@ export function openSheet(view) {
   whenSettled(() => history.pushState({ sheet: stack.length }, '')); // after any pending back()
   document.body.classList.add('locked');
   const panel = /** @type {HTMLElement|null} */ (el.querySelector('[role="dialog"]'));
-  panel?.focus({ preventScroll: true });
+  if (!panel?.contains(document.activeElement)) panel?.focus({ preventScroll: true }); // keep a field mount() focused
   return { close: () => closeSheet(entry), el };
 }
 
@@ -124,6 +124,46 @@ export function toast(text) {
   document.body.append(el);
   setTimeout(() => el.classList.add('out'), 2600);
   setTimeout(() => el.remove(), 3000);
+}
+
+/** How long an undo snackbar stays (ms). */
+export const SNACK_MS = 8000;
+
+/**
+ * Show an undo snackbar: the text plus an „Отмени“ button for {@link SNACK_MS}. Only one is
+ * shown at a time (a newer toast or snackbar replaces it – deleted things stay in
+ * "Recently deleted" anyway).
+ * @param {string} text
+ * @param {() => void} onUndo
+ * @param {number} [ms]
+ * @returns {HTMLElement}
+ */
+export function snack(text, onUndo, ms = SNACK_MS) {
+  document.querySelectorAll('.toast').forEach((old) => old.remove());
+  const el = document.createElement('div');
+  el.className = 'toast snack';
+  el.setAttribute('role', 'status');
+  const msg = document.createElement('span');
+  msg.className = 'snacktxt';
+  msg.textContent = text;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'snackbtn';
+  btn.textContent = t('undo.undo');
+  let used = false;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (used) return;
+    used = true;
+    el.remove();
+    onUndo();
+    toast(t('undo.done'));
+  });
+  el.append(msg, btn);
+  document.body.append(el);
+  setTimeout(() => el.classList.add('out'), ms - 400);
+  setTimeout(() => el.remove(), ms);
+  return el;
 }
 
 /**

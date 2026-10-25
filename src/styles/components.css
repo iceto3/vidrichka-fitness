@@ -475,6 +475,35 @@ html[lang='bg'] .nav .t {
 .toast.out {
   opacity: 0;
 }
+.toast.snack {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 8px 8px 8px 16px;
+  width: min(92vw, 440px);
+  font-weight: 600;
+}
+.snacktxt {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.snackbtn {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #7ee0a8;
+  font-weight: 800;
+  font-size: 15px;
+}
 @keyframes up {
   from {
     transform: translateY(24px);

@@ -8,7 +8,7 @@ import { emit } from '../../core/bus.js';
 import { L } from '../../core/i18n.js';
 import { dayKey, hhmm } from '../../core/dates.js';
 import { FOODS, FOOD_CATEGORIES, QUICK_PICKS } from '../../data/foods.js';
-import { portion } from './logic.js';
+import { known, portion, scaleRow } from './logic.js';
 
 export { FOODS, FOOD_CATEGORIES, QUICK_PICKS };
 
@@ -72,10 +72,11 @@ export function logFood(food, grams, meal, date = view.date) {
 }
 
 /**
- * Log ready-made diary rows (e.g. confirmed voice entries with their own nutrition, day,
- * meal and time). One micro animation for the batch.
+ * Log ready-made diary rows (e.g. voice entries with their own nutrition, day, meal and
+ * time). One micro animation for the batch.
  * @param {{date: string, meal: string, ts: number, time: string, name: string, emoji?: string,
- *   grams: number, kcal: number, p: number, c: number, f: number, source?: string}[]} rows
+ *   grams: number, kcal: number, p: number, c: number, f: number, fib?: number, salt?: number,
+ *   source?: string}[]} rows
  */
 export function logRows(rows) {
   const saved = rows.map((r) => put('food', { ...r, id: uid('f') }));
@@ -83,23 +84,39 @@ export function logRows(rows) {
   return saved;
 }
 
-/** Remove a diary row. @param {string} id */
+/** Remove a diary row for good (no bin – see views for delete-with-undo). @param {string} id */
 export const unlog = (id) => remove('food', id);
+
+/**
+ * Change a diary row's grams (nutrition scales) and/or move it to another meal.
+ * @param {string} id
+ * @param {{grams?: number, meal?: string}} change
+ * @returns {{before: any, after: any}|null}
+ */
+export function editRow(id, change) {
+  const before = get('food', id);
+  if (!before) return null;
+  let after = change.grams != null && change.grams !== before.grams ? scaleRow(before, change.grams) : { ...before };
+  if (change.meal && change.meal !== before.meal) after = { ...after, meal: change.meal };
+  put('food', after);
+  return { before, after };
+}
 
 /** Saved regular meals, most used first. */
 export const savedMeals = () => all('meals').sort((a, b) => (b.uses ?? 0) - (a.uses ?? 0));
 
 /**
- * Save a regular meal from diary rows.
+ * Save a regular meal (combination) from diary rows, with each item's grams and nutrition.
  * @param {string} name
  * @param {any[]} rows
+ * @returns {any} The saved meal.
  */
 export const saveMeal = (name, rows) =>
   put('meals', {
     id: uid('meal'),
     name,
     uses: 0,
-    items: rows.map(({ foodId, name: n, emoji, grams, kcal, p, c, f }) => ({
+    items: rows.map(({ foodId, name: n, emoji, grams, kcal, p, c, f, fib, salt }) => ({
       foodId,
       name: n,
       emoji,
@@ -108,23 +125,27 @@ export const saveMeal = (name, rows) =>
       p,
       c,
       f,
+      ...(known(fib) ? { fib } : {}),
+      ...(known(salt) ? { salt } : {}),
     })),
   });
 
 /**
- * Log all items of a saved meal in one tap.
+ * Log all items of a saved meal in one go.
  * @param {string} id
  * @param {string} meal
+ * @returns {{rows: any[], before: any}|null} The new diary rows and the meal as it was (for Undo).
  */
 export function logSavedMeal(id, meal) {
   const m = get('meals', id);
-  if (!m) return;
+  if (!m) return null;
   const ts = view.date === dayKey() ? Date.now() : new Date(`${view.date}T12:00`).getTime();
-  m.items.forEach((/** @type {any} */ it, /** @type {number} */ i) =>
+  const rows = m.items.map((/** @type {any} */ it, /** @type {number} */ i) =>
     put('food', { ...it, id: uid('f'), date: view.date, meal, ts: ts + i, time: hhmm(new Date(ts)) }),
   );
   put('meals', { ...m, uses: (m.uses ?? 0) + 1 });
   emit('food:logged', { meal, emoji: m.items[0]?.emoji ?? '🍽️' });
+  return { rows, before: m };
 }
 
 /** Category ids ordered by usage (most used first, ties keep default order). */

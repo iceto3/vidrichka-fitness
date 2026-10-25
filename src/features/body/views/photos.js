@@ -11,7 +11,8 @@ import { dayKey, hhmm, parseDay } from '../../../core/dates.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { seg } from '../../../ui/components.js';
-import { confirmDialog, openSheet } from '../../../ui/sheet.js';
+import { confirmDialog, openSheet, snack } from '../../../ui/sheet.js';
+import { restore } from '../../../core/trash.js';
 import { POSES, photoMonth, photoSessions, photos } from '../api.js';
 import { assignSlots, beforeAfter, monthOf } from '../photo-logic.js';
 import { addPhoto, deletePhoto, movePhoto, newSession, photoUrl, setSessionDate } from '../photos.js';
@@ -160,7 +161,14 @@ ${busy ? html`<p class="muted small b mt8 center" role="status">${t('photo.savin
       del: async (el) => {
         if (!(await confirmDialog({ title: t('body.deletePhotoQ'), ok: t('common.delete'), danger: true })))
           return false;
-        deletePhoto(el.dataset.id ?? '');
+        const ph = photos().find((x) => x.id === el.dataset.id);
+        const tid = ph
+          ? deletePhoto(ph.id, {
+              label: `${t('trash.photo')} · ${t(`pose.${ph.pose}`)}`,
+              sub: fmtDate(parseDay(ph.date), { day: 'numeric', month: 'short', year: 'numeric' }),
+            })
+          : null;
+        if (tid) snack(t('photo.deleted'), () => restore(tid));
       },
     },
     onClose: () => {

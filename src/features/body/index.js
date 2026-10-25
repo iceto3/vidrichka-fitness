@@ -4,6 +4,7 @@
  * @module features/body
  */
 import { register } from '../../core/registry.js';
+import { onRestore } from '../../core/trash.js';
 import { on, emit } from '../../core/bus.js';
 import { all, kv } from '../../core/store.js';
 import { dayKey, monthKey } from '../../core/dates.js';
@@ -12,6 +13,9 @@ import { award, XP } from '../motivation/api.js';
 import { day, patchDay } from '../daily/api.js';
 import { photoMonth } from './api.js';
 import { monthComplete, monthOf } from './photo-logic.js';
+
+// A photo put back from "Recently deleted" gets a free slot and its session date re-derived.
+onRestore('photo', async (e) => (await import('./photos.js')).restoredPhoto(e));
 
 register('progressTabs', { id: 'body', label: 'progress.body', order: 20, load: () => import('./views/body.js') });
 

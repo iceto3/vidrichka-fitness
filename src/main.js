@@ -15,7 +15,7 @@ import { closeAll, closeSheet, initSheets, openSheet, whenSettled } from './ui/s
 import { unlockAudio } from './ui/feedback.js';
 import { ic } from './ui/icons.js';
 import { seg, stepper } from './ui/components.js';
-import { startCelebrations, startDaily, startMotivation } from './features/index.js';
+import { startCelebrations, startDaily, startMotivation, startTrash } from './features/index.js';
 import { seedPlans } from './features/workouts/api.js';
 import { otter } from './features/mascot/api.js';
 import { stats } from './features/motivation/api.js';
@@ -95,19 +95,21 @@ const genderRow = () =>
 function whatsNew() {
   const seen = /** @type {string} */ (kv('seenWhatsNew', ''));
   if (seen === WHATS_NEW) return;
-  // Coming from 1.2.1: only the 1.3 items; from 1.2.0 ("1.2") also the 1.2.1 ones; from older,
-  // the 1.2 items and the gender choice too. Voice items only once the voice server is set.
-  const had12 = seen === '1.2' || seen.startsWith('1.2.');
-  const had121 = /^1\.2\.[1-9]/.test(seen);
+  // Coming from 1.3.0: only the 1.3.1 items; from 1.2.1 also the 1.3 ones; from 1.2.0 ("1.2")
+  // also the 1.2.1 ones; from older, the 1.2 items and the gender choice too. Voice items
+  // only once the voice server is set.
+  const had13 = seen.startsWith('1.3');
+  const had12 = had13 || seen === '1.2' || seen.startsWith('1.2.');
+  const had121 = had13 || /^1\.2\.[1-9]/.test(seen);
   const push = !had12 && !!pushUrl(); // push items only once the server is deployed
   const voice = !!voiceUrl();
   const items = /** @type {[string, string][]} */ ([
-    ...(voice
-      ? /** @type {[string, string][]} */ ([
-          ['mic', 'whatsNew.voice'],
-          ['check', 'whatsNew.voiceConfirm'],
-        ])
-      : []),
+    ...(voice ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.voiceMeal']]) : []),
+    ['food', 'whatsNew.fiberSalt'],
+    ['edit', 'whatsNew.mealEdit'],
+    ['undo', 'whatsNew.undo'],
+    ['star', 'whatsNew.combos'],
+    ...(voice && !had13 ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.voice']]) : []),
     ...(had121
       ? []
       : /** @type {[string, string][]} */ ([
@@ -204,6 +206,7 @@ async function start() {
   await applySettings();
   watchTheme();
   seedPlans();
+  startTrash();
   initSheets($id('layer'));
   bindActions($id('nav'), () => null);
   on('nav', (/** @type {{path?: string, replace?: boolean, back?: string}} */ p) => {

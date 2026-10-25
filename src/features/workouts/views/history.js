@@ -12,7 +12,8 @@ import { get } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { topBar } from '../../../ui/components.js';
-import { confirmDialog } from '../../../ui/sheet.js';
+import { confirmDialog, snack } from '../../../ui/sheet.js';
+import { restore } from '../../../core/trash.js';
 import { exById, exName } from '../../library/api.js';
 import { planName } from '../api.js';
 import { deleteSession } from '../session.js';
@@ -72,8 +73,9 @@ ${(s.prs ?? []).map(
           ok: t('common.delete'),
           danger: true,
         });
-        if (!ok || !deleteSession(id)) return false;
-        emit('toast', { key: 'history.deleted' });
+        const tid = ok && deleteSession(id);
+        if (!tid) return false;
+        snack(t('history.deleted'), () => restore(tid));
         emit('nav', { path: backTo, replace: true });
         return false;
       },

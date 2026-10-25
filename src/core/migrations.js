@@ -41,6 +41,10 @@ export const MIGRATIONS = [
         : {}),
     },
   }),
+  // 3 -> 4 (1.3.1): add the `trash` store ("Recently deleted"). Food rows and foods may now
+  // carry optional fiber (`fib`) and salt (`salt`) in grams; old rows simply don't have them,
+  // which means "unknown" – nothing is rewritten, every existing row is kept as is.
+  (s) => ({ ...s, stores: { ...s.stores, trash: s.stores.trash ?? [] } }),
 ];
 
 export const DATA_VERSION = MIGRATIONS.length + 1;

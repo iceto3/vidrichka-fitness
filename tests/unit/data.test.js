@@ -105,7 +105,7 @@ test('1.0 → 1.1 migration keeps every existing row and adds the days store', (
   assert.deepEqual(withDays.stores.days, [{ id: '2026-10-20', wake: 1 }]);
 });
 
-test('IndexedDB schema: upgrading v1 → v2 only adds `days`, a fresh install gets every store once', async () => {
+test('IndexedDB schema: upgrading v1 → v3 only adds `days` and `trash`, a fresh install gets every store once', async () => {
   const { SCHEMA, STORES, DB_VERSION } = await import('../../src/core/db.js');
   const fakeDb = (names) => {
     const created = [];
@@ -124,7 +124,7 @@ test('IndexedDB schema: upgrading v1 → v2 only adds `days`, a fresh install ge
   };
   const old = fakeDb(['kv', 'plans', 'sessions', 'measurements', 'food', 'meals', 'foods', 'photos']);
   upgrade(old, 1);
-  assert.deepEqual(old.created, ['days']);
+  assert.deepEqual(old.created, ['days', 'trash']); // 1.3.1 adds the bin; nothing else changes
   const fresh = fakeDb([]);
   upgrade(fresh, 0);
   assert.deepEqual([...fresh.created].sort(), [...STORES].sort());

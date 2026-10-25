@@ -4,12 +4,13 @@
  */
 import { html } from '../../../ui/dom.js';
 import { t } from '../../../core/i18n.js';
-import { remove } from '../../../core/store.js';
+import { get } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { empty, topBar } from '../../../ui/components.js';
 import { confirmDialog } from '../../../ui/sheet.js';
-import { foodName, logSavedMeal, savedMeals } from '../api.js';
+import { foodName, savedMeals } from '../api.js';
+import { addCombo, deleteCombo } from './combo.js';
 import { mealFor, totals } from '../logic.js';
 
 /** @returns {import('../../../core/registry.js').View} */
@@ -34,14 +35,13 @@ ${
   },
   actions: {
     log: (el) => {
-      logSavedMeal(el.dataset.id ?? '', mealFor());
-      emit('toast', { key: 'food.mealLogged' });
-      emit('nav', { path: 'food' });
+      if (addCombo(el.dataset.id ?? '', mealFor())) emit('nav', { path: 'food' });
       return false;
     },
     del: async (el) => {
-      if (await confirmDialog({ title: t('food.deleteMeal'), ok: t('common.delete'), danger: true }))
-        remove('meals', el.dataset.id ?? '');
+      const m = get('meals', el.dataset.id ?? '');
+      if (m && (await confirmDialog({ title: t('food.deleteMeal'), ok: t('common.delete'), danger: true })))
+        deleteCombo(m);
     },
   },
 });

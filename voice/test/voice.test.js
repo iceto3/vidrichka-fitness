@@ -111,7 +111,14 @@ test('parses a sentence: one xAI call with the strict prompt, schema and caps; e
   assert.equal(sent.messages[0].content, SYSTEM);
   assert.match(sent.messages[1].content, /today is 2026-10-25 \(Sunday\), local time 13:05, time zone Europe\/Sofia/);
   assert.match(sent.messages[1].content, /"""изядох купа/);
-  assert.deepEqual(body.entries[2], { type: 'water', amount_ml: 500, meal: 'lunch', date: '2026-10-25', time: null });
+  assert.deepEqual(body.entries[2], {
+    type: 'water',
+    amount_ml: 500,
+    meal: 'lunch',
+    meal_named: false,
+    date: '2026-10-25',
+    time: null,
+  });
   assert.equal(body.entries[0].name, 'овесени ядки');
   assert.equal(body.entries[0].kcal, 230);
   assert.deepEqual(body.usage, { in: 1000, out: 200 });
@@ -235,11 +242,21 @@ test('normalize: clamps numbers, drops junk, fixes dates/meals, caps the count',
     protein: 0,
     carbs: 12.3,
     fat: 0,
+    fiber: null,
+    salt: null,
     meal: 'dinner',
+    meal_named: false,
     date: '2026-10-25',
     time: null,
   });
-  assert.deepEqual(out[1], { type: 'water', amount_ml: 250, meal: 'dinner', date: '2026-10-24', time: '19:30' });
+  assert.deepEqual(out[1], {
+    type: 'water',
+    amount_ml: 250,
+    meal: 'dinner',
+    meal_named: false,
+    date: '2026-10-24',
+    time: '19:30',
+  });
   assert.equal(out[2].date, '2026-10-25', 'more than a week back → today');
   assert.equal(out.length, 3);
   assert.equal(
@@ -248,6 +265,52 @@ test('normalize: clamps numbers, drops junk, fixes dates/meals, caps the count',
   );
   assert.throws(() => normalize({ nope: 1 }, q));
   assert.deepEqual(normalize({ entries: [] }, q), []);
+});
+
+test('1.3.1: the named meal, fiber and salt come through (clamped; unknown stays null)', () => {
+  const q = { today: '2026-10-25', time: '13:05' };
+  const food = {
+    type: 'food',
+    amount: '2 бр.',
+    grams: 120,
+    kcal: 300,
+    protein: 20,
+    carbs: 2,
+    fat: 24,
+    date: q.today,
+    time: null,
+  };
+  const out = normalize(
+    {
+      entries: [
+        { ...food, name: 'кебапчета', fiber: 0.04, salt: 2.345, meal: 'breakfast', meal_named: true },
+        { ...food, name: 'лютеница', fiber: 999, salt: -1, meal: 'breakfast', meal_named: 'yes' },
+        { ...food, name: 'сода', fiber: null, salt: '0.1', meal: 'brunch', meal_named: true },
+      ],
+    },
+    q,
+  );
+  assert.deepEqual(
+    out.map((e) => [e.meal, e.meal_named, e.fiber, e.salt]),
+    [
+      ['breakfast', true, 0, 2.35],
+      ['breakfast', false, 200, 0], // only a real `true` counts as named
+      ['lunch', false, null, 0.1], // unknown meal → by time, never "named"
+    ],
+  );
+});
+
+test('1.3.1 prompt: named meal wins, Bulgarian names, always grams, split dishes, fiber & salt', () => {
+  assert.match(SYSTEM, /meal_named true/);
+  assert.match(SYSTEM, /"закуска"/);
+  assert.match(SYSTEM, /always Bulgarian/);
+  assert.match(SYSTEM, /"grams" is ALWAYS a number/);
+  assert.match(SYSTEM, /лютеница ≈ 260 g/);
+  assert.match(SYSTEM, /Split mixed dishes/);
+  assert.match(SYSTEM, /salt = salt \(not sodium\)/);
+  const item = SCHEMA.properties.entries.items;
+  for (const k of ['fiber', 'salt', 'meal_named']) assert.ok(item.required.includes(k), k);
+  assert.equal(item.properties.meal_named.type, 'boolean');
 });
 
 test('mealAt: default meal by local time', () => {

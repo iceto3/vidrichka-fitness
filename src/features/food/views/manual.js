@@ -1,6 +1,6 @@
 /**
  * Manual food entry (fallback for unknown barcodes / offline): name, kcal and macros per
- * 100 g, saved to the custom foods store for reuse.
+ * 100 g (1.3.1: plus optional fiber and salt – left empty they stay unknown), saved to the custom foods store for reuse.
  * @module features/food/views/manual
  */
 import { html } from '../../../ui/dom.js';
@@ -9,7 +9,7 @@ import { uid } from '../../../core/store.js';
 import { closeSheet, openSheet } from '../../../ui/sheet.js';
 import { validateFood } from '../logic.js';
 
-const FIELDS = /** @type {const} */ (['kcal', 'p', 'c', 'f']);
+const FIELDS = /** @type {const} */ (['kcal', 'p', 'c', 'f', 'fib', 'salt']);
 
 /**
  * @param {{name?: string, barcode?: string}} init
@@ -17,7 +17,7 @@ const FIELDS = /** @type {const} */ (['kcal', 'p', 'c', 'f']);
  */
 export function openManualForm(init, onSave) {
   /** @type {Record<string, string>} */
-  const v = { name: init.name ?? '', kcal: '', p: '', c: '', f: '', portion: '100' };
+  const v = { name: init.name ?? '', kcal: '', p: '', c: '', f: '', fib: '', salt: '', portion: '100' };
   /** @type {Record<string, string>} */
   let errors = {};
   /** @type {string|null} The kcal warning that was shown (a second Save confirms it). */
@@ -27,7 +27,7 @@ export function openManualForm(init, onSave) {
   openSheet({
     render: () => html`<h2 class="h2">${t('food.manual')}</h2><p class="muted small b mt4">${t('manual.hint')}</p>
 <label class="field mt12"><span>${t('manual.name')}</span><input class="input${errors.name ? ' bad' : ''}" id="mname" data-input="v" data-k="name" value="${v.name}" autocomplete="off">${err('name')}</label>
-<div class="grid2 mt10">${FIELDS.map((k) => html`<label class="field"><span>${t(`manual.${k}`)}</span><input class="input${errors[k] ? ' bad' : ''}" id="m${k}" inputmode="decimal" data-input="v" data-k="${k}" value="${v[k]}" aria-invalid="${String(!!errors[k])}">${err(k)}</label>`)}
+<div class="grid2 mt10">${FIELDS.map((k) => html`<label class="field"><span>${t(`manual.${k}`)}</span><input class="input${errors[k] ? ' bad' : ''}" id="m${k}" inputmode="decimal" data-input="v" data-k="${k}" value="${v[k]}"${k === 'fib' || k === 'salt' ? html` placeholder="${t('manual.optional')}"` : ''} aria-invalid="${String(!!errors[k])}">${err(k)}</label>`)}
 <label class="field"><span>${t('manual.portion')}</span><input class="input${errors.portion ? ' bad' : ''}" id="mportion" inputmode="numeric" data-input="v" data-k="portion" value="${v.portion}" aria-invalid="${String(!!errors.portion)}">${err('portion')}</label></div>
 ${warned ? html`<p class="fwarn mt10" role="alert">${t(warned, { est: validateFood(v).est })}</p>` : ''}
 <button class="btn w100 mt16" data-act="save">${warned ? t('manual.saveAnyway') : t('common.save')}</button>`,
@@ -53,6 +53,8 @@ ${warned ? html`<p class="fwarn mt10" role="alert">${t(warned, { est: validateFo
           c: n('c'),
           f: n('f'),
           portion: n('portion') || 100,
+          ...(r.values.fib != null ? { fib: r.values.fib } : {}),
+          ...(r.values.salt != null ? { salt: r.values.salt } : {}),
         };
         closeSheet();
         setTimeout(() => onSave(food), 0);

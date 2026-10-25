@@ -5,13 +5,14 @@
  */
 import { html, num } from '../../../ui/dom.js';
 import { L, t, weekdayName } from '../../../core/i18n.js';
-import { get, put, remove, uid } from '../../../core/store.js';
+import { get, put, uid } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { seg, stepper, topBar } from '../../../ui/components.js';
 import { confirmDialog } from '../../../ui/sheet.js';
+import { deleteWithUndo } from '../../../ui/undo.js';
 import { exById, exName } from '../../library/api.js';
-import { plans } from '../api.js';
+import { planName, plans } from '../api.js';
 
 /** Editable numeric fields: [key, step, min, max, label key]. */
 const FIELDS = /** @type {const} */ ([
@@ -137,7 +138,14 @@ ${src ? html`<div class="row gap10 mt20"><button class="btn sec f1" data-act="du
           }))
         )
           return false;
-        remove('plans', d.id);
+        const plan = get('plans', d.id);
+        if (plan)
+          deleteWithUndo(
+            'plan',
+            [{ store: 'plans', row: plan }],
+            { label: planName(plan), emoji: '📋' },
+            t('undo.deleted', { name: planName(plan) }),
+          );
         emit('nav', { back: 'workouts' });
         return false;
       },

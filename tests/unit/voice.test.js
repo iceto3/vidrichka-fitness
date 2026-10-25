@@ -7,8 +7,7 @@ import {
   requestBody,
   glassesFor,
   prepare,
-  withGrams,
-  totalKcal,
+  assignMeals,
   entryTs,
   foodRows,
   waterByDay,
@@ -53,18 +52,28 @@ test('water converts to glasses of the configured size (at least one)', () => {
   assert.equal(glassesFor(1500, 300), 5);
   const [o, w] = prepare([oats, water], 250);
   assert.equal(/** @type {any} */ (w).glasses, 2);
-  assert.deepEqual(/** @type {any} */ (o).base, { grams: 60, kcal: 230, protein: 8, carbs: 40, fat: 4 });
+  assert.deepEqual(o, oats); // food entries are saved as the server estimated them
 });
 
-test('changing grams scales nutrition from the original estimate (no drift)', () => {
-  const [o] = /** @type {any[]} */ (prepare([oats], 250));
-  const a = withGrams(o, 120);
-  assert.deepEqual([a.grams, a.kcal, a.protein, a.carbs, a.fat], [120, 460, 16, 80, 8]);
-  const b = withGrams(withGrams(a, 7), 60); // back again: same as the start
-  assert.deepEqual([b.grams, b.kcal, b.protein, b.carbs, b.fat], [60, 230, 8, 40, 4]);
-  assert.equal(withGrams(o, 0).grams, 1);
-  assert.equal(withGrams(o, 99999).grams, 5000);
-  assert.equal(totalKcal([a, /** @type {any} */ (water)]), 460);
+test('1.3.1: the meal named in the sentence wins; else a said time / past day keeps the server meal; else screen or current meal', () => {
+  const today = '2026-10-25';
+  const base = { ...oats, time: null, meal: 'lunch', meal_named: false };
+  const pick = (/** @type {any} */ e, /** @type {any} */ o = {}) =>
+    assignMeals([e], { today, defaultMeal: 'lunch', ...o })[0].meal;
+  // "запиши в закуска две кебапчета…" at 13:05 → breakfast, even from Food › Add dinner
+  assert.equal(pick({ ...base, meal: 'breakfast', meal_named: true }), 'breakfast');
+  assert.equal(pick({ ...base, meal: 'breakfast', meal_named: true }, { screenMeal: 'dinner' }), 'breakfast');
+  // nothing named, today, no time → the screen's meal, else the current meal
+  assert.equal(pick({ ...base, meal: 'snack' }, { screenMeal: 'dinner' }), 'dinner');
+  assert.equal(pick({ ...base, meal: 'snack' }), 'lunch');
+  // a said time or a past day keeps what the server inferred
+  assert.equal(pick({ ...base, meal: 'breakfast', time: '08:00' }, { screenMeal: 'dinner' }), 'breakfast');
+  assert.equal(pick({ ...base, meal: 'dinner', date: '2026-10-24' }, { screenMeal: 'lunch' }), 'dinner');
+  // older servers without meal_named behave like "not named"
+  const { meal_named: _n, ...old } = base;
+  assert.equal(pick({ ...old, meal: 'breakfast' }, { screenMeal: 'snack' }), 'snack');
+  // water follows the same rules
+  assert.equal(pick({ ...water, meal: 'breakfast', meal_named: true }, { screenMeal: 'snack' }), 'breakfast');
 });
 
 test('entry time: its own time, else now for today, else the usual meal time', () => {
@@ -81,7 +90,7 @@ test('foodRows makes diary rows in the food store shape; water is summed per day
     prepare(
       [
         oats,
-        { ...oats, name: 'банан', grams: 120, kcal: 105, meal: 'brunch' },
+        { ...oats, name: 'банан', grams: 120, kcal: 105, meal: 'brunch', fiber: 3.1, salt: 0 },
         water,
         { ...water, date: '2026-10-24' },
         water,
@@ -109,6 +118,9 @@ test('foodRows makes diary rows in the food store shape; water is summed per day
     },
   );
   assert.equal(rows[1].meal, 'snack'); // unknown meal falls back
+  assert.equal(rows[1].fib, 3.1); // fiber / salt come along when the server sent them
+  assert.equal(rows[1].salt, 0);
+  assert.ok(!('fib' in rows[0]) && !('salt' in rows[0])); // … and stay unknown otherwise
   assert.notEqual(rows[0].ts, rows[1].ts); // stable order
   assert.deepEqual(waterByDay(list), { '2026-10-25': 4, '2026-10-24': 2 });
 });
@@ -118,6 +130,8 @@ test('emoji for common foods, fallback plate', () => {
   assert.equal(emojiFor('Oatmeal'), '🥣');
   assert.equal(emojiFor('пилешко филе'), '🍗');
   assert.equal(emojiFor('нещо странно'), '🍽️');
+  assert.equal(emojiFor('лютеница'), '🥫');
+  assert.equal(emojiFor('кебапчета'), '🥩');
 });
 
 test('voice server URL is empty until deployed, so the buttons stay hidden', () => {
@@ -128,7 +142,7 @@ test('voice server URL is empty until deployed, so the buttons stay hidden', () 
 
 test('every voice string exists in both languages', () => {
   const keys = Object.keys(bg).filter((k) => k.startsWith('voice.') || k.startsWith('whatsNew.voice'));
-  assert.ok(keys.length >= 25);
+  assert.ok(keys.length >= 18);
   for (const k of keys) assert.ok(k in en, k);
   for (const c of ['offline', 'rate-limit', 'too-long', 'server']) assert.ok(`voice.err.${c}` in bg, c);
 });

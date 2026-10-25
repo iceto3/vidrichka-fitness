@@ -18,6 +18,7 @@ export const STORES = /** @type {const} */ ([
   'foods',
   'photos',
   'days', // v2 (1.1.0): one row per day – wake/bed times, protein, check-ins
+  'trash', // v3 (1.3.1): "Recently deleted" – deleted rows kept 7 days so they can be restored
 ]);
 
 /** @type {((db: IDBDatabase, tx: IDBTransaction) => void)[]} */
@@ -29,6 +30,8 @@ export const SCHEMA = [
     ),
   // v1 -> v2 (1.1.0): daily rhythm records. Existing stores and rows are untouched.
   (db) => db.objectStoreNames.contains('days') || db.createObjectStore('days', { keyPath: 'id' }),
+  // v2 -> v3 (1.3.1): the "Recently deleted" bin. Existing stores and rows are untouched.
+  (db) => db.objectStoreNames.contains('trash') || db.createObjectStore('trash', { keyPath: 'id' }),
 ];
 
 export const DB_VERSION = SCHEMA.length;

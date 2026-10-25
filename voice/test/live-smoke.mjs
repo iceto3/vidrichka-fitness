@@ -15,8 +15,10 @@ const PRICE_IN = Number(process.env.PRICE_IN ?? 1.25),
   PRICE_OUT = Number(process.env.PRICE_OUT ?? 2.5);
 
 const cases = [
-  { lang: 'bg', text: 'изядох купа овесени ядки с банан и изпих две чаши вода' },
-  { lang: 'en', text: 'yesterday evening I had two eggs and a slice of toast, and a glass of water' },
+  { lang: 'bg', text: 'изядох купа овесени ядки с банан и изпих две чаши вода', water: true },
+  { lang: 'en', text: 'yesterday evening I had two eggs and a slice of toast, and a glass of water', water: true },
+  // 1.3.1: the named meal wins over the time of day (13:05), Bulgarian names, fiber & salt
+  { lang: 'bg', text: 'запиши в закуска две кебапчета, половин буркан лютеница и една сода', meal: 'breakfast' },
 ];
 let cost = 0;
 for (const c of cases) {
@@ -36,10 +38,27 @@ for (const c of cases) {
     body.entries.some((e) => e.type === 'food'),
     'has food',
   );
-  assert.ok(
-    body.entries.some((e) => e.type === 'water'),
-    'has water',
-  );
+  if (c.water)
+    assert.ok(
+      body.entries.some((e) => e.type === 'water'),
+      'has water',
+    );
+  if (c.meal) {
+    const foods = body.entries.filter((e) => e.type === 'food');
+    assert.ok(body.entries.length >= 3 && foods.length >= 2, 'split into items'); // "сода" = sparkling water
+    assert.ok(
+      body.entries.every((e) => e.meal === c.meal && e.meal_named === true),
+      'named meal',
+    );
+    assert.ok(
+      foods.every((e) => e.grams > 0 && typeof e.fiber === 'number' && typeof e.salt === 'number'),
+      'grams, fiber, salt',
+    );
+    assert.ok(
+      foods.every((e) => /[а-я]/i.test(e.name)),
+      'Bulgarian names',
+    );
+  }
   const usd = ((body.usage.in ?? 0) * PRICE_IN + (body.usage.out ?? 0) * PRICE_OUT) / 1e6;
   cost += usd;
   console.log(

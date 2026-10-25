@@ -10,7 +10,7 @@ workers_dev = true
 ALLOWED_ORIGINS = "https://iceto3.github.io"
 XAI_MODEL = "grok-4.20-0309-non-reasoning"
 MAX_TEXT = "500"
-MAX_TOKENS = "700"
+MAX_TOKENS = "1200"
 
 # Workers Rate Limiting binding (free on all plans): 8 parses per minute per IP.
 [[ratelimits]]

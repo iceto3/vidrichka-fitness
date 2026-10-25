@@ -47,6 +47,8 @@ const num = (v, max, dp = 0) => {
   const k = 10 ** dp;
   return Math.round(Math.min(n, max) * k) / k;
 };
+/** Like num, but null stays null (unknown), e.g. fiber/salt. @param {any} v @param {number} max @param {number} dp */
+const opt = (v, max, dp) => (v === null || v === undefined || v === '' ? null : num(v, max, dp));
 /** @param {any} v @param {number} max */
 const str = (v, max) => (typeof v === 'string' ? v.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, max) : '');
 /** Default meal by local time. @param {string} hm */
@@ -59,7 +61,7 @@ export const mealAt = (hm) => {
  * Normalize the model's JSON into app entries.
  * @param {any} out Parsed model output.
  * @param {{today: string, time: string}} q
- * @returns {({type: 'food', name: string, amount: string, grams: number, kcal: number, protein: number, carbs: number, fat: number, meal: string, date: string, time: string|null} | {type: 'water', amount_ml: number, meal: string, date: string, time: string|null})[]}
+ * @returns {({type: 'food', name: string, amount: string, grams: number, kcal: number, protein: number, carbs: number, fat: number, fiber: number|null, salt: number|null, meal: string, meal_named: boolean, date: string, time: string|null} | {type: 'water', amount_ml: number, meal: string, meal_named: boolean, date: string, time: string|null})[]}
  */
 export function normalize(out, q) {
   const list = Array.isArray(out?.entries) ? out.entries.slice(0, MAX_ENTRIES) : null;
@@ -72,10 +74,11 @@ export function normalize(out, q) {
     const back = dayDiff(date, q.today);
     if (!(back >= 0 && back <= 7)) date = q.today; // no future, at most a week back
     const time = typeof e.time === 'string' && HM.test(e.time) ? e.time : null;
+    const named = e.meal_named === true && MEALS.includes(e.meal);
     const meal = MEALS.includes(e.meal) ? e.meal : mealAt(time ?? q.time);
     if (e.type === 'water') {
       const ml = num(e.amount_ml, 5000);
-      if (ml >= 10) res.push({ type: 'water', amount_ml: ml, meal, date, time });
+      if (ml >= 10) res.push({ type: 'water', amount_ml: ml, meal, meal_named: named, date, time });
       continue;
     }
     if (e.type !== 'food') continue;
@@ -90,7 +93,10 @@ export function normalize(out, q) {
       protein: num(e.protein, 500, 1),
       carbs: num(e.carbs, 800, 1),
       fat: num(e.fat, 500, 1),
+      fiber: opt(e.fiber, 200, 1),
+      salt: opt(e.salt, 100, 2),
       meal,
+      meal_named: named,
       date,
       time,
     });

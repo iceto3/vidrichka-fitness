@@ -113,9 +113,9 @@ async function run(name, browser, P) {
       !/favicon|ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(m.text()) &&
       errors.push(m.text()),
   );
-  const shot = async (/** @type {string} */ n, full = false) => {
+  const shot = async (/** @type {string} */ n, full = false, keepToast = false) => {
     if (!SHOTS) return;
-    await page.evaluate(() => document.querySelectorAll('.toast').forEach((e) => e.remove()));
+    if (!keepToast) await page.evaluate(() => document.querySelectorAll('.toast').forEach((e) => e.remove()));
     await page.screenshot({ path: `screenshots/${P.prefix}${n}.png`, fullPage: full });
   };
   const layer = page.locator('#layer');
@@ -334,6 +334,7 @@ async function run(name, browser, P) {
   if (name === 'android') await fixes(page, h);
   await photos121(page, h, name);
   await voice13(page, h);
+  await v131(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -989,8 +990,8 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
 
 /**
  * 1.3: "Say it" voice logging against a mocked voice server: hidden until the server is
- * configured, sentence → confirm sheet (edit grams, remove an item) → saved through the food
- * API; nothing is saved before Save; errors show in the sheet.
+ * configured; 1.3.1: sentence → saved at once with an Undo snackbar (no confirm sheet), the
+ * meal named in the sentence wins, fiber/salt are kept; errors show in the sheet.
  * @param {import('playwright-core').Page} page
  * @param {any} h helpers from run()
  */
@@ -1014,6 +1015,48 @@ async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
     sent.push({ ...b, ct: req.headers()['content-type'] });
     if (status !== 200) return route.fulfill({ status, headers: cors, body: JSON.stringify({ error: 'rate-limit' }) });
     const food = (/** @type {any} */ o) => ({ type: 'food', meal: 'breakfast', date: b.today, time: b.time, ...o });
+    if (/закуска/.test(b.text)) {
+      const named = (/** @type {any} */ o) => ({
+        ...o,
+        meal: 'breakfast',
+        meal_named: true,
+        date: b.today,
+        time: null,
+      });
+      return route.fulfill({
+        headers: cors,
+        body: JSON.stringify({
+          entries: [
+            named({
+              type: 'food',
+              name: 'кебапчета',
+              amount: '2 бр.',
+              grams: 120,
+              kcal: 336,
+              protein: 20.4,
+              carbs: 2.4,
+              fat: 26.4,
+              fiber: 0,
+              salt: 1.8,
+            }),
+            named({
+              type: 'food',
+              name: 'лютеница',
+              amount: '½ буркан',
+              grams: 130,
+              kcal: 169,
+              protein: 3.1,
+              carbs: 13,
+              fat: 11.7,
+              fiber: 4,
+              salt: 1.56,
+            }),
+            named({ type: 'water', amount_ml: 330 }),
+          ],
+          model: 'mock',
+        }),
+      });
+    }
     return route.fulfill({
       headers: cors,
       body: JSON.stringify({
@@ -1026,7 +1069,10 @@ async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
       }),
     });
   });
-  const voiceRows = async () => /** @type {any[]} */ (await rows('food')).filter((r) => r.source === 'voice');
+  const voiceRows = async () =>
+    /** @type {any[]} */ (await rows('food'))
+      .filter((r) => r.source === 'voice')
+      .sort((a, b) => a.ts - b.ts || a.name.localeCompare(b.name));
   const glasses = async () => {
     const d = await page.evaluate(() => {
       const n = new Date();
@@ -1058,35 +1104,65 @@ async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
   await page.waitForTimeout(700);
   await shot('voice-sheet');
   await layer.locator('[data-act="parse"]').click();
-  await layer.locator('.vconfirm').waitFor();
+  // 1.3.1: no confirm step — saved at once, the sheet closes, an Undo snackbar lists what was added
+  await layer.locator('#vtext').waitFor({ state: 'detached' });
+  await page.locator('.toast.snack').waitFor();
   assert.equal(sent.length, 1);
   assert.deepEqual(Object.keys(sent[0]).sort(), ['ct', 'lang', 'text', 'time', 'today', 'tz']);
   assert.match(sent[0].ct, /^text\/plain/, 'simple request (no CORS preflight)');
   assert.equal(sent[0].tz, 'Europe/Sofia');
-  assert.equal(await layer.locator('.vitem').count(), 3);
-  assert.match(await layer.locator('.vitem.water').innerText(), /2 glasses · 500 ml/);
-  assert.equal((await voiceRows()).length, r0, 'nothing saved before Save');
-  await page.waitForTimeout(700);
-  await shot('voice-confirm');
-
-  // Edit: oats +10 g (scaled kcal), remove the banana, then save
-  await layer.locator('.vitem').first().locator('[data-act="grams"][data-d="1"]').click();
   await settle();
-  assert.match(await layer.locator('.vitem').first().innerText(), /268 kcal/, '70 g of oats');
-  await layer.locator('.vitem').nth(1).locator('[data-act="del"]').click();
-  await settle();
-  assert.equal(await layer.locator('.vitem').count(), 2);
-  assert.match(await layer.locator('.vconfirm').innerText(), /268 kcal/, 'total');
-  await layer.locator('[data-act="save"]').click();
-  await layer.locator('.vconfirm').waitFor({ state: 'detached' });
-  await settle();
-  const saved = (await voiceRows()).slice(r0);
-  assert.equal(saved.length, 1);
-  assert.equal(saved[0].name, 'Oats');
-  assert.equal(saved[0].grams, 70);
-  assert.equal(saved[0].kcal, 268);
-  assert.equal(saved[0].meal, 'breakfast');
+  const snackTxt = await page.locator('.toast.snack .snacktxt').innerText();
+  assert.match(snackTxt, /Added to breakfast: Oats 60 g, Banana 120 g, \+2 glasses of water/);
+  const byName = (/** @type {any[]} */ l) => [...l].sort((a, b) => a.name.localeCompare(b.name));
+  let saved = byName((await voiceRows()).slice(r0));
+  assert.equal(saved.length, 2);
+  assert.deepEqual(
+    saved.map((r) => [r.name, r.grams, r.kcal, r.meal]),
+    [
+      ['Banana', 120, 105, 'breakfast'],
+      ['Oats', 60, 230, 'breakfast'],
+    ],
+  );
   assert.equal(await glasses(), w0 + 2, 'two glasses of water added');
+  // Undo takes all of it back
+  await page.locator('.toast.snack .snackbtn').click();
+  await settle();
+  assert.equal((await voiceRows()).length, r0, 'undo removes the voice rows');
+  assert.equal(await glasses(), w0, 'undo restores the water');
+  await clearCel();
+
+  // The meal named in the sentence wins over the screen's meal (Food › Add dinner), in Bulgarian
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
+  await go('food/add/dinner');
+  await page.locator('#page [data-act="voice"]').click();
+  await layer.locator('#vtext').fill('запиши в закуска две кебапчета, половин буркан лютеница и една сода');
+  await layer.locator('[data-act="parse"]').click();
+  await page.locator('.toast.snack').waitFor();
+  await settle();
+  saved = byName((await voiceRows()).slice(r0));
+  assert.deepEqual(
+    saved.map((r) => [r.name, r.grams, r.meal, r.fib, r.salt]),
+    [
+      ['кебапчета', 120, 'breakfast', 0, 1.8],
+      ['лютеница', 130, 'breakfast', 4, 1.56],
+    ],
+    'named meal (breakfast), not the screen meal (dinner); fiber and salt saved',
+  );
+  assert.equal(await glasses(), w0 + 1, 'the сода (sparkling water) counts as water');
+  assert.match(
+    await page.locator('.toast.snack .snacktxt').innerText(),
+    /Добавено в закуска: кебапчета 120 г, лютеница 130 г, \+1 чаша вода/,
+  );
+  await page.waitForTimeout(1500); // let the micro animation finish
+  await shot('voice-named-meal', false, true);
+  await page.evaluate(() => document.querySelectorAll('.toast').forEach((e) => e.remove()));
+  await go('profile');
+  await page.locator('.lang [data-v="en"]').click();
+  await settle();
+  const r1 = (await voiceRows()).length;
   await clearCel();
 
   // Errors stay in the sheet (rate limit); Food › Add has the button too
@@ -1099,7 +1175,7 @@ async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
   assert.match(await layer.locator('.verr').innerText(), /Too many tries/);
   await page.keyboard.press('Escape');
   await settle();
-  assert.equal((await voiceRows()).length, r0 + 1, 'an error saves nothing');
+  assert.equal((await voiceRows()).length, r1, 'an error saves nothing');
 
   // Server unreachable again → buttons hidden
   await page.evaluate(() => localStorage.removeItem('vf-voice-url'));
@@ -1109,6 +1185,192 @@ async function voice13(page, { go, settle, shot, clearCel, layer, rows }) {
   await go('home');
   await settle();
   assert.equal(await page.locator('[data-act="voice"]').count(), 0, 'hidden again without a server');
-  console.log('  ✔ 1.3 voice: hidden until configured, sentence → confirm (edit/remove) → saved, errors in the sheet');
+  console.log('  ✔ 1.3 voice: hidden until configured, saved at once with Undo, named meal wins, errors in the sheet');
+  await page.removeLocatorHandler(layer.locator('.dprompt'));
+}
+
+/**
+ * 1.3.1 (in Bulgarian): fiber & salt in the manual sheet and the daily totals, editing an item
+ * (grams + move to another meal) with Undo, delete → "Recently deleted" → restore, "Save as
+ * combination" from the meal sheet (name pre-selected), combination chips in Add food
+ * (tap selects, tap again adds, Undo).
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
+  await page.addLocatorHandler(layer.locator('.dprompt'), async (l) => {
+    await l
+      .locator('[data-close]')
+      .first()
+      .evaluate((b) => /** @type {HTMLElement} */ (b).click());
+  });
+  await page.route('**/*openfoodfacts.org/**', (r) =>
+    r.fulfill({ json: { count: 0, products: [] }, headers: { 'access-control-allow-origin': '*' } }),
+  );
+  const today = await page.evaluate(() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  });
+  const dayFood = async () =>
+    /** @type {any[]} */ (await rows('food')).filter((r) => r.date === today && !String(r.id).startsWith('water_'));
+  const banica = async () => (await dayFood()).find((r) => r.name === 'Баница');
+  const closeAll = async () => {
+    for (let i = 0; i < 4 && (await layer.locator('.panel').count()); i++) {
+      await page.keyboard.press('Escape');
+      await settle();
+    }
+  };
+  /** The name field is focused with its whole default name selected. */
+  const nameSelected = () =>
+    page.evaluate(() => {
+      const i = /** @type {HTMLInputElement} */ (document.getElementById('mealname'));
+      return (
+        !!i &&
+        document.activeElement === i &&
+        i.value.length > 0 &&
+        i.selectionStart === 0 &&
+        i.selectionEnd === i.value.length
+      );
+    });
+  await clearCel();
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
+
+  // 1) Manual food: optional "Фибри / 100 г" and "Сол / 100 г" right below Мазнини
+  await go('food/add/breakfast');
+  await page.locator('[data-act="manual"]').first().click();
+  await layer.locator('#mname').fill('Баница');
+  const labels = await layer.locator('.grid2 .field > span').allInnerTexts();
+  assert.deepEqual(labels.slice(3, 6), ['Мазнини / 100 г', 'Фибри / 100 г', 'Сол / 100 г']);
+  assert.equal(await layer.locator('#msalt').getAttribute('placeholder'), 'по желание');
+  await layer.locator('#mkcal').fill('300');
+  await layer.locator('#mp').fill('8');
+  await layer.locator('#mc').fill('30');
+  await layer.locator('#mf').fill('16');
+  await layer.locator('#mfib').fill('1,5');
+  await layer.locator('#msalt').fill('1,2');
+  await page.waitForTimeout(300);
+  await shot('manual-fiber-salt');
+  await layer.locator('[data-act="save"]').click();
+  await layer.locator('#grams').waitFor();
+  assert.match(await layer.locator('.extra').innerText(), /Фибри/i, 'grams sheet shows fiber/salt');
+  await layer.locator('[data-act="done"]').click();
+  await settle();
+  assert.match(await page.locator('.toast.snack').innerText(), /Добавено: Баница · 100 г[\s\S]*Отмени/, 'add has Undo');
+  let b = await banica();
+  assert.deepEqual([b.grams, b.kcal, b.fib, b.salt, b.meal], [100, 300, 1.5, 1.2, 'breakfast']);
+  await page.locator('.cat').first().click();
+  await layer.locator('[data-act="pick"]').first().click();
+  await layer.locator('[data-act="done"]').click();
+  await settle();
+  await page.locator('.topbar .btn[data-act="finish"]').click();
+  await layer.locator('#mealname').waitFor();
+  await page.waitForTimeout(500);
+  assert.ok(await nameSelected(), 'combination name is pre-selected (typing replaces it)');
+  await layer.locator('[data-close]').first().click();
+  await settle();
+  await closeAll();
+  await go('food');
+  const sum = async (/** @type {string} */ k) =>
+    String(Math.round((await dayFood()).reduce((a, r) => a + (r[k] ?? 0), 0) * 10) / 10).replace('.', ',');
+  const fs = await page.locator('.fibsalt').innerText();
+  const want = new RegExp(`Фибри\\s+${await sum('fib')} g[\\s\\S]*Сол\\s+${await sum('salt')} g`);
+  assert.match(fs, want, 'daily fiber/salt totals');
+  console.log('  ✔ 1.3.1 fiber & salt: manual fields (optional), saved, daily totals');
+
+  // 2) Meal edit: tap an item → grams (macros follow) + move to another meal → Undo
+  await page.locator('.meal[data-m="breakfast"]').click();
+  await layer.locator('.mealitems').waitFor();
+  assert.ok(await layer.locator('[data-go="food/add/breakfast"]').count(), '+ Add to breakfast stays');
+  await layer.locator('.itembtn', { hasText: 'Баница' }).click();
+  await layer.locator('#egrams').waitFor();
+  await layer.locator('#egrams').fill('150');
+  await layer.locator('#egrams').dispatchEvent('change');
+  await settle();
+  assert.match(await layer.locator('.kcalbig').innerText(), /^450/);
+  await layer.locator('.mealseg [data-v="lunch"]').click();
+  await settle();
+  await page.waitForTimeout(300);
+  await shot('meal-edit');
+  await layer.locator('.itemedit [data-act="save"]').click();
+  await settle();
+  b = await banica();
+  assert.deepEqual([b.grams, b.kcal, b.p, b.salt, b.meal], [150, 450, 12, 1.8, 'lunch']);
+  assert.match(await page.locator('.toast.snack').innerText(), /Баница: 150 г → Обяд/);
+  await closeAll();
+  await page.waitForTimeout(300);
+  await shot('undo-snackbar', false, true);
+  await page.locator('.toast.snack .snackbtn').click();
+  await settle();
+  b = await banica();
+  assert.deepEqual([b.grams, b.kcal, b.salt, b.meal], [100, 300, 1.2, 'breakfast'], 'Undo restores the item');
+  console.log('  ✔ 1.3.1 meal edit: grams + move, Undo');
+
+  // 3) Delete → Undo snackbar → "Наскоро изтрити" (Food diary and Profile) → restore
+  await page.locator('.meal[data-m="breakfast"]').click();
+  await layer.locator('.mealitems').waitFor();
+  await layer.locator('.lrow', { hasText: 'Баница' }).locator('[data-act="del"]').click();
+  await settle();
+  assert.equal(await banica(), undefined);
+  assert.match(await page.locator('.toast.snack').innerText(), /Изтрито: Баница/);
+  await closeAll();
+  await page.evaluate(() => document.querySelectorAll('.toast').forEach((e) => e.remove()));
+  await page.locator('.trashlink').click();
+  await page.locator('.trashlist').waitFor();
+  const trow = page.locator('.trow', { hasText: 'Баница' });
+  assert.match(await trow.innerText(), /Храна[\s\S]*7 дни/);
+  await page.waitForTimeout(300);
+  await shot('recently-deleted');
+  await trow.locator('[data-act="restore"]').click();
+  await settle();
+  b = await banica();
+  assert.deepEqual([b.grams, b.fib, b.meal], [100, 1.5, 'breakfast'], 'restored as it was');
+  await go('profile');
+  assert.ok(await page.locator('[data-go="trash"]').count(), 'reachable from Profile');
+  console.log('  ✔ 1.3.1 delete with Undo, Recently deleted (diary + profile), restore');
+
+  // 4) "Запази като комбинация" in the meal sheet, name pre-selected
+  await go('food');
+  await page.locator('.meal[data-m="breakfast"]').click();
+  await layer.locator('.savecombo').click();
+  await layer.locator('#mealname').waitFor();
+  await page.waitForTimeout(500);
+  assert.ok(await nameSelected(), 'default name selected');
+  await shot('save-as-combo');
+  await page.keyboard.type('Закуска с баница');
+  await layer.locator('[data-act="save"]').click();
+  await settle();
+  assert.match(await page.locator('.toast.snack').innerText(), /Закуска с баница/);
+  await closeAll();
+  const combo = /** @type {any[]} */ (await rows('meals')).find((m) => m.name === 'Закуска с баница');
+  assert.ok(combo && combo.items.some((/** @type {any} */ i) => i.name === 'Баница' && i.fib === 1.5));
+  console.log('  ✔ 1.3.1 save as combination from the meal sheet');
+
+  // 5) Combination chips: first tap selects, second adds to the meal (with Undo)
+  await go('food/add/lunch');
+  const chip = page.locator('.chips.combos .chip', { hasText: 'Закуска с баница' });
+  const lunch0 = (await dayFood()).filter((r) => r.meal === 'lunch').length;
+  await chip.click();
+  await settle();
+  assert.equal(await chip.getAttribute('aria-pressed'), 'true');
+  assert.match(await page.locator('.combohint').innerText(), /Баница 100 g[\s\S]*Докосни пак, за да добавиш към обяд/);
+  assert.equal((await dayFood()).filter((r) => r.meal === 'lunch').length, lunch0, 'first tap only selects');
+  await page.waitForTimeout(300);
+  await shot('combo-chips');
+  await chip.click();
+  await page.waitForURL(/#\/food$/);
+  await settle();
+  const lunch1 = (await dayFood()).filter((r) => r.meal === 'lunch');
+  assert.equal(lunch1.length, lunch0 + combo.items.length, 'second tap adds the whole combination');
+  assert.match(await page.locator('.toast.snack').innerText(), /Добавено в обяд/);
+  await page.locator('.toast.snack .snackbtn').click();
+  await settle();
+  assert.equal((await dayFood()).filter((r) => r.meal === 'lunch').length, lunch0, 'Undo removes it again');
+  console.log('  ✔ 1.3.1 combination chips: select, add, Undo');
+
+  await go('profile');
+  await page.locator('.lang [data-v="en"]').click();
+  await settle();
   await page.removeLocatorHandler(layer.locator('.dprompt'));
 }

@@ -289,3 +289,38 @@
   background: rgba(255, 255, 255, 0.55);
   font-size: 20px;
 }
+
+/* 1.3.1: fiber / salt totals, tappable meal items, item editor, combination chips. */
+.fibsalt {
+  color: var(--text);
+}
+.fibsalt > span {
+  white-space: nowrap;
+}
+.mealitems .lrow {
+  padding-right: 4px;
+}
+.mealitems .itembtn {
+  min-width: 0;
+  align-items: center;
+  text-align: left;
+  padding: 0;
+  background: none;
+  color: inherit;
+}
+.itemedit .mealseg button {
+  font-size: 12.5px;
+  padding-inline: 2px;
+}
+.chips.combos .chip.on {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.combohint {
+  line-height: 1.45;
+}
+.itemedit .f2 {
+  flex: 2;
+  min-width: 0;
+}

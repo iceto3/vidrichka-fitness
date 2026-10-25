@@ -1,6 +1,7 @@
 /**
- * Voice logging maths (pure): the request context, editing parsed entries and turning
- * them into diary rows and glasses of water.
+ * Voice logging maths (pure): the request context, choosing each entry's meal, and
+ * turning parsed entries into diary rows and glasses of water (1.3.1: saved directly,
+ * with Undo – no confirm step).
  * @module features/voice/logic
  */
 
@@ -30,8 +31,9 @@ export const requestBody = (text, now, lang) => ({
 
 /**
  * @typedef {{type: 'food', name: string, amount: string, grams: number, kcal: number, protein: number,
- *   carbs: number, fat: number, meal: string, date: string, time: string|null, base?: any}} FoodEntry
- * @typedef {{type: 'water', amount_ml: number, glasses?: number, meal: string, date: string, time: string|null}} WaterEntry
+ *   carbs: number, fat: number, fiber?: number|null, salt?: number|null, meal: string, meal_named?: boolean,
+ *   date: string, time: string|null}} FoodEntry
+ * @typedef {{type: 'water', amount_ml: number, glasses?: number, meal: string, meal_named?: boolean, date: string, time: string|null}} WaterEntry
  * @typedef {FoodEntry | WaterEntry} Entry
  */
 
@@ -39,39 +41,28 @@ export const requestBody = (text, now, lang) => ({
 export const glassesFor = (ml, glassMl) => Math.max(1, Math.round(ml / (glassMl || 250)));
 
 /**
- * Prepare server entries for the confirm sheet: remember the original portion (to scale
- * nutrition when grams change) and convert water to glasses.
+ * Prepare server entries for saving: water becomes glasses.
  * @param {any[]} list @param {number} glassMl @returns {Entry[]}
  */
 export const prepare = (list, glassMl) =>
-  list.map((e) =>
-    e.type === 'water'
-      ? { ...e, glasses: glassesFor(e.amount_ml, glassMl) }
-      : { ...e, base: { grams: e.grams || 100, kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat } },
-  );
+  list.map((e) => (e.type === 'water' ? { ...e, glasses: glassesFor(e.amount_ml, glassMl) } : e));
 
 /**
- * A food entry at a new weight: nutrition scales with the grams of the original estimate.
- * @param {FoodEntry} e @param {number} grams @returns {FoodEntry}
+ * Which meal each entry goes to:
+ * 1. the meal named in the sentence ("запиши в закуска …") always wins;
+ * 2. a said time ("на обяд", "в 8") or a past day keeps the meal the server inferred;
+ * 3. otherwise (today, nothing said) the meal of the Food › Add screen it was opened from,
+ *    else the current meal by time of day.
+ * @param {Entry[]} list
+ * @param {{today: string, screenMeal?: string, defaultMeal: string}} o
+ * @returns {Entry[]}
  */
-export function withGrams(e, grams) {
-  const g = Math.max(1, Math.min(5000, Math.round(grams) || 1));
-  const b = e.base ?? { grams: e.grams || 100, kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat };
-  const k = g / (b.grams || 100),
-    r1 = (/** @type {number} */ v) => Math.round((v || 0) * k * 10) / 10;
-  return {
-    ...e,
-    base: b,
-    grams: g,
-    kcal: Math.round((b.kcal || 0) * k),
-    protein: r1(b.protein),
-    carbs: r1(b.carbs),
-    fat: r1(b.fat),
-  };
-}
-
-/** Total kcal of the food entries. @param {Entry[]} list */
-export const totalKcal = (list) => list.reduce((a, e) => a + (e.type === 'food' ? e.kcal || 0 : 0), 0);
+export const assignMeals = (list, o) =>
+  list.map((e) => {
+    if (e.meal_named && MEALS.includes(e.meal)) return e;
+    if (e.time || e.date !== o.today) return MEALS.includes(e.meal) ? e : { ...e, meal: o.defaultMeal };
+    return { ...e, meal: o.screenMeal && MEALS.includes(o.screenMeal) ? o.screenMeal : o.defaultMeal };
+  });
 
 /**
  * Timestamp of an entry: its own time, else now (today) or the meal's usual time (past day).
@@ -84,7 +75,7 @@ export function entryTs(e, now) {
 }
 
 /**
- * Diary rows (the food store's shape) for the confirmed food entries.
+ * Diary rows (the food store's shape) for the food entries (fiber/salt when the server sent them).
  * @param {Entry[]} list @param {Date} now
  */
 export const foodRows = (list, now) =>
@@ -105,6 +96,8 @@ export const foodRows = (list, now) =>
         p: f.protein,
         c: f.carbs,
         f: f.fat,
+        ...(typeof f.fiber === 'number' && f.fiber >= 0 ? { fib: f.fiber } : {}),
+        ...(typeof f.salt === 'number' && f.salt >= 0 ? { salt: f.salt } : {}),
         source: 'voice',
       };
     });
@@ -139,6 +132,10 @@ const EMOJI = [
   [/вино|wine/i, '🍷'],
   [/ядки|бадем|орех|nut|almond/i, '🥜'],
   [/протеин|protein/i, '💪'],
+  [/лютеница|кетчуп|доматен сос|ketchup/i, '🥫'],
+  [/сода|газирана|кола|лимонада|soda|cola/i, '🥤'],
+  [/домат|tomato/i, '🍅'],
+  [/краставиц|cucumber/i, '🥒'],
 ];
 /** A fitting emoji for a food name (fallback 🍽️). @param {string} name */
 export const emojiFor = (name) =>

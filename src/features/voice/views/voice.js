@@ -1,8 +1,9 @@
 /**
- * "Say it" sheets: (1) a text box for the phone keyboard's dictation (or typing; on
- * Android Chrome the browser's speech recognition is offered too), sent to the voice
- * server; (2) a confirm sheet with the parsed foods and water — grams, glasses and meal
- * can be changed and items removed. Nothing is saved until **Save**; then the rows go
+ * "Say it" sheet: a text box for the phone keyboard's dictation (or typing; on Android
+ * Chrome the browser's speech recognition is offered too), sent to the voice server.
+ * 1.3.1: the parsed foods and water are saved straight away into the meal named in the
+ * sentence (else the screen's / current meal), the sheet closes and an Undo snackbar lists
+ * what was added. Items can be fixed afterwards in the meal sheet (tap an item). Rows go
  * through the food API, so quests, XP and the micro animations work as usual.
  * @module features/voice/views/voice
  */
@@ -11,12 +12,13 @@ import { fmtDate, getLang, t } from '../../../core/i18n.js';
 import { settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
-import { stepper } from '../../../ui/components.js';
 import { closeSheet, openSheet, whenSettled } from '../../../ui/sheet.js';
+import { undoEdit } from '../../../ui/undo.js';
 import { logRows, setWater, water } from '../../food/api.js';
+import { mealFor } from '../../food/logic.js';
 import { isIOS } from '../../profile/api.js';
 import { parseText } from '../api.js';
-import { MAX_TEXT, MEALS, foodRows, localDay, prepare, totalKcal, waterByDay, withGrams } from '../logic.js';
+import { MAX_TEXT, MEALS, assignMeals, foodRows, localDay, prepare, waterByDay } from '../logic.js';
 
 /** Browser speech recognition (Android Chrome); iOS users use the keyboard's mic instead. */
 const Speech = () =>
@@ -96,7 +98,7 @@ ${SR ? html`<button class="btn sec f1${listening ? ' rec' : ''}" data-act="liste
             return false;
           }
           closeSheet();
-          whenSettled(() => openConfirm(entries, text, o.meal));
+          whenSettled(() => saveEntries(entries, o.meal));
         } catch (e) {
           busy = false;
           err = t(`voice.err.${/** @type {Error} */ (e).message}`);
@@ -109,89 +111,70 @@ ${SR ? html`<button class="btn sec f1${listening ? ' rec' : ''}" data-act="liste
 }
 
 /**
- * Open the confirm sheet for parsed entries.
+ * Save parsed entries right away and offer Undo (removes the rows, puts the water back).
  * @param {any[]} parsed Entries from the server.
- * @param {string} [text] The sentence (to go back and fix it).
- * @param {string} [meal] Meal of the Food › Add screen it was opened from.
+ * @param {string} [screenMeal] Meal of the Food › Add screen it was opened from.
+ * @param {Date} [now]
+ * @returns {{rows: any[], water: Record<string, number>, text: string}}
  */
-export function openConfirm(parsed, text = '', meal = '') {
+export function saveEntries(parsed, screenMeal = '', now = new Date()) {
   const glassMl = settings().glassMl || 250;
-  const today = localDay(new Date()),
-    yesterday = localDay(new Date(Date.now() - 864e5));
-  // Opened from Food › Add <meal>: today's foods go to that meal (still changeable per item).
-  let list = prepare(parsed, glassMl).map((e) => (meal && e.type === 'food' && e.date === today ? { ...e, meal } : e));
-  const when = (/** @type {{date: string, time: string|null}} */ e) =>
-    [
-      e.date === today
-        ? ''
-        : e.date === yesterday
-          ? t('voice.yesterday')
-          : fmtDate(new Date(`${e.date}T12:00`), { day: 'numeric', month: 'short' }),
-      e.time ?? '',
-    ]
-      .filter(Boolean)
-      .join(' · ');
-  const mealSel = (/** @type {any} */ e, /** @type {number} */ i) =>
-    html`<select class="vmeal" data-change="meal" data-i="${i}" aria-label="${t('voice.meal')}">${MEALS.map((m) => html`<option value="${m}" ${m === e.meal ? 'selected' : ''}>${t(`meal.${m}`)}</option>`)}</select>`;
-
-  const row = (/** @type {any} */ e, /** @type {number} */ i) =>
-    e.type === 'water'
-      ? html`<li class="vitem water"><div class="row gap10"><span class="fic">💧</span><div class="f1 minw0"><div class="b">${t('voice.water')}</div>
-<div class="muted xs b">${t('voice.glassesMl', { n: e.glasses, ml: e.glasses * glassMl })}${when(e) ? ` · ${when(e)}` : ''}</div></div>
-<button class="iconbtn flat sm" data-act="del" data-i="${i}" aria-label="${t('common.remove')} ${t('voice.water')}">${ic('close', 16, 2.6)}</button></div>
-<div class="mt8">${stepper({ act: 'glasses', value: e.glasses, unit: t('voice.glassUnit'), label: t('voice.water'), data: { i: String(i) } })}</div></li>`
-      : html`<li class="vitem"><div class="row gap10"><span class="fic">${foodRows([e], new Date())[0].emoji}</span><div class="f1 minw0"><div class="b ell">${e.name}</div>
-<div class="muted xs b">${e.amount ? `${e.amount} · ` : ''}${e.kcal} kcal · ${t('food.p')} ${Math.round(e.protein)} · ${t('food.c')} ${Math.round(e.carbs)} · ${t('food.f')} ${Math.round(e.fat)}${when(e) ? ` · ${when(e)}` : ''}</div></div>
-<button class="iconbtn flat sm" data-act="del" data-i="${i}" aria-label="${t('common.remove')} ${e.name}">${ic('close', 16, 2.6)}</button></div>
-<div class="row gap8 mt8">${stepper({ act: 'grams', value: e.grams, unit: 'g', label: `${e.name} g`, data: { i: String(i) } })}${mealSel(e, i)}</div></li>`;
-
-  openSheet({
-    kind: 'sheet',
-    render: () => html`<div class="vconfirm"><h2 class="h2">${t('voice.confirmTitle')}</h2>
-<p class="muted small b mt4">${t('voice.confirmSub')}</p>
-${list.length ? html`<ul class="vlist mt12">${list.map(row)}</ul>` : html`<p class="muted b center mt16">${t('voice.allRemoved')}</p>`}
-<div class="row between mt12 px4"><span class="muted small b">${t('voice.total')}</span><span class="b num">${totalKcal(list)} kcal</span></div>
-<div class="row gap10 mt14 sticky-b"><button class="btn sec f1" data-act="back">${ic('edit', 18)}${t('voice.fix')}</button>
-<button class="btn f2" data-act="save" ${list.length ? '' : 'disabled'}>${ic('check', 18, 3)}${t('voice.save')}</button></div></div>`,
-    actions: {
-      grams: (el, ev) => {
-        const i = Number(el.dataset.i),
-          e = /** @type {any} */ (list[i]);
-        const g =
-          ev.type === 'change'
-            ? parseFloat(/** @type {HTMLInputElement} */ (el).value) || e.grams
-            : e.grams + Number(el.dataset.d) * 10;
-        list = list.map((x, k) => (k === i ? withGrams(/** @type {any} */ (x), g) : x));
-      },
-      glasses: (el, ev) => {
-        const i = Number(el.dataset.i),
-          e = /** @type {any} */ (list[i]);
-        const n =
-          ev.type === 'change'
-            ? parseInt(/** @type {HTMLInputElement} */ (el).value, 10) || e.glasses
-            : e.glasses + Number(el.dataset.d);
-        list = list.map((x, k) => (k === i ? { ...x, glasses: Math.max(1, Math.min(20, n)) } : x));
-      },
-      meal: (el) => {
-        const i = Number(el.dataset.i);
-        list = list.map((x, k) => (k === i ? { ...x, meal: /** @type {HTMLSelectElement} */ (el).value } : x));
-      },
-      del: (el) => void (list = list.filter((_, k) => k !== Number(el.dataset.i))),
-      back: () => {
-        closeSheet();
-        whenSettled(() => openVoice({ text, meal }));
-        return false;
-      },
-      save: () => {
-        if (!list.length) return false;
-        const now = new Date();
-        const rows = foodRows(list, now);
-        if (rows.length) logRows(rows);
-        for (const [date, n] of Object.entries(waterByDay(list))) setWater(date, water(date) + n);
-        closeSheet();
-        emit('toast', { text: t('voice.saved', { n: list.length }) });
-        return false;
-      },
-    },
+  const today = localDay(now);
+  const list = assignMeals(prepare(parsed, glassMl), { today, screenMeal, defaultMeal: mealFor(now) });
+  const rows = foodRows(list, now);
+  const saved = rows.length ? logRows(rows) : [];
+  /** @type {Record<string, number>} */
+  const before = {};
+  for (const [date, n] of Object.entries(waterByDay(list))) {
+    before[date] = water(date);
+    setWater(date, before[date] + n);
+  }
+  const text = summary(list, saved, today);
+  undoEdit(text, [{ store: 'food', added: saved.map((r) => r.id) }], () => {
+    for (const [date, n] of Object.entries(before)) setWater(date, n);
   });
+  return { rows: saved, water: before, text };
+}
+
+/**
+ * Snackbar text: "Добавено в Закуска: кебапчета, лютеница, сода" (one meal today), else
+ * grouped per day and meal; water as "+2 чаши вода".
+ * @param {import('../logic.js').Entry[]} list @param {any[]} rows @param {string} today
+ */
+function summary(list, rows, today) {
+  const yesterday = localDay(new Date(new Date(`${today}T12:00`).getTime() - 864e5));
+  const day = (/** @type {string} */ d) =>
+    d === today
+      ? ''
+      : d === yesterday
+        ? t('voice.yesterday')
+        : fmtDate(new Date(`${d}T12:00`), { day: 'numeric', month: 'short' });
+  /** @type {Map<string, string[]>} */
+  const groups = new Map();
+  for (const r of rows) {
+    const k = `${r.date}|${r.meal}`;
+    groups.set(k, [...(groups.get(k) ?? []), t('voice.item', { name: r.name, g: r.grams })]);
+  }
+  const glasses = list.reduce((a, e) => a + (e.type === 'water' ? (e.glasses ?? 1) : 0), 0);
+  const waterTxt = glasses ? t('voice.waterAdded', { n: glasses }) : '';
+  const keys = [...groups.keys()];
+  if (keys.length === 1 && keys[0].startsWith(`${today}|`)) {
+    const meal = t(`meal.${keys[0].split('|')[1]}`).toLowerCase();
+    return t('voice.savedTo', {
+      meal,
+      items: [.../** @type {string[]} */ (groups.get(keys[0])), waterTxt].filter(Boolean).join(', '),
+    });
+  }
+  const parts = keys
+    .sort((a, b) => {
+      const [da, ma] = a.split('|'),
+        [db, mb] = b.split('|');
+      return da.localeCompare(db) || MEALS.indexOf(ma) - MEALS.indexOf(mb);
+    })
+    .map((k) => {
+      const [d, m] = k.split('|');
+      const label = [day(d), t(`meal.${MEALS.includes(m) ? m : 'snack'}`)].filter(Boolean).join(' ');
+      return `${label}: ${/** @type {string[]} */ (groups.get(k)).join(', ')}`;
+    });
+  return t('voice.savedDays', { items: [...parts, waterTxt].filter(Boolean).join(' · ') });
 }

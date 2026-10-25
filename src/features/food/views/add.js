@@ -1,6 +1,6 @@
 /**
  * Add food: search (local + Open Food Facts), barcode scan, quick picks, recents,
- * saved meals (one tap), 8 category tiles (most used first) → grams sheet → Done.
+ * saved combinations (tap to select, tap again to add – with Undo), 8 category tiles (most used first) → grams sheet → Done.
  * Items accumulate in a "basket" for the meal; finishing offers "Save as a regular meal?".
  * 1.2: `food/add/breakfast?protein` (after "Ate it" on the protein breakfast) logs to
  * today's breakfast and shows a hint; closing without adding anything is fine.
@@ -18,16 +18,16 @@ import {
   categoriesByUse,
   foodName,
   logFood,
-  logSavedMeal,
   quickPicks,
   recentFoods,
   savedMeals,
   searchLocal,
-  unlog,
   view,
 } from '../api.js';
 import { signature, timesEaten, totals } from '../logic.js';
 import { openGrams } from './grams.js';
+import { deleteFoodRow } from './item.js';
+import { undoEdit } from '../../../ui/undo.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 
 /** One food result row. @param {any} f */
@@ -45,6 +45,7 @@ export default ({ meal }) => {
   /** @type {Map<string, any>} */
   const online = new Map();
   let q = '',
+    picked = '',
     showRecent = false,
     timer = 0,
     seq = 0;
@@ -53,8 +54,12 @@ export default ({ meal }) => {
 
   const add = (/** @type {any} */ food) =>
     openGrams(food, (g) => {
-      basket.push(logFood(food, g, meal));
-      emit('toast', { text: t('food.added', { name: foodName(food), g }) });
+      const row = logFood(food, g, meal);
+      basket.push(row);
+      undoEdit(t('food.added', { name: foodName(food), g }), [{ store: 'food', added: [row.id] }], () => {
+        const i = basket.indexOf(row);
+        if (i >= 0) (basket.splice(i, 1), emit('ui:refresh'));
+      });
       emit('ui:refresh');
     });
 
@@ -86,40 +91,24 @@ ${!loc.length && q ? html`<button class="btn sec w100 mt10" data-act="manual">${
     const rows = basket.filter((r) => all('food').some((x) => x.id === r.id));
     const sig = signature(rows);
     const known = savedMeals().some((m) => signature(m.items) === sig);
-    if (rows.length >= 2 && !known) await askSave(rows, timesEaten(all('food'), sig, view.date));
+    if (rows.length >= 2 && !known) {
+      const times = timesEaten(all('food'), sig, view.date);
+      const { openSaveCombo } = await import('./combo.js');
+      await openSaveCombo({
+        rows,
+        meal,
+        body:
+          times >= 1
+            ? t('food.saveBodyTimes', {
+                items: rows.map(foodName).join(' + '),
+                meal: t(`meal.${meal}`).toLowerCase(),
+                n: times + 1,
+              })
+            : undefined,
+      });
+    }
     emit('nav', { back: 'food' });
   };
-
-  /** "Save this as a regular meal?" dialog. @param {any[]} rows @param {number} times */
-  const askSave = (rows, times) =>
-    new Promise((resolve) => {
-      let name = t('food.usualMeal', { meal: t(`meal.${meal}`).toLowerCase() });
-      openSheet({
-        kind: 'dialog',
-        onClose: () => resolve(null),
-        render:
-          () => html`<div class="dlg-otter" id="saveotter"></div><h2 class="h2 center mt8">${t('food.saveTitle')}</h2>
-<p class="muted b small mt6 center lh">${times >= 1 ? t('food.saveBodyTimes', { items: rows.map(foodName).join(' + '), meal: t(`meal.${meal}`).toLowerCase(), n: times + 1 }) : t('food.saveBody')}</p>
-<label class="field mt16 hl">${ic('edit', 18, 2.2, 'var(--accent-d)')}<input class="bare" id="mealname" data-input="name" value="${name}" aria-label="${t('food.mealName')}"></label>
-<div class="row gap8 mt10 wrap center-j">${rows.map((r) => html`<span class="chip">${foodName(r)}</span>`)}<span class="chip accent">${totals(rows).kcal} kcal</span></div>
-<div class="row gap10 mt16"><button class="btn sec f1" data-close>${t('food.notNow')}</button><button class="btn f1" data-act="save">${t('food.saveMeal')}</button></div>`,
-        mount: async (el) => {
-          const { otter } = await import('../../mascot/api.js');
-          const o = el.querySelector('#saveotter');
-          if (o) o.innerHTML = String(otter({ size: 120, pose: 'wave' }));
-        },
-        actions: {
-          name: (el) => ((name = /** @type {HTMLInputElement} */ (el).value), false),
-          save: async () => {
-            const { saveMeal } = await import('../api.js');
-            saveMeal(name.trim() || t(`meal.${meal}`), rows);
-            emit('toast', { key: 'food.mealSaved' });
-            closeSheet();
-            return false;
-          },
-        },
-      });
-    });
 
   const openCategory = (/** @type {string} */ cat) =>
     openSheet({
@@ -162,7 +151,13 @@ ${
 ${
   meals.length
     ? html`<div class="section-title"><h2 class="h3">${t('food.regularMeals')}</h2><button class="link" data-go="food/meals">${t('common.all')}</button></div>
-<div class="chips">${meals.map((m) => html`<button class="chip" data-act="logMeal" data-id="${m.id}">⭐ ${m.name} · ${totals(m.items).kcal}</button>`)}</div>`
+<div class="chips combos" role="group" aria-label="${t('food.regularMeals')}">${meals.map((m) => html`<button class="chip${picked === m.id ? ' on' : ''}" data-act="logMeal" data-id="${m.id}" aria-pressed="${String(picked === m.id)}">${picked === m.id ? '✓' : '⭐'} ${m.name} · ${totals(m.items).kcal}</button>`)}</div>
+${(() => {
+  const m = meals.find((x) => x.id === picked);
+  return m
+    ? html`<div class="combohint muted small b mt6" role="status">${m.items.map((/** @type {any} */ i) => `${foodName(i)} ${i.grams} g`).join(' · ')}<br><span class="acc">${t('food.tapAgain', { meal: t(`meal.${meal}`).toLowerCase() })}</span></div>`
+    : '';
+})()}`
     : ''
 }
 <div class="section-title"><h2 class="h3">${showRecent ? t('food.recent') : t('food.quickPicks')}</h2><button class="link" data-act="recent" aria-pressed="${String(showRecent)}">${showRecent ? t('food.quickPicks') : t('food.recent')}</button></div>
@@ -199,12 +194,16 @@ ${
       undo: (el, ev) => {
         ev.stopPropagation();
         const [r] = basket.splice(Number(el.dataset.i), 1);
-        if (r) unlog(r.id);
+        const row = r && all('food').find((x) => x.id === r.id);
+        if (row) deleteFoodRow(row);
       },
-      logMeal: (el) => {
-        logSavedMeal(el.dataset.id ?? '', meal);
-        emit('toast', { key: 'food.mealLogged' });
-        emit('nav', { back: 'food' });
+      // Saved combinations: the first tap selects (shows what's in it), the second adds it.
+      logMeal: async (el) => {
+        const id = el.dataset.id ?? '';
+        if (picked !== id) return void (picked = id);
+        picked = '';
+        const { addCombo } = await import('./combo.js');
+        if (addCombo(id, meal)) emit('nav', { back: 'food' });
         return false;
       },
       finish: () => (finish(), false),

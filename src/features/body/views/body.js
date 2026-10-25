@@ -7,12 +7,13 @@
 import { html } from '../../../ui/dom.js';
 import { L, fmtDate, t } from '../../../core/i18n.js';
 import { addDays, dayKey, parseDay } from '../../../core/dates.js';
-import { put, remove, uid } from '../../../core/store.js';
+import { put, uid } from '../../../core/store.js';
 import { emit, on } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { delta } from '../../../ui/components.js';
 import { lineChart, mergeSameX, sparkline } from '../../../ui/chart.js';
 import { closeSheet, confirmDialog, openSheet, whenSettled } from '../../../ui/sheet.js';
+import { deleteWithUndo } from '../../../ui/undo.js';
 import { MEASURE_FIELDS, checkMeasure } from '../../../data/measurements.js';
 import { measurements } from '../api.js';
 import { openCompare, openSession, openTimeline, photoSection } from './photos.js';
@@ -71,8 +72,16 @@ function openChart(f) {
         )}</div>`,
     actions: {
       del: async (el) => {
-        if (await confirmDialog({ title: t('body.deleteEntry'), ok: t('common.delete'), danger: true }))
-          remove('measurements', el.dataset.id ?? '');
+        if (!(await confirmDialog({ title: t('body.deleteEntry'), ok: t('common.delete'), danger: true }))) return;
+        const r = measurements().find((x) => x.id === el.dataset.id);
+        if (!r) return;
+        const label = `${t(`measure.${f}`)} · ${fmt1(r[f])} ${unit}`;
+        deleteWithUndo(
+          'measurement',
+          [{ store: 'measurements', row: r }],
+          { label, sub: fmtDate(parseDay(r.date), { day: 'numeric', month: 'short', year: 'numeric' }), emoji: '📏' },
+          t('undo.deleted', { name: label }),
+        );
       },
     },
   });

@@ -15,7 +15,7 @@ test('totals sum rows', () => {
       { kcal: 100, p: 1, c: 2, f: 3 },
       { kcal: 50, p: 1, c: 1, f: 1 },
     ]),
-    { kcal: 150, p: 2, c: 3, f: 4 },
+    { kcal: 150, p: 2, c: 3, f: 4, fib: 0, salt: 0, fibN: 0, saltN: 0 },
   );
 });
 

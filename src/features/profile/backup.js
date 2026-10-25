@@ -24,6 +24,8 @@ const fromDataUrl = async (url) => (await fetch(url)).blob();
 /** Build the backup JSON string. */
 export async function backupJson() {
   const snap = snapshot();
+  // "Recently deleted" is a short-lived bin (and may hold photo blobs) – not part of a backup.
+  delete snap.stores.trash;
   snap.stores.photos = await Promise.all(
     snap.stores.photos.map(async (p) => ({ ...p, blob: p.blob instanceof Blob ? await toDataUrl(p.blob) : p.blob })),
   );

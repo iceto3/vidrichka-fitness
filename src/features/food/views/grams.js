@@ -4,18 +4,29 @@
  * @module features/food/views/grams
  */
 import { html } from '../../../ui/dom.js';
-import { t } from '../../../core/i18n.js';
+import { fmtNum, t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
 import { stepper } from '../../../ui/components.js';
 import { closeSheet, openSheet } from '../../../ui/sheet.js';
 import { FOOD_CATEGORIES, foodName } from '../api.js';
-import { portion } from '../logic.js';
+import { known, portion } from '../logic.js';
 
 export const GRAM_STEP = 10;
 
 /** Macro line (P / C / F). @param {{p: number, c: number, f: number}} n */
 export const macroLine = (n) =>
   html`<span class="row gap12 small b num"><span><span class="cp">●</span> ${t('food.p')} ${Math.round(n.p)} g</span><span><span class="cc">●</span> ${t('food.c')} ${Math.round(n.c)} g</span><span><span class="cf">●</span> ${t('food.f')} ${Math.round(n.f)} g</span></span>`;
+
+/**
+ * Fiber / salt line – only the values that are known (empty when neither is).
+ * @param {{fib?: number, salt?: number}} n
+ */
+export const extraLine = (n) => {
+  const parts = [];
+  if (known(n.fib)) parts.push(`${t('food.fiber')} ${fmtNum(/** @type {number} */ (n.fib), 1)} g`);
+  if (known(n.salt)) parts.push(`${t('food.salt')} ${fmtNum(/** @type {number} */ (n.salt), 1)} g`);
+  return parts.length ? html`<div class="muted small b num px4 mt6 extra">${parts.join(' · ')}</div>` : '';
+};
 
 /**
  * Open the grams sheet.
@@ -34,6 +45,7 @@ export function openGrams(food, onDone, initial) {
 <div class="mt14">${stepper({ act: 'g', value: g, unit: 'g', label: t('food.grams'), big: true, id: 'grams' })}</div>
 ${food.portion && food.portion !== g ? html`<div class="row center-j mt8"><button class="chip" data-act="portion">${t('food.portion', { n: food.portion })}</button></div>` : ''}
 <div class="row between mt14 px4"><div class="num kcalbig">${n.kcal} <small>kcal</small></div>${macroLine(n)}</div>
+${extraLine(n)}
 <button class="btn w100 mt14" data-act="done">${ic('check', 20, 3)}${t('workout.done')}</button>`;
     },
     actions: {

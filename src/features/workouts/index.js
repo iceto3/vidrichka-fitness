@@ -4,6 +4,10 @@
  * @module features/workouts
  */
 import { register } from '../../core/registry.js';
+import { onRestore } from '../../core/trash.js';
+
+// A workout put back from "Recently deleted" gets its PRs/XP recomputed.
+onRestore('session', async (e) => (await import('./session.js')).restoreSession(e));
 
 register('tabs', { id: 'workouts', icon: 'dumbbell', label: 'nav.workouts', path: 'workouts', order: 20 });
 register(

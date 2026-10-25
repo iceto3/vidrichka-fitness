@@ -4,6 +4,40 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] – 2026-10-25
+
+### Added
+
+- **Fiber and salt.**
+  - The manual food sheet has **Фибри / 100 г** and **Сол / 100 г** below Мазнини. Both are optional; empty means unknown.
+  - Open Food Facts fills them from `fiber_100g` and `salt_100g` (or `sodium_100g` × 2.5).
+  - Voice logging fills them too.
+  - They are shown per item (grams sheet, meal sheet) and as daily totals under the macros (— while nothing logged that day has them).
+- **Edit a meal item.** Tapping an item in the meal sheet opens an editor: change the grams (kcal and macros follow) and/or move it to another meal, or delete it. **+ Add to _meal_** stays.
+- **Undo everywhere.** Every delete and edit shows an **Отмени** snackbar for 8 seconds:
+  - food (add, delete, edit, move), water decreases, voice logging, combinations (save, add, delete);
+  - workouts, measurements, photos and plans (after their existing confirm).
+- **Наскоро изтрити** (Recently deleted), reachable from Profile and the Food diary.
+  - Deleted foods, photos, workouts, measurements, combinations and plans are kept for 7 days and can be restored (or deleted forever); after that they are purged at startup.
+  - A restored workout recomputes PRs and XP. A restored photo whose slot was filled moves to a free slot or a new session.
+  - The bin is not part of backups.
+- **Saved combinations as quick chips** in Add food: the first tap selects (and shows what is in it), the second tap adds it to the meal, with Undo.
+- **Запази като комбинация** in the meal sheet. The combination name dialog opens with its default name selected, so typing replaces it.
+- A **What's new in 1.3.1** note.
+
+### Changed
+
+- **Voice logging saves at once.** There is no separate confirm/**Запази** step any more: the entries are saved, the sheet closes, and an Undo snackbar lists what was added (e.g. _"Добавено в Закуска: кебапчета 120 г, лютеница 130 г, +1 чаша вода"_).
+- **The meal named in the sentence wins.** _"запиши в закуска две кебапчета, половин буркан лютеница и една сода"_ goes to Breakfast from any screen and at any time. With no meal named, a said time or a past day keeps the meal inferred from it; otherwise the screen's meal (Food › Add _meal_) or the current meal by time of day is used.
+- **Voice server** (redeployed):
+  - The schema adds `meal_named`, `fiber` and `salt` per entry.
+  - The prompt asks for names in the app language (Bulgarian for bg, English names translated), always an estimate in grams, typical portions for vague amounts (e.g. half a jar of лютеница ≈ 130 g), splitting clearly separate parts of mixed dishes, and no invented time. In Bulgarian "сода" is sparkling water, so it counts as water.
+  - The reply cap is 1,200 tokens (was 700) because each entry now has more fields. A call costs about $0.0025.
+
+### Data
+
+- IndexedDB schema 3 adds the `trash` store; data version 4 adds an empty bin. Existing rows are not rewritten: old foods simply have no fiber/salt (unknown).
+
 ## [1.3.0] – 2026-10-25
 
 ### Added

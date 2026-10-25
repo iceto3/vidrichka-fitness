@@ -4,9 +4,10 @@
  * The capture date is read from the original file (EXIF) before resizing.
  * @module features/body/photos
  */
-import { all, put, remove, uid } from '../../core/store.js';
+import { all, put, uid } from '../../core/store.js';
+import { trash } from '../../core/trash.js';
 import { emit } from '../../core/bus.js';
-import { applySessionDate, movePhoto as movePlan } from './photo-logic.js';
+import { POSES, applySessionDate, movePhoto as movePlan } from './photo-logic.js';
 import { photoDateOf } from './exif.js';
 
 const MAX = 1280;
@@ -65,13 +66,38 @@ export async function addPhoto(session, pose, file) {
   return mine;
 }
 
-/** Delete a photo (the session's date is re-derived from what is left). @param {string} id */
-export function deletePhoto(id) {
+/**
+ * Delete a photo into "Recently deleted" (the session's date is re-derived from what is left).
+ * @param {string} id
+ * @param {{label: string, sub?: string}} meta Text for the bin.
+ * @returns {string|null} The bin entry id.
+ */
+export function deletePhoto(id, meta) {
   const p = all('photos').find((x) => x.id === id);
-  if (!p) return;
-  remove('photos', id);
+  if (!p) return null;
+  const tid = trash('photo', [{ store: 'photos', row: p }], { ...meta, emoji: '📷' });
   const u = urls.get(id);
   if (u) (URL.revokeObjectURL(u), urls.delete(id));
+  writeAll(applySessionDate(ofSession(p.session)));
+  return tid;
+}
+
+/**
+ * After a photo is put back: if its slot was filled meanwhile, it moves to a free slot of
+ * the same session (or to its own new session) so nothing is hidden; then the session's
+ * date is re-derived with it included.
+ * @param {import('../../core/trash.js').TrashEntry} e
+ */
+export function restoredPhoto(e) {
+  const back = e.rows[0]?.row;
+  if (!back) return;
+  let p = back;
+  const others = ofSession(back.session).filter((x) => x.id !== back.id);
+  if (others.some((x) => x.pose === back.pose)) {
+    const free = POSES.find((pose) => !others.some((x) => x.pose === pose));
+    p = free ? { ...back, pose: free } : { ...back, session: newSession() };
+    put('photos', p);
+  }
   writeAll(applySessionDate(ofSession(p.session)));
 }
 

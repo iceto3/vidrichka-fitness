@@ -123,6 +123,14 @@ Features never import another feature's views, only its `api.js`. Removing a fea
 - **App** (`features/voice/`):
   - `config.js › VOICE_URL` (on localhost, `localStorage['vf-voice-url']` can override it, which the e2e test uses).
   - `api.js` checks `/health` at start and when the phone comes online. `voiceReady()` gates the buttons on Home and Food › Add. `parseText()` sends a `text/plain` POST (a simple request, so no CORS preflight).
-  - `logic.js` is pure. It builds the request body, scales grams and converts water to glasses, and builds the rows and the per-day water.
-  - `views/voice.js` has the dictation sheet and the confirm sheet.
-  - Saving calls `food/api.js › logRows()` (rows with `source: 'voice'`, one `food:logged`) and `setWater()`. Nothing is stored before **Save**.
+  - `logic.js` is pure. It builds the request body, converts water to glasses, picks the meal (`assignMeals`: a meal named in the sentence wins; else a said time or a past day keeps the server's meal; else the screen's meal or the current one) and builds the rows (with `fib`/`salt` when sent) and the per-day water.
+  - `views/voice.js` has the dictation sheet. Since 1.3.1 there is no confirm sheet: `saveEntries()` calls `food/api.js › logRows()` (rows with `source: 'voice'`, one `food:logged`) and `setWater()` at once, then shows an Undo snackbar that lists what was added.
+
+## Undo and "Recently deleted" (1.3.1)
+
+- `ui/sheet.js › snack(text, onUndo)` shows an **Отмени** snackbar for 8 s (one at a time).
+- `ui/undo.js`:
+  - `deleteWithUndo(kind, rows, meta)` moves rows into the bin (`core/trash.js › trash()`) and offers Undo (= restore).
+  - `undoEdit(text, changes)` restores the `before` rows and removes `added` ids, for edits that are not deletes (edit/move, water, voice, combinations).
+- `core/trash.js`: the `trash` store holds `{id, kind, ts, label, sub?, emoji?, rows:[{store,row}], extra?}`. `restore()` puts the rows back and runs the kind's `onRestore` hook (workouts recompute PRs/XP and restore the XP ledger; photos move to a free slot or a new session). Entries older than 7 days are purged at start-up (`features/trash › startTrash`). The bin is not exported in backups.
+- Fiber/salt are optional food fields `fib` and `salt` (grams per 100 g on foods, per portion on diary rows); missing means unknown, so no migration rewrites old rows.

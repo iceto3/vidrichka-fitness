@@ -29,6 +29,7 @@ export const PATHS = {
     '<path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/><path d="M8 6H4.5c0 3 1.5 4.5 3.7 4.8M16 6h3.5c0 3-1.5 4.5-3.7 4.8M12 13v4M8.5 20.5h7M9.5 17h5v3.5h-5z"/>',
   back: '<path d="M15 5 8 12l7 7"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   right: '<path d="m9 5 7 7-7 7"/>',
   left: '<path d="m15 5-7 7 7 7"/>',
   down: '<path d="m6 9 6 6 6-6"/>',

@@ -4,11 +4,13 @@
  * @module features/workouts/session
  */
 import { emit } from '../../core/bus.js';
-import { get, put, remove, setKv } from '../../core/store.js';
+import { get, kv, put, setKv } from '../../core/store.js';
+import { trash } from '../../core/trash.js';
+import { fmtDate } from '../../core/i18n.js';
 import { exById } from '../library/api.js';
 import { bodyWeight } from '../body/api.js';
 import { award, isCompleteWorkout, setAward, xpForWorkout } from '../motivation/api.js';
-import { activeWorkout, sessions } from './api.js';
+import { activeWorkout, planName, sessions } from './api.js';
 import { detectPRs, estimateKcal, recomputeAfterDelete, sessionMet, summarize } from './logic.js';
 
 /** @typedef {import('./logic.js').WItem} WItem */
@@ -134,19 +136,45 @@ export function finish() {
  * Delete a finished workout and keep everything derived from it consistent: its XP entry is
  * removed, and every later workout's PRs (and so its XP) are recomputed against the history
  * without it. Streak, weekly goal and Lifts are derived from the sessions, so they follow.
- * Badges already earned are kept.
+ * Badges already earned are kept. 1.3.1: the workout goes to "Recently deleted" (see
+ * {@link restoreSession}).
  * @param {string} id
- * @returns {boolean} false if there was no such workout.
+ * @returns {string|false} The bin entry id, or false if there was no such workout.
  */
 export function deleteSession(id) {
   const gone = get('sessions', id);
   if (!gone) return false;
-  remove('sessions', id);
+  const ledger = kv('xp', {})[`session:${id}`] ?? null;
+  const tid = trash('session', [{ store: 'sessions', row: gone }], {
+    label: planName(gone),
+    sub: fmtDate(new Date(gone.endedAt), { day: 'numeric', month: 'short', year: 'numeric' }),
+    emoji: '🏋️',
+    extra: { ledger },
+  });
   setAward(`session:${id}`, 0);
   for (const c of recomputeAfterDelete(sessions(), gone.endedAt, exById, xpForWorkout)) {
     put('sessions', { ...get('sessions', c.id), prs: c.prs, xp: c.xp });
     setAward(`session:${c.id}`, c.xp);
   }
   emit('workout:deleted', { id });
-  return true;
+  return tid;
+}
+
+/**
+ * After a deleted workout is put back: recompute its own and every later workout's PRs/XP
+ * against the full history again, and restore its XP entry (with its original date).
+ * @param {import('../../core/trash.js').TrashEntry} e
+ */
+export function restoreSession(e) {
+  const back = e.rows[0]?.row;
+  if (!back) return;
+  for (const c of recomputeAfterDelete(sessions(), back.endedAt - 1, exById, xpForWorkout)) {
+    put('sessions', { ...get('sessions', c.id), prs: c.prs, xp: c.xp });
+    if (c.id !== back.id) setAward(`session:${c.id}`, c.xp);
+  }
+  const xp = get('sessions', back.id)?.xp ?? 0;
+  const ledger = { ...kv('xp', {}) };
+  if (xp > 0) ledger[`session:${back.id}`] = { amt: xp, ts: e.extra?.ledger?.ts ?? back.endedAt };
+  setKv('xp', ledger);
+  emit('workout:restored', { id: back.id });
 }
