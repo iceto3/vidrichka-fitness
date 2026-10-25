@@ -15,7 +15,7 @@ import { ic } from '../../ui/icons.js';
 import { celebrating } from '../celebrations/api.js';
 import { setWater, water } from '../food/api.js';
 import { activeWorkout, sessions } from '../workouts/api.js';
-import { BREAKFAST_LOGGER, day, proteinYes } from './api.js';
+import { BREAKFAST_LOGGER, day } from './api.js';
 import { slotText } from './notify.js';
 import { morningPromptOk } from './logic.js';
 
@@ -66,14 +66,14 @@ function pump() {
   const x = slotText(s);
   const primary =
     s.group === 'protein'
-      ? { label: t('notif.protein.yes'), run: () => (proteinYes(), emit('nav', { path: BREAKFAST_LOGGER })) }
+      ? { label: t('notif.protein.yes'), run: () => emit('nav', { path: BREAKFAST_LOGGER }) }
       : s.group === 'water'
         ? { label: t('notif.water.add'), run: () => setWater(dayKey(), water(dayKey()) + 1) }
         : { label: t(`prompt.${s.group}`), run: () => emit('nav', { path: s.route }) };
   openSheet({
     kind: 'dialog',
     render:
-      () => html`<div class="center dprompt"><div class="sq acc mauto">${ic(s.group === 'bed' ? 'moon' : s.group === 'water' ? 'drop' : s.group === 'morning' ? 'sun' : 'bell', 22, 2.3)}</div>
+      () => html`<div class="center dprompt"><div class="sq acc mauto">${ic(s.group === 'bed' ? 'moon' : s.group === 'water' ? 'drop' : s.group === 'morning' ? 'sun' : s.group === 'photos' ? 'camera' : 'bell', 22, 2.3)}</div>
 <h2 class="h2 mt8">${x.title}</h2><p class="muted b small mt6">${x.body}</p>
 <div class="row gap10 mt16"><button class="btn sec f1" data-close>${t('prompt.later')}</button><button class="btn f1" data-act="go">${primary.label}</button></div>
 ${s.group === 'water' ? html`<button class="linkbtn w100 mt8" data-act="open">${t('prompt.openWater')}</button>` : ''}</div>`,

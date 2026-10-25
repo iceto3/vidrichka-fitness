@@ -102,7 +102,7 @@ export default () => ({
       lv = level(),
       st = stats(),
       r = s.reminders,
-      since = kv('meta', { createdAt: Date.now() }).createdAt;
+      since = /** @type {{createdAt?: number}} */ (kv('meta', {})).createdAt ?? Date.now();
     const langs = Object.entries(LANGUAGES).map(([v, l]) => ({
       value: v,
       label: v.toUpperCase(),
@@ -260,6 +260,7 @@ ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic t
       closeSheet();
       emit('toast', { key: 'profile.resetDone' });
       emit('nav', { path: 'home', replace: true });
+      emit('app:reset'); // 1.2.1: the welcome shows at once, not only after a reload
     },
   },
 });

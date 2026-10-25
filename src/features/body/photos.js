@@ -1,14 +1,19 @@
 /**
- * Progress photos: downscale to JPEG (max 1280 px), store as IndexedDB blobs, and cache
- * object URLs for display.
+ * Progress photos, storage side: downscale to JPEG (max 1280 px), store as IndexedDB blobs,
+ * cache object URLs, and keep each session's date consistent (see photo-logic.js).
+ * The capture date is read from the original file (EXIF) before resizing.
  * @module features/body/photos
  */
-import { put, uid } from '../../core/store.js';
-import { dayKey } from '../../core/dates.js';
+import { all, put, remove, uid } from '../../core/store.js';
+import { emit } from '../../core/bus.js';
+import { applySessionDate, movePhoto as movePlan } from './photo-logic.js';
+import { photoDateOf } from './exif.js';
 
 const MAX = 1280;
 /** @type {Map<string, string>} */
 const urls = new Map();
+
+/** @typedef {import('./photo-logic.js').Photo} Photo @typedef {import('./photo-logic.js').Pose} Pose */
 
 /** Object URL for a photo row. @param {{id: string, blob: Blob}} p */
 export function photoUrl(p) {
@@ -31,10 +36,56 @@ export async function shrink(file) {
   return new Promise((res) => c.toBlob((b) => res(b ?? file), 'image/jpeg', 0.85));
 }
 
+/** Photos of one session. @param {string} session @returns {Photo[]} */
+const ofSession = (session) => all('photos').filter((p) => p.session === session);
+
+/** Write rows whose session date changed. @param {Photo[]} rows */
+const writeAll = (rows) => rows.forEach((r) => put('photos', /** @type {any} */ (r)));
+
+/** A new session id. */
+export const newSession = () => uid('ps');
+
 /**
- * Save a photo from a file input.
- * @param {File} file
- * @param {string} [date]
+ * Save a picked photo into a session slot. Its default date is the EXIF capture date (else
+ * an older file date, else now); the session takes the earliest of its photos' dates unless
+ * she edited it.
+ * @param {string} session @param {Pose} pose @param {File} file
+ * @returns {Promise<Photo>}
  */
-export const addPhoto = async (file, date = dayKey()) =>
-  put('photos', { id: uid('ph'), date, ts: Date.now(), blob: await shrink(file) });
+export async function addPhoto(session, pose, file) {
+  const shot = await photoDateOf(file);
+  const blob = await shrink(file);
+  /** @type {Photo} */
+  const row = { id: uid('ph'), session, pose, date: shot.date, time: shot.time, ts: Date.now(), shot, blob };
+  const rest = ofSession(session);
+  const dated = applySessionDate([...rest, row]);
+  const mine = dated.find((r) => r.id === row.id) ?? row;
+  put('photos', /** @type {any} */ (mine));
+  writeAll(dated.filter((r) => r.id !== row.id));
+  return mine;
+}
+
+/** Delete a photo (the session's date is re-derived from what is left). @param {string} id */
+export function deletePhoto(id) {
+  const p = all('photos').find((x) => x.id === id);
+  if (!p) return;
+  remove('photos', id);
+  const u = urls.get(id);
+  if (u) (URL.revokeObjectURL(u), urls.delete(id));
+  writeAll(applySessionDate(ofSession(p.session)));
+}
+
+/** Move a photo to another pose slot (swaps with the photo there). @param {string} id @param {Pose} pose */
+export function movePhoto(id, pose) {
+  const p = all('photos').find((x) => x.id === id);
+  if (p) writeAll(movePlan(ofSession(p.session), id, pose));
+}
+
+/**
+ * Set a session's date by hand (e.g. taken yesterday, uploaded today). Fully valid, also
+ * for the monthly set and streak. @param {string} session @param {{date: string, time?: string}} d
+ */
+export function setSessionDate(session, d) {
+  writeAll(applySessionDate(ofSession(session), { date: d.date, time: d.time ?? '' }));
+  emit('photos:dated', session);
+}

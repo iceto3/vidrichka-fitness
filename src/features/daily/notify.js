@@ -35,6 +35,12 @@ const granted = () => typeof Notification !== 'undefined' && Notification.permis
 const records = () => Object.fromEntries(all('days').map((r) => [r.id, r]));
 
 /**
+ * Groups planned on the phone even with push on: the push server (not deployed yet) has no
+ * schedule for the monthly photo set, so that one always goes through the on-phone path.
+ */
+export const LOCAL_ONLY = ['photos'];
+
+/**
  * Localized title/body/action labels for a slot. iPhone gets no action buttons (iOS web
  * push has none), so its texts say "tap to …" instead.
  * @param {import('./logic.js').Slot} s
@@ -61,15 +67,19 @@ export async function syncDaily() {
   const reg = await swReg();
   if (!reg) return;
   const now = Date.now(),
-    on = dailyEnabled() && !pushOn(); // push on: the server sends them, plan nothing locally
-  const slots = on ? planRange(now, 7, dailySettings(), records()).map(slotText) : [];
+    push = pushOn(); // push on: the server sends them, plan only what it does not (photos)
+  const slots = dailyEnabled()
+    ? planRange(now, 7, dailySettings(), records())
+        .filter((s) => !push || LOCAL_ONLY.includes(s.group))
+        .map(slotText)
+    : [];
   reg.active?.postMessage({
     type: 'daily',
     daily: { slots, waterGoal: settings().waterGoal, waterLogged: t('notif.water.logged') },
   });
   if (!granted() || !('showTrigger' in Notification.prototype)) return;
   // Notification Triggers: replace every scheduled daily notification with a fresh plan.
-  const groups = ['morning', 'protein', 'water', 'checkinAm', 'checkinPm', 'bed'];
+  const groups = ['morning', 'protein', 'water', 'checkinAm', 'checkinPm', 'bed', 'photos'];
   for (const tag of groups.map((g) => `vf-${g}`))
     (await reg.getNotifications(/** @type {any} */ ({ tag, includeTriggered: false }))).forEach((n) => n.close());
   const recs = records();
@@ -98,8 +108,10 @@ export async function syncDaily() {
  * @returns {import('./logic.js').Slot[]} the slots shown
  */
 export function checkDaily(now = Date.now()) {
-  if (!dailyEnabled() || !settings().onboarded || pushOn()) return [];
-  const { show, seen } = dueSlots(planRange(now, 1, dailySettings(), records()), now, records());
+  if (!dailyEnabled() || !settings().onboarded) return [];
+  const push = pushOn();
+  const plan = planRange(now, 1, dailySettings(), records()).filter((s) => !push || LOCAL_ONLY.includes(s.group));
+  const { show, seen } = dueSlots(plan, now, records());
   seen.forEach((s) => patchDay(s.day, { shown: { ...day(s.day).shown, [s.kind]: now } }));
   if (!show.length) return [];
   if (document.visibilityState === 'visible') show.forEach((s) => emit('daily:prompt', s));

@@ -338,12 +338,9 @@ self.addEventListener('notificationclick', (e) => {
       let route = d.route;
       if (e.action === 'water-add') return Promise.all([addWater(), postEvent('water-logged')]);
       if (e.action === 'protein-yes') {
-        await Promise.all([
-          update('days', [d.day], (r) => (r.proteinAt ? r : { ...r, proteinAt: Date.now() })),
-          postEvent('protein-done'),
-        ]);
+        // 1.2.1: no credit here — the app records it once a breakfast entry is saved.
         await closeTags(['vf-protein']);
-        route = 'food/add/breakfast?protein'; // then log what she ate (Food › Breakfast)
+        route = 'food/add/breakfast?protein'; // log what she ate (Food › Breakfast)
       } else if (d.group === 'morning') {
         // Tapped the 7:30 (or 8:15) one: she is up – the 8:15 alarm must not fire.
         await Promise.all([

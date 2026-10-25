@@ -14,7 +14,7 @@ import { ic } from '../../../ui/icons.js';
 import { rig } from '../../mascot/api.js';
 import { PROTEIN_WINDOW, MIN } from '../logic.js';
 import { closeNotifications } from '../notify.js';
-import { BREAKFAST_LOGGER, day, isMorning, lastNight, proteinState, proteinYes, sleepHours, wakeUp } from '../api.js';
+import { BREAKFAST_LOGGER, day, isMorning, lastNight, proteinState, sleepHours, wakeUp } from '../api.js';
 
 const R = 92,
   C = 2 * Math.PI * R;
@@ -87,9 +87,9 @@ ${proteinCard()}
     actions: {
       wake: () => void wakeUp(),
       yes: () => {
-        proteinYes();
+        // 1.2.1: only opens the logger; saving a breakfast there ticks the protein quest.
         closeNotifications(['protein']);
-        emit('nav', { path: BREAKFAST_LOGGER }); // what did she eat? (optional)
+        emit('nav', { path: BREAKFAST_LOGGER });
         return false;
       },
     },

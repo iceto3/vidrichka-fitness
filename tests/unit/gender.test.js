@@ -11,7 +11,15 @@ import { DEFAULTS } from '../../src/core/settings.js';
 import { t, L, setLang, setGender, getGender, isGendered, byGender } from '../../src/core/i18n.js';
 
 /** Gendered keys found in the 1.2 audit of bg.js (the user is addressed with a participle/adjective). */
-const GENDERED = ['cel.waterSub', 'cel.levelSub', 'daily.loudSub'];
+const GENDERED = [
+  'cel.waterSub',
+  'cel.levelSub',
+  'daily.loudSub',
+  // 1.2.1 photos
+  'photo.dateHint',
+  'cel.photo2',
+  'cel.photoSetSub',
+];
 
 /** Every string variant of a dictionary value. @param {any} v @returns {string[]} */
 const variants = (v) => (typeof v === 'string' ? [v] : Object.values(v).flatMap(variants));

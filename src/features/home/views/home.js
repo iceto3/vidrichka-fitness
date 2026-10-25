@@ -24,7 +24,6 @@ import {
   morningPending,
   proteinBar,
   proteinSkip,
-  proteinYes,
   tuckedIn,
 } from '../../daily/api.js';
 import { closeNotifications } from '../../daily/notify.js';
@@ -207,9 +206,9 @@ ${
       install: () => installApp(),
       noInstall: () => void setKv('installDismissed', true),
       proteinYes: () => {
-        proteinYes(); // celebration + push "protein-done" via the bus
+        // 1.2.1: only opens the logger; saving a breakfast there ticks the protein quest.
         closeNotifications(['protein']);
-        emit('nav', { path: BREAKFAST_LOGGER }); // log what she ate (optional)
+        emit('nav', { path: BREAKFAST_LOGGER });
         return false;
       },
       proteinSkip: () => {

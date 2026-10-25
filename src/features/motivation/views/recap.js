@@ -4,7 +4,7 @@
  * @module features/motivation/views/recap
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, t } from '../../../core/i18n.js';
+import { fmtDate, fmtVolume, t } from '../../../core/i18n.js';
 import { all, kv, setKv } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
@@ -34,7 +34,7 @@ export default ({ month }) => {
 <button class="iconbtn wrclose" data-back aria-label="${t('common.close')}">${ic('close', 22)}</button>
 ${card('c1', html`<div class="wrk">${t('recap.kicker')}</div><h1 class="wrh">${name}</h1>${otter({ size: 190, pose: 'cheer', mood: 'excited' })}<p class="wrp">${t('recap.intro', { otter: otterName() })}</p><div class="wrhint">${ic('down', 20, 2.6)}</div>`)}
 ${card('c2', html`${big(r.workouts, t('recap.workouts'))}<p class="wrp">${t('recap.days', { n: r.days, min: r.minutes })}</p>`)}
-${card('c3', html`${big(r.volume >= 1000 ? `${(r.volume / 1000).toFixed(1)}t` : `${r.volume} kg`, t('recap.lifted'))}<p class="wrp">${t('recap.liftedSub', { sets: r.sets, kcal: r.kcalBurned })}</p>${r.topExercise ? html`<div class="wrchip">${ic('star', 16, 2.4)}${t('recap.top', { ex: exName(r.topExercise.exId), n: r.topExercise.times })}</div>` : ''}`)}
+${card('c3', html`${big(fmtVolume(r.volume).text, t('recap.lifted'))}<p class="wrp">${t('recap.liftedSub', { sets: r.sets, kcal: r.kcalBurned })}</p>${r.topExercise ? html`<div class="wrchip">${ic('star', 16, 2.4)}${t('recap.top', { ex: exName(r.topExercise.exId), n: r.topExercise.times })}</div>` : ''}`)}
 ${card('c4', html`${big(r.prs.length, t('recap.prs'))}<div class="wrlist">${r.prs.slice(0, 4).map((p) => html`<div>${ic('trophy', 16, 2.4)} ${exName(p.exId)} · <b class="num">${p.w ? `${p.w} kg × ${p.r}` : `× ${p.r}`}</b></div>`)}</div>${r.prs.length ? '' : html`<p class="wrp">${t('recap.noPrs')}</p>`}`)}
 ${card('c5', html`${big(r.foodDays, t('recap.foodDays'))}<p class="wrp">${r.avgKcal ? t('recap.avgKcal', { kcal: r.avgKcal }) : t('recap.noFood')}</p>${r.weightDelta != null ? html`<div class="wrchip">${ic('scale', 16, 2.4)}${t('recap.weight', { d: `${r.weightDelta > 0 ? '+' : ''}${r.weightDelta}` })}</div>` : ''}`)}
 ${card(
@@ -51,7 +51,7 @@ ${card(
           otterSvg: otterSvg({ size: 420, pose: 'cheer', mood: 'excited', gear: ['headband'] }),
           stats: [
             [t('recap.workouts'), String(r.workouts)],
-            [t('recap.lifted'), `${Math.round(r.volume / 100) / 10}t`],
+            [t('recap.lifted'), fmtVolume(r.volume).text],
             [t('recap.prs'), String(r.prs.length)],
             [t('summary.time'), `${r.minutes}′`],
             [t('recap.foodDays'), String(r.foodDays)],

@@ -62,6 +62,8 @@ export async function startDaily() {
       ('daily' in p || 'lang' in p || 'userName' in p) && notify.syncDaily().catch(() => {}),
   );
   api.catchUpProtein();
+  // 1.2.1: the protein breakfast counts only once a breakfast entry is saved.
+  on('store:food', (/** @type {any} */ row) => api.proteinLogged(row));
   // Not awaited: it waits for the service worker; pushOn() alone already decides local planning.
   push.startPush().catch((e) => console.warn('[push]', e));
   notify.syncDaily().catch(() => {});

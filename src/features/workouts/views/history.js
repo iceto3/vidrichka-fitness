@@ -6,7 +6,7 @@
  * @module features/workouts/views/history
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, fmtNum, t } from '../../../core/i18n.js';
+import { fmtDate, fmtNum, fmtVolume, t } from '../../../core/i18n.js';
 import { durationMin } from '../../../core/dates.js';
 import { get } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
@@ -37,7 +37,11 @@ export default ({ id, tab = 'progress' }) => {
         ['clock', t('summary.time'), html`${durationMin(s.durationSec)} <small>${t('unit.min')}</small>`],
         ['check', t('summary.sets'), html`${s.setsDone} <small>${t('summary.of', { n: s.setsPlanned })}</small>`],
         ['bolt', t('summary.reps'), html`${s.reps}`],
-        ['dumbbell', t('summary.volume'), html`${fmtNum(s.volume)} <small>kg</small>`],
+        [
+          'dumbbell',
+          t('summary.volume'),
+          html`${fmtVolume(s.volume).value} <small>${fmtVolume(s.volume).unit}</small>`,
+        ],
         ['flame', t('summary.kcal'), html`~${s.kcal} <small>kcal</small>`],
         ['star', t('summary.xp'), html`<span class="gold">+${s.xp}</span>`],
       ];

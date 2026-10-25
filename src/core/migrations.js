@@ -16,6 +16,31 @@ export const MIGRATIONS = [
   // 1 -> 2 (1.1.0): add the `days` store (wake/bed, protein, check-ins). Every existing row
   // is kept as is; a backup that already has `days` keeps them.
   (s) => ({ ...s, stores: { ...s.stores, days: s.stores.days ?? [] } }),
+  // 2 -> 3 (1.2.1): progress photos become dated sessions with pose slots. Every existing
+  // photo is kept (blob untouched) as its own session with the photo in the Front slot and
+  // its original date; rows that already have a session are left as they are.
+  (s) => ({
+    ...s,
+    stores: {
+      ...s.stores,
+      ...(s.stores.photos
+        ? {
+            photos: s.stores.photos.map((p) =>
+              p && !p.session
+                ? {
+                    ...p,
+                    session: `ps_${p.id}`,
+                    pose: 'front',
+                    time: p.time ?? '',
+                    ts: Number.isFinite(p.ts) ? p.ts : new Date(`${p.date}T12:00`).getTime() || 0,
+                    shot: { date: p.date, time: p.time ?? '', source: 'upload' },
+                  }
+                : p,
+            ),
+          }
+        : {}),
+    },
+  }),
 ];
 
 export const DATA_VERSION = MIGRATIONS.length + 1;

@@ -6,6 +6,7 @@
  * @module features/celebrations/play
  */
 import { esc } from '../../ui/dom.js';
+import { t } from '../../core/i18n.js';
 import { rig } from '../mascot/api.js';
 
 /**
@@ -14,7 +15,9 @@ import { rig } from '../mascot/api.js';
  * @property {string} [key] Merge key for the queue (e.g. 'water').
  * @property {string} title
  * @property {string} [sub]
- * @property {'drop'|'check'|'moon'|'egg'} [icon] SMALL: icon on the right.
+ * @property {'drop'|'check'|'moon'|'egg'|'camera'|'badge'} [icon] SMALL: icon on the right.
+ * @property {'wave'|'hop'|'spin'|'flash'} [variant] SMALL: otter move (default wave: bounce, wave, wink).
+ * @property {boolean} [dismiss] SMALL: stays ~3 s and can be tapped away (e.g. a badge after a photo session).
  * @property {[number, number]} [progress] SMALL: progress bar from → to (0…1).
  * @property {() => {sub: string, pct: number}|null} [live] SMALL: read the text and bar from the
  *   current state while it is on screen (set counter while tapping fast).
@@ -95,7 +98,14 @@ const ICONS = {
     '<div class="drop ok"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#1fb46b"/><path d="m7.5 12.5 3 3 6-6.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>',
   egg: '<div class="drop ok"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 3c3.5 0 6.5 6 6.5 10a6.5 6.5 0 0 1-13 0C5.5 9 8.5 3 12 3z" fill="#f5b935"/><circle cx="12" cy="14" r="2.6" fill="#fff" opacity=".8"/></svg></div>',
   moon: '<div class="drop night"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="#7c5cff"/></svg></div>',
+  camera:
+    '<div class="drop warm"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.4-2h5l1.4 2h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" fill="#ff7a2f"/><circle cx="12" cy="12.5" r="3.4" fill="#fff"/></svg></div>',
+  badge:
+    '<div class="drop gold"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="9.5" r="6" fill="#f5b935"/><path d="m8.5 14 -1.5 7 5-2.5 5 2.5-1.5-7" fill="#e09a12"/><path d="m12 6.6 1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z" fill="#fff"/></svg></div>',
 };
+
+/** Otter moves for SMALL (variety for repeated celebrations, e.g. every photo session). */
+export const SMALL_VARIANTS = /** @type {const} */ (['wave', 'hop', 'spin', 'flash']);
 
 const chipsHtml = (/** @type {Celebration['chips']} */ chips = []) =>
   chips.map((c) => `<span class="chip ${esc(c.tone ?? '')}">${esc(c.text)}</span>`).join('');
@@ -115,6 +125,15 @@ async function small(host, c, { A, cue, reduce }) {
   const card = $(root, '.toastc'),
     ob = $(root, '.ob'),
     svg = $(root, 'svg');
+  const hold = c.dismiss ? 2.9 : 1.1; // seconds on screen before sliding out
+  /** @type {() => void} */
+  let skip = () => {};
+  const skipped = new Promise((r) => (skip = () => r(null)));
+  if (c.dismiss) {
+    card.classList.add('live', 'tapaway');
+    card.setAttribute('aria-label', t('common.close'));
+    card.addEventListener('click', () => skip(), { once: true });
+  }
   A(
     card,
     [
@@ -132,27 +151,86 @@ async function small(host, c, { A, cue, reduce }) {
       { transform: 'translateY(150px)', opacity: 0 },
     ],
     0.26,
-    1.1,
+    hold,
     {
       fill: 'forwards',
       e: 'cubic-bezier(.5,0,.75,0)',
     },
   );
-  A(
-    ob,
-    [
-      { transform: 'translateY(0) scale(1,1)' },
-      { offset: 0.14, transform: 'translateY(0) scale(1.1,.88)' },
-      { offset: 0.36, transform: 'translateY(-26px) scale(.94,1.08)' },
-      { offset: 0.56, transform: 'translateY(0) scale(1.08,.9)' },
-      { offset: 0.72, transform: 'translateY(-10px) scale(.98,1.03)' },
-      { offset: 0.86, transform: 'translateY(0) scale(1.03,.97)' },
-      { transform: 'translateY(0) scale(1,1)' },
-    ],
-    0.78,
-    0.12,
-    { e: 'ease-in-out' },
-  );
+  const v = c.variant ?? 'wave';
+  if (v === 'hop')
+    // two quick hops with a lean
+    A(
+      ob,
+      [
+        { transform: 'translateY(0) rotate(0)' },
+        { offset: 0.2, transform: 'translateY(-22px) rotate(-8deg)' },
+        { offset: 0.4, transform: 'translateY(0) rotate(0) scale(1.06,.92)' },
+        { offset: 0.6, transform: 'translateY(-16px) rotate(8deg)' },
+        { offset: 0.8, transform: 'translateY(0) rotate(0) scale(1.04,.95)' },
+        { transform: 'translateY(0) rotate(0)' },
+      ],
+      0.8,
+      0.12,
+      { e: 'ease-in-out' },
+    );
+  else if (v === 'spin')
+    // a happy pirouette in the air
+    A(
+      ob,
+      [
+        { transform: 'translateY(0) rotate(0)' },
+        { offset: 0.3, transform: 'translateY(-24px) rotate(-180deg)' },
+        { offset: 0.6, transform: 'translateY(-8px) rotate(-360deg)' },
+        { offset: 0.8, transform: 'translateY(0) rotate(-360deg) scale(1.06,.92)' },
+        { transform: 'translateY(0) rotate(-360deg)' },
+      ],
+      0.85,
+      0.12,
+      { e: 'ease-in-out' },
+    );
+  else if (v === 'flash') {
+    // camera flash, then a little "click" squash
+    const fl = el('<div class="flash"></div>', $(root, '.oslot'));
+    A(
+      fl,
+      [
+        { opacity: 0, transform: 'scale(.4)' },
+        { offset: 0.25, opacity: 0.95, transform: 'scale(1)' },
+        { opacity: 0, transform: 'scale(1.5)' },
+      ],
+      0.6,
+      0.2,
+      { e: 'ease-out' },
+    );
+    A(
+      ob,
+      [
+        { transform: 'scale(1,1)' },
+        { offset: 0.3, transform: 'scale(1.08,.9)' },
+        { offset: 0.55, transform: 'translateY(-12px) scale(.96,1.05)' },
+        { transform: 'scale(1,1)' },
+      ],
+      0.7,
+      0.25,
+      { e: 'ease-in-out' },
+    );
+  } else
+    A(
+      ob,
+      [
+        { transform: 'translateY(0) scale(1,1)' },
+        { offset: 0.14, transform: 'translateY(0) scale(1.1,.88)' },
+        { offset: 0.36, transform: 'translateY(-26px) scale(.94,1.08)' },
+        { offset: 0.56, transform: 'translateY(0) scale(1.08,.9)' },
+        { offset: 0.72, transform: 'translateY(-10px) scale(.98,1.03)' },
+        { offset: 0.86, transform: 'translateY(0) scale(1.03,.97)' },
+        { transform: 'translateY(0) scale(1,1)' },
+      ],
+      0.78,
+      0.12,
+      { e: 'ease-in-out' },
+    );
   A($(svg, '.o-smile'), [{ opacity: 1 }, { opacity: 0 }], 0.08, 0.18);
   A($(svg, '.o-open'), [{ opacity: 0 }, { opacity: 1 }], 0.08, 0.18);
   A(
@@ -219,7 +297,7 @@ async function small(host, c, { A, cue, reduce }) {
       );
     });
   cue('hello', 0.1);
-  await wait(reduce ? 1.8 : 1.4);
+  await Promise.race([wait(reduce ? hold + 0.7 : hold + 0.3), skipped]);
   root.remove();
 }
 

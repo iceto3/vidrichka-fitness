@@ -4,7 +4,7 @@
  * @module features/partner/api
  */
 import { html } from '../../ui/dom.js';
-import { t } from '../../core/i18n.js';
+import { fmtGrouped, fmtVolume, t } from '../../core/i18n.js';
 import { settings, setSettings } from '../../core/settings.js';
 import { emit } from '../../core/bus.js';
 import { ic } from '../../ui/icons.js';
@@ -30,7 +30,8 @@ export function statsText() {
     goal: s.streak.goal,
     streak: s.streak.weeks,
     total: s.totalWorkouts,
-    kg: Math.round(s.totalKg).toLocaleString(),
+    // The text has its own "kg"/"кг" (BG wording unchanged), so only the shared separator here.
+    kg: fmtGrouped(Math.round(s.totalKg)),
     link: cheerLink(),
   });
 }
@@ -46,7 +47,7 @@ export async function shareStatsImage() {
       [t('partner.thisWeek'), `${s.streak.thisWeek}/${s.streak.goal}`],
       [t('profile.weekStreak'), `🔥 ${s.streak.weeks}`],
       [t('profile.workouts'), String(s.totalWorkouts)],
-      [t('summary.volume'), `${Math.round(s.totalKg / 100) / 10}t`],
+      [t('summary.volume'), fmtVolume(s.totalKg).text],
       [t('partner.prs'), String(s.prCount)],
       [t('home.levelShort'), String(s.level)],
     ],

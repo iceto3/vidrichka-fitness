@@ -9,6 +9,7 @@
  * @module features/daily/logic
  */
 import { addDays, dayKey, parseDay } from '../../core/dates.js';
+import { PHOTO_DAY } from '../../data/photos.js';
 
 export const MIN = 60_000;
 export const HOUR = 60 * MIN;
@@ -179,8 +180,8 @@ export function sleepStreak(rows, now) {
  * @typedef {object} Slot A reminder occurrence.
  * @property {string} id      `<day>:<kind>`
  * @property {string} day     Day key of the record it belongs to.
- * @property {string} kind    wake | loud | p10 | p20 | p30 | water0…3 | checkinAm | checkinPm | bed
- * @property {string} group   morning | protein | water | checkinAm | checkinPm | bed (one shown per group)
+ * @property {string} kind    wake | loud | p10 | p20 | p30 | water0…3 | checkinAm | checkinPm | bed | photos
+ * @property {string} group   morning | protein | water | checkinAm | checkinPm | bed | photos (one shown per group)
  * @property {number} at      When it becomes due.
  * @property {number} until   After this it is stale and never shown.
  * @property {string} route   Where a tap leads (`morning`, `food?water`, …).
@@ -197,6 +198,7 @@ export function sleepStreak(rows, now) {
  * @property {{time: string, on: boolean}[]} water
  * @property {{time: string, on: boolean}} checkinAm @property {{time: string, on: boolean}} checkinPm
  * @property {{time: string, on: boolean}} bedtime
+ * @property {{time: string, on: boolean}} [photos] Monthly photo set reminder (1st of the month).
  */
 
 /**
@@ -289,6 +291,19 @@ export function planDay(day, cfg, rec = {}) {
       silent: true,
       skipIf: ['bed'],
     });
+  // 1.2.1: monthly photo set on the 1st (skipped once that month's 4 poses are done — the
+  // body feature sets `photoSet` on the 1st's record; the daily quest stays until then).
+  if (cfg.photos?.on && Number(day.slice(8)) === PHOTO_DAY) {
+    const t = at(day, cfg.photos.time);
+    add({
+      kind: 'photos',
+      group: 'photos',
+      at: t,
+      until: Math.max(t + 4 * HOUR, at(day, '23:59')),
+      route: 'progress/body',
+      skipIf: ['photoSet'],
+    });
+  }
   return out;
 }
 
@@ -334,10 +349,10 @@ export function dueSlots(slots, now, recs) {
 
 /**
  * How many daily-rhythm reminders are switched on (for the Profile › Reminders summary).
- * @param {{morning?: boolean, protein?: boolean, water?: {on: boolean}[], checkinAm?: {on: boolean}, checkinPm?: {on: boolean}, bedtime?: {on: boolean}}} d
+ * @param {{morning?: boolean, protein?: boolean, water?: {on: boolean}[], checkinAm?: {on: boolean}, checkinPm?: {on: boolean}, bedtime?: {on: boolean}, photos?: {on: boolean}}} d
  */
 export const dailyOnCount = (d) =>
-  [d.morning, d.protein, d.checkinAm?.on, d.checkinPm?.on, d.bedtime?.on].filter(Boolean).length +
+  [d.morning, d.protein, d.checkinAm?.on, d.checkinPm?.on, d.bedtime?.on, d.photos?.on].filter(Boolean).length +
   (d.water ?? []).filter((w) => w.on).length;
 
 /**

@@ -5,7 +5,16 @@
  */
 
 /** Notification text kinds the server sends (protein and water share one text each). */
-export const TEXT_KINDS = /** @type {const} */ (['wake', 'loud', 'protein', 'water', 'checkinAm', 'checkinPm', 'bed']);
+export const TEXT_KINDS = /** @type {const} */ ([
+  'wake',
+  'loud',
+  'protein',
+  'water',
+  'checkinAm',
+  'checkinPm',
+  'bed',
+  'photos', // 1.2.1 monthly photo set (scheduled on the phone for now; the text is ready for push)
+]);
 
 /** App event → server event (`checkin:done` carries morning/evening). */
 export const EVENT_OF = /** @type {const} */ ({

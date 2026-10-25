@@ -17,6 +17,7 @@ export const DEFAULT_TEXTS = {
   checkinAm: { title: 'Morning check-in', body: 'How do you feel, and how did you sleep? Two taps.' },
   checkinPm: { title: 'Evening check-in', body: 'How was your energy today? One tap.' },
   bed: { title: 'Bedtime 🌙', body: 'Vidrichka is getting sleepy… tuck her in?' },
+  photos: { title: 'Monthly photo day 📸', body: 'Vidrichka is ready with the camera: front, back, left and right.' },
 };
 
 /** Text key of a slot (protein and water share one text per group). @param {{group: string, kind: string}} s */

@@ -122,6 +122,28 @@
 .cel .drop.night {
   background: #e6e3ff;
 }
+.cel .drop.warm {
+  background: #ffe9dc;
+}
+.cel .drop.gold {
+  background: #fff3d1;
+}
+/* 1.2.1: a SMALL toast that can be tapped away (e.g. a badge after a photo session) */
+.cel .toastc.tapaway {
+  cursor: pointer;
+}
+/* 1.2.1: camera-flash variant of the SMALL otter */
+.cel .flash {
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 35%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+  opacity: 0;
+}
 .cel .pbar {
   height: 7px;
   border-radius: 99px;

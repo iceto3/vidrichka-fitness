@@ -96,6 +96,7 @@ ${d.water.map((w, i) => drow(`water.${i}`, t('daily.water', { n: i + 1 }), w.tim
 ${drow('checkinAm', t('daily.checkinAm'), d.checkinAm.time, d.checkinAm.on, t('daily.checkinAmSub'))}
 ${drow('checkinPm', t('daily.checkinPm'), d.checkinPm.time, d.checkinPm.on, t('daily.checkinPmSub'))}
 ${drow('bedtime', t('daily.bedtime'), d.bedtime.time, d.bedtime.on, t('daily.bedtimeSub'))}
+${drow('photos', t('daily.photos'), d.photos.time, d.photos.on, t('daily.photosSub'))}
 ${s.notif && s.permission === 'default' ? html`<button class="btn w100 mt14" data-act="allow">${t('daily.allow')}</button>` : ''}
 <p class="muted xs b mt12 lh">${t(isIOS() ? 'daily.noteIos' : 'daily.noteAndroid')}</p></div>
 <div class="card mt12 note"><div class="b">${t('reminders.howTitle')}</div><p class="small b muted mt6 lh">${t(how)}</p>

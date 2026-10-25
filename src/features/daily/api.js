@@ -53,7 +53,11 @@ export function wakeUp(now = Date.now()) {
   return true;
 }
 
-/** "Yes, I ate" — stops the protein reminders and celebrates. @param {number} [now] */
+/**
+ * Protein breakfast recorded — stops the protein reminders and celebrates. Since 1.2.1 this
+ * runs only when a breakfast entry is actually saved (see `proteinLogged`); "Yes, I ate"
+ * buttons just open the breakfast logger. @param {number} [now]
+ */
 export function proteinYes(now = Date.now()) {
   const id = dayKey(now),
     rec = day(id);
@@ -62,6 +66,19 @@ export function proteinYes(now = Date.now()) {
   emit('protein:done', { onTime: proteinOnTime(next) });
   emit('daily:changed');
   return true;
+}
+
+/**
+ * A food row was saved: if it is today's breakfast (not water) while the protein countdown
+ * runs, that is the protein breakfast. The quest/XP then follows the usual 30-min window
+ * (`proteinOnTime`). @param {any} row @param {number} [now]
+ * @returns {boolean} true if it recorded the protein breakfast.
+ */
+export function proteinLogged(row, now = Date.now()) {
+  if (!row || row.removed || row.type === 'water' || row.meal !== 'breakfast' || row.date !== dayKey(now)) return false;
+  const rec = day(dayKey(now));
+  if (!rec.proteinStart || rec.proteinAt || rec.proteinSkip) return false;
+  return proteinYes(now);
 }
 
 /**

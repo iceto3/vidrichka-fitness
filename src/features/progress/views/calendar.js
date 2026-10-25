@@ -3,7 +3,7 @@
  * @module features/progress/views/calendar
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, fmtNum, t, weekdayName } from '../../../core/i18n.js';
+import { fmtDate, fmtVolume, t, weekdayName } from '../../../core/i18n.js';
 import { dayKey, durationMin, monthKey, totalMin, weekdayMon } from '../../../core/dates.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
@@ -19,7 +19,12 @@ export default () => ({
       mk = monthKey(first),
       days = new Date(state.y, state.m + 1, 0).getDate();
     const list = sessions().filter((s) => monthKey(new Date(s.endedAt)) === mk);
-    const byDay = new Set(list.map((s) => dayKey(s.endedAt)));
+    // 1.2.1: partial workouts are listed and marked, but not counted as workouts.
+    const full = list.filter((s) => !s.partial),
+      partial = list.length - full.length,
+      vol = list.reduce((a, s) => a + (s.volume || 0), 0);
+    const byDay = new Set(full.map((s) => dayKey(s.endedAt))),
+      partDay = new Set(list.filter((s) => s.partial).map((s) => dayKey(s.endedAt)));
     const today = dayKey(),
       isNow = mk === monthKey();
     return html`<div class="card mt12 cal">
@@ -30,11 +35,11 @@ export default () => ({
 ${Array.from({ length: weekdayMon(first) }, () => html`<span></span>`)}
 ${Array.from({ length: days }, (_, i) => {
   const k = dayKey(new Date(state.y, state.m, i + 1));
-  return html`<span class="cd${byDay.has(k) ? ' on' : ''}${k === today ? ' today' : ''}">${i + 1}</span>`;
+  return html`<span class="cd${byDay.has(k) ? ' on' : partDay.has(k) ? ' part' : ''}${k === today ? ' today' : ''}">${i + 1}</span>`;
 })}</div></div>
-<div class="grid3 mt12"><div class="stat"><div class="l">${ic('dumbbell', 15, 2.3)}${t('calendar.workouts')}</div><div class="v num">${list.length}</div></div>
+<div class="grid3 mt12"><div class="stat"><div class="l">${ic('dumbbell', 15, 2.3)}${t('calendar.workouts')}</div><div class="v num">${full.length}${partial ? html` <small class="partn">${t('calendar.partialN', { n: partial })}</small>` : ''}</div></div>
 <div class="stat"><div class="l">${ic('clock', 15, 2.3)}${t('calendar.time')}</div><div class="v num">${totalMin(list)} <small>${t('unit.min')}</small></div></div>
-<div class="stat"><div class="l">${ic('bolt', 15, 2.3)}${t('summary.volume')}</div><div class="v num">${fmtNum(list.reduce((a, s) => a + s.volume, 0) / 1000, 1)} <small>t</small></div></div></div>
+<div class="stat"><div class="l">${ic('bolt', 15, 2.3)}${t('summary.volume')}</div><div class="v num">${fmtVolume(vol).value} <small>${fmtVolume(vol).unit}</small></div></div></div>
 ${list.length && !isNow ? html`<button class="btn sec w100 mt12" data-act="recap">${ic('gift', 18, 2.2)}${t('calendar.recap', { month: fmtDate(first, { month: 'long' }) })}</button>` : ''}
 <div class="section-title"><h2 class="h3">${t('calendar.history')}</h2></div>
 ${
@@ -43,7 +48,7 @@ ${
         (
           s,
         ) => html`<button class="lrow" data-go="history/${s.id}"><span class="f1 left"><span class="b block">${planName(s)}</span>
-<span class="muted xs b">${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })} · ${durationMin(s.durationSec)} ${t('unit.min')} · ${fmtNum(s.volume)} kg</span></span>
+<span class="muted xs b">${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })} · ${durationMin(s.durationSec)} ${t('unit.min')} · ${fmtVolume(s.volume).text}</span></span>
 ${s.partial ? html`<span class="chip chip-sm">${t('summary.partial')}</span>` : ''}
 ${s.prs.length ? html`<span class="chip warm chip-sm">${ic('trophy', 13, 2.4)}${s.prs.length}</span>` : ''}${ic('right', 16, 2.2, 'var(--muted)')}</button>`,
       )}</div>`

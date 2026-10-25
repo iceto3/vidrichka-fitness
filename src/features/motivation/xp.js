@@ -5,7 +5,7 @@
  */
 
 /** XP rewards in one place. */
-export const XP = { workout: 50, perSet: 2, pr: 20, badge: 25, challenge: 100 };
+export const XP = { workout: 50, perSet: 2, pr: 20, badge: 25, challenge: 100, photoSet: 100 };
 
 /** XP needed to go from `level` to `level + 1`. @param {number} level */
 export const xpNeeded = (level) => 250 + 125 * (level - 1);

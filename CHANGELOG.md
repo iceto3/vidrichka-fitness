@@ -4,6 +4,42 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] – 2026-10-25
+
+### Added
+
+- **Progress photo sessions** (Progress › Body).
+  - Every upload is a dated session with four pose slots: **Front**, **Back**, **Left** and **Right**. A session can have 1–4 photos, and all four slots are always offered.
+  - Each slot has **Camera** and **Gallery**. **Add several** fills the empty slots in order, and a photo can be moved to another slot (it swaps) or deleted (asks first).
+  - The Body tab shows the latest session's four slots with the date the photos were taken and when they were added.
+  - A **Timeline** lists all sessions in chronological order, and each one opens for editing.
+- **Photo dates.** The default is the EXIF capture date (`DateTimeOriginal`, read on the phone by a tiny built-in JPEG reader, which reads nothing else). Without EXIF, the file date is used when it is from an earlier day, and otherwise the upload time. A session takes the earliest date of its photos. The date can always be changed, for example for photos taken yesterday and uploaded today. An edited date re-sorts the timeline and the before/after, and counts for the monthly set and streak.
+- **Pose-to-pose Before/After.** For each pose, the oldest photo is shown as **Before** and the newest as **Now**, and either side can be picked again. It never shows the same photo on both sides. With only one photo of a pose, that photo is **Now** and **Before** stays empty.
+- **Monthly 4-pose set**, from the 1st of each month:
+  - a "Monthly progress photos" quest (n/4) until all four poses are done that month (across sessions)
+  - 100 bonus XP for each complete month and a monthly streak
+  - a reminder at 10:00 on the 1st (Profile › Reminders), which always comes from the phone itself
+- **Photo celebrations:**
+  - Each session ends with a small celebration: the otter's bounce, wave, wink and sparkles with the Warm hello sound, plus new hop, spin and flash variants and random titles, never the same twice in a row.
+  - Completing the monthly set brings the big celebration.
+  - The **First photo** badge and any level-up from a session now come after the small celebration as tap-away toasts and no longer block the screen.
+- A **What's new in 1.2.1** note. People coming straight from 1.1 also get the 1.2 items and the gender choice.
+
+### Changed
+
+- **Ate it** / **Да, ядох!** (on #morning, the Home protein bar, the in-app prompt and the Android notification button) now only opens the Breakfast logger. The protein quest, its XP and the protein record are counted only once a breakfast entry is actually saved, with the existing 30-minute rules. The reminders keep coming until breakfast is logged or **Skipped**. This changes item 12 of 1.2.0.
+- Data version 3: the 2 → 3 migration turns every existing photo into its own session, with the photo in the **Front** slot and its original date and image kept. Nothing else changes and no data is removed. Backups from older versions still restore.
+- "What's new" now uses the full version, so a patch release can have its own note.
+- Tests: new unit tests (EXIF parsing with JPEG fixtures, date fallbacks, edited dates, before/after, monthly set and streak, migration) and e2e photo flows on Android (Chromium) and iPhone (WebKit). The iPhone e2e now uses a persistent WebKit profile, because private (ephemeral) WebKit contexts cannot store photo Blobs in IndexedDB. The Profile page also no longer fails if the install date is missing from the data.
+
+### Fixed
+
+1. Two weigh-ins on the same day: the weight card showed the older one until a reload. The Body tab now updates as soon as a measurement is saved.
+2. A partial workout said "<Workout> complete" on the summary and share card and counted as a workout in the Calendar. Partial workouts are now labelled **Partial**, the share card shows done/planned sets, and the Calendar counts only complete workouts. Partial ones show as "+N partial" and partial-only days get an outlined mark.
+3. Workout volume was formatted differently in different places ("3960 kg" next to "5,8 t"). One shared formatter is now used everywhere (summary, share card, history, calendar, recap, partner card). It shows kg with a thousands separator below 10 t ("3 960 kg") and tonnes with one decimal from 10 t ("12,4 t"). The partner share text keeps its own "kg" word, so it uses the separator only.
+4. The weight card with no data opened an empty chart. It now shows an empty state with **Add weight**.
+5. **Reset all data** showed the welcome only after a reload. It now shows right away.
+
 ## [1.2.0] – 2026-10-25
 
 ### Added

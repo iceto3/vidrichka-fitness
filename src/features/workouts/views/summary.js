@@ -4,7 +4,7 @@
  * @module features/workouts/views/summary
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, fmtNum, t } from '../../../core/i18n.js';
+import { fmtDate, fmtVolume, t } from '../../../core/i18n.js';
 import { get } from '../../../core/store.js';
 import { durationMin } from '../../../core/dates.js';
 import { settings } from '../../../core/settings.js';
@@ -21,7 +21,7 @@ const statTiles = (s) => [
   ['clock', t('summary.time'), html`${durationMin(s.durationSec)} <small>${t('unit.min')}</small>`],
   ['check', t('summary.sets'), html`${s.setsDone} <small>${t('summary.of', { n: s.setsPlanned })}</small>`],
   ['bolt', t('summary.reps'), html`${s.reps}`],
-  ['dumbbell', t('summary.volume'), html`${fmtNum(s.volume)} <small>kg</small>`],
+  ['dumbbell', t('summary.volume'), html`${fmtVolume(s.volume).value} <small>${fmtVolume(s.volume).unit}</small>`],
   ['flame', t('summary.kcal'), html`~${s.kcal} <small>kcal</small>`],
   ['star', t('summary.xp'), html`<span class="gold">+${s.xp}</span>`],
 ];
@@ -38,7 +38,7 @@ export default ({ id }) => ({
 <div class="row between"><button class="iconbtn" data-go="home" aria-label="${t('common.close')}">${ic('close', 20)}</button><span class="chip ${s.partial ? 'warm' : 'accent'}">${ic('check', 14, 3)}${s.partial ? t('summary.partial') : t('summary.saved')}</span></div>
 <div class="hero-otter">${otter({ size: 180, pose: 'cheer', mood: 'excited' })}</div>
 <div class="center"><h1 class="h1 big">${name ? t('summary.greatJobName', { name }) : t('summary.greatJob')}</h1>
-<div class="muted b mt6">${t('summary.complete', { plan: planName(s) })} · ${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })}</div></div>
+<div class="muted b mt6">${t(s.partial ? 'summary.partialTitle' : 'summary.complete', { plan: planName(s) })} · ${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })}</div></div>
 <div class="grid3 mt20">${statTiles(s).map(([i, l, v]) => html`<div class="stat"><div class="l">${ic(String(i), 15, 2.3)}${l}</div><div class="v num">${v}</div></div>`)}</div>
 ${s.prs.map(
   (
@@ -56,14 +56,14 @@ ${s.partial ? html`<p class="muted xs b mt12 center partialnote">${t('summary.pa
     share: async () => {
       const s = get('sessions', id);
       const blob = await shareCard({
-        title: t('summary.complete', { plan: planName(s) }),
+        title: t(s.partial ? 'summary.partialTitle' : 'summary.complete', { plan: planName(s) }),
         sub: fmtDate(s.endedAt, { weekday: 'long', day: 'numeric', month: 'long' }),
         otterSvg: otterSvg({ size: 420, pose: 'cheer', mood: 'excited', gear: ['headband'] }),
         stats: [
           [t('summary.time'), `${durationMin(s.durationSec)} ${t('unit.min')}`],
-          [t('summary.sets'), String(s.setsDone)],
+          [t('summary.sets'), s.partial ? `${s.setsDone}/${s.setsPlanned}` : String(s.setsDone)],
           [t('summary.reps'), String(s.reps)],
-          [t('summary.volume'), `${fmtNum(s.volume)} kg`],
+          [t('summary.volume'), fmtVolume(s.volume).text],
           [t('summary.kcal'), `~${s.kcal}`],
           ['XP', `+${s.xp}`],
         ],
@@ -72,7 +72,13 @@ ${s.partial ? html`<p class="muted xs b mt12 center partialnote">${t('summary.pa
           : '',
         footer: 'Vidrichka Fitness',
       });
-      const r = await shareFile(blob, `workout-${s.id}.png`, t('summary.shareText', { plan: planName(s) }));
+      const r = await shareFile(
+        blob,
+        `workout-${s.id}.png`,
+        s.partial
+          ? t('summary.shareTextPartial', { plan: planName(s), n: s.setsDone })
+          : t('summary.shareText', { plan: planName(s) }),
+      );
       if (r === 'downloaded') emit('toast', { key: 'common.downloaded' });
       return false;
     },

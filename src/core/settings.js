@@ -21,6 +21,7 @@ export const DAILY = {
   checkinAm: { time: '11:00', on: true }, // mood + sleep quality
   checkinPm: { time: '19:30', on: true }, // energy
   bedtime: { time: '22:30', on: true }, // silent "tuck her in?" nudge
+  photos: { time: '10:00', on: true }, // 1.2.1: monthly 4-pose photo set, on the 1st of the month
 };
 
 /** @typedef {typeof DEFAULTS} Settings */

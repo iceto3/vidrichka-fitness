@@ -18,7 +18,9 @@
  */
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { chromium, webkit, devices } from 'playwright-core';
 
@@ -54,14 +56,22 @@ const PROFILES = {
     },
     prefix: '',
   },
-  iphone: { type: webkit, launch: {}, ctx: { ...devices['iPhone 14'] }, prefix: 'iphone-' },
+  // A persistent (non-private) profile: WebKit's ephemeral contexts cannot store Blobs in
+  // IndexedDB (like Safari private browsing), but the installed app on an iPhone can.
+  iphone: { type: webkit, launch: {}, ctx: { ...devices['iPhone 14'] }, prefix: 'iphone-', persistent: true },
 };
 
 let failed = false;
 for (const [name, P] of Object.entries(PROFILES)) {
   if (ONLY && ONLY !== name) continue;
   const t0 = Date.now();
-  const browser = await P.type.launch(P.launch);
+  const browser = P.persistent
+    ? {
+        newContext: (/** @type {any} */ o) =>
+          P.type.launchPersistentContext(mkdtempSync(join(tmpdir(), 'vf-e2e-')), { ...P.launch, ...o }),
+        close: async () => {},
+      }
+    : await P.type.launch(P.launch);
   try {
     await run(name, browser, P);
     console.log(`✔ ${name} flows passed (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
@@ -77,7 +87,7 @@ process.exit(failed ? 1 : 0);
 
 /**
  * @param {string} name
- * @param {import('playwright-core').Browser} browser
+ * @param {import('playwright-core').Browser | {newContext: (o: any) => Promise<any>, close: () => Promise<void>}} browser
  * @param {any} P
  */
 async function run(name, browser, P) {
@@ -126,6 +136,33 @@ async function run(name, browser, P) {
     await clearCel();
     await page.evaluate((r) => (location.hash = '#/' + r), r);
     await page.waitForTimeout(350);
+  };
+  /** Read rows of one IndexedDB store (as saved, not the app's cache). @param {string} store */
+  const rows = (store) =>
+    page.evaluate(
+      (store) =>
+        new Promise((res, rej) => {
+          const r = indexedDB.open('vidrichka-fitness');
+          r.onerror = () => rej(r.error);
+          r.onsuccess = () => {
+            const q = r.result.transaction(store).objectStore(store).getAll();
+            q.onsuccess = () => (
+              res(q.result.map((x) => ({ ...x, blob: x.blob ? x.blob.size : undefined }))),
+              r.result.close()
+            );
+          };
+        }),
+      store,
+    );
+  /** A field of today's day record (fake clock), or null. @param {string} f */
+  const dayField = async (f) => {
+    const key = await page.evaluate(() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+    await page.waitForTimeout(150); // let the IndexedDB write land
+    const r = /** @type {any[]} */ (await rows('days')).find((x) => x.id === key);
+    return r?.[f] ?? null;
   };
   /** Tag a node so a later `same()` can tell whether it survived a re-render. */
   const tag = (/** @type {string} */ sel) =>
@@ -289,8 +326,10 @@ async function run(name, browser, P) {
     console.log('  ✔ offline reload works');
   }
 
-  await daily(page, { go, settle, shot, clearCel, tag, same, layer });
-  if (name === 'android') await fixes(page, { go, settle, shot, clearCel, layer });
+  const h = { go, settle, shot, clearCel, tag, same, layer, rows, dayField };
+  await daily(page, h);
+  if (name === 'android') await fixes(page, h);
+  await photos121(page, h, name);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -302,7 +341,7 @@ async function run(name, browser, P) {
  * @param {import('playwright-core').Page} page
  * @param {any} h helpers from run()
  */
-async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
+async function daily(page, { go, settle, shot, clearCel, tag, same, layer, dayField }) {
   const at = async (/** @type {number} */ d, /** @type {string} */ hm) => {
     await page.clock.setSystemTime(new Date(`2026-10-${d}T${hm}:00+03:00`));
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -358,16 +397,17 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
   assert.ok((await same('.pbar')) && (await same('.pbar .ptime')), 'timer updates in place');
   await shot('home-protein-running');
   await page.locator('.pbar [data-act="proteinYes"]').click();
-  await page.locator('.cel .toastc').waitFor();
-  // …then the Food logger opens on today's breakfast with a hint; logging there also
-  // completes the "Log breakfast" quest.
+  // 1.2.1 (bug L): "Ate it" only opens the Food logger on today's breakfast — no credit yet.
   await page.locator('.add .phint').waitFor();
   assert.match(page.url(), /#\/food\/add\/breakfast\?protein$/);
   assert.match(await page.locator('.add .topbar').innerText(), /breakfast/i);
-  await clearCel();
+  assert.equal(await page.locator('.cel .toastc').count(), 0, 'no protein celebration before a breakfast is saved');
+  assert.equal(await dayField('proteinAt'), null, 'protein not recorded by the button');
   await shot('protein-breakfast-logger');
   await page.locator('.add .chips [data-act="pick"]').first().click();
   await layer.locator('[data-act="done"]').click();
+  await page.locator('.cel .toastc').waitFor(); // saving the breakfast records the protein
+  assert.ok(await dayField('proteinAt'), 'protein recorded once the breakfast is saved');
   await page.locator('#micro .micro.food').waitFor({ timeout: 2000 });
   await page.waitForTimeout(200);
   await shot('micro-food');
@@ -463,10 +503,14 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
     await page.waitForURL(/#\/food\/add\/breakfast\?protein$/);
     await clearCel();
     if (first) {
-      // Closing the breakfast logger without adding anything: protein still counts.
+      // 1.2.1 (bug L): closing the breakfast logger without adding anything gives no credit.
       await page.locator('.add .topbar [data-act="finish"]').first().click();
       await go('morning');
-      await page.locator('.pcard.done').waitFor();
+      await page.waitForTimeout(300);
+      assert.equal(await page.locator('.pcard.done').count(), 0, 'no protein credit without a breakfast');
+      assert.equal(await dayField('proteinAt'), null);
+      await go('home');
+      assert.equal(await page.locator('.quest[data-go="morning"] .qbox.done').count(), 0, 'protein quest not ticked');
       first = false;
     }
     await at(d, '11:10');
@@ -672,5 +716,269 @@ async function fixes(page, { go, settle, shot, clearCel, layer }) {
   assert.equal(await page.locator('.lrow[data-go^="history/"]').count(), 0, 'the workout is gone');
   await clearCel();
   console.log('  ✔ #3 past workout: read-only detail in Progress, delete with confirm');
+  await page.removeLocatorHandler(layer.locator('.dprompt'));
+}
+
+/**
+ * 1.2.1: progress photo sessions (4 pose slots, EXIF date, add several, move, delete, edited
+ * date re-sorting the timeline and before/after, monthly quest + small → big celebration),
+ * the 2 → 3 photo migration, and fixes C1 (newest weight shows at once), C2 (partial workout),
+ * C4 (empty weight card), C5 (reset shows the welcome at once).
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ * @param {string} name profile
+ */
+async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name) {
+  const FX = (/** @type {string} */ n) => `tests/fixtures/${n}`;
+  const today = await page.evaluate(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+  await page.addLocatorHandler(layer.locator('.dprompt'), async (l) => {
+    await l
+      .locator('[data-close]')
+      .first()
+      .evaluate((b) => /** @type {HTMLElement} */ (b).click());
+  });
+  const slot = (/** @type {string} */ p) => layer.locator(`.pslot[data-pose="${p}"]`);
+  const pick = async (/** @type {string} */ p, /** @type {string} */ file) => {
+    await slot(p).locator('input[data-change="slot"]:not([capture])').setInputFiles(FX(file));
+    await slot(p).locator('img').waitFor();
+    await settle();
+  };
+
+  // Monthly quest on Home
+  await go('home');
+  const quest = page.locator('.quest[data-go="progress/body"]');
+  await quest.waitFor();
+  assert.match(await quest.innerText(), /Monthly progress photos[\s\S]*0\/4|0 of 4/i);
+  await quest.evaluate((e) => e.scrollIntoView({ block: 'center' }));
+  await settle();
+  await shot('photo-monthly-quest');
+
+  // New session: 4 empty slots, camera + gallery per slot
+  await go('progress/body');
+  assert.match(await page.locator('.pmonth').innerText(), /0 of 4 poses/);
+  await page.locator('[data-act="psNew"]').click();
+  await layer.locator('.pslots.edit').waitFor();
+  assert.equal(await layer.locator('.pslot.empty').count(), 4, 'all 4 pose slots offered');
+  assert.equal(await layer.locator('.pslot.empty input[capture]').count(), 4, 'camera per slot');
+  assert.equal(await layer.locator('.pslot.empty input:not([capture])').count(), 4, 'gallery per slot');
+  assert.equal(await layer.locator('#psdate').inputValue(), today, 'defaults to the upload day');
+
+  // EXIF capture date becomes the session date
+  await pick('front', 'pose-front.jpg');
+  const exifSeen = (await layer.locator('#psdate').inputValue()) === '2026-10-18';
+  assert.ok(exifSeen, `EXIF DateTimeOriginal read in ${name}`);
+  assert.match(await layer.innerText(), /Date from the photo/);
+  console.log(`  ✔ EXIF DateTimeOriginal read from the picked JPEG (${name === 'android' ? 'Chromium' : 'WebKit'})`);
+
+  // Add several → fill the empty slots in order (back, left); no EXIF → upload date, the
+  // session keeps the earliest date
+  await layer.locator('input[data-change="several"]').setInputFiles([FX('pose-back.jpg'), FX('pose-right.jpg')]);
+  await slot('left').locator('img').waitFor();
+  await settle();
+  assert.equal(await slot('back').locator('img').count(), 1);
+  assert.equal(await slot('right').locator('img').count(), 0, 'several go to the empty slots in order');
+  assert.equal(await layer.locator('#psdate').inputValue(), '2026-10-18', 'earliest capture date');
+  // the right-pose picture landed in "left": move it
+  await slot('left').locator('[data-act="mv"]').click();
+  await slot('left').locator('[data-act="mvTo"][data-v="right"]').click();
+  await settle();
+  assert.equal(await slot('left').locator('img').count(), 0);
+  assert.equal(await slot('right').locator('img').count(), 1, 'moved to Right');
+  // delete with confirm, then add it again
+  await slot('back').locator('[data-act="del"]').click();
+  await layer.locator('.btn.danger').click();
+  await settle();
+  assert.equal(await slot('back').locator('img').count(), 0, 'deleted after confirm');
+  await pick('back', 'pose-back.jpg');
+  await shot('photo-session');
+  await pick('left', 'pose-left.jpg');
+  assert.equal(await layer.locator('.pslot img').count(), 4);
+  const saved = /** @type {any[]} */ (await rows('photos'));
+  assert.equal(saved.length, 4);
+  assert.ok(saved.every((p) => p.date === '2026-10-18' && p.blob > 0 && p.session === saved[0].session));
+  assert.equal(saved.find((p) => p.pose === 'front').shot.source, 'exif');
+  assert.equal(saved.find((p) => p.pose === 'back').shot.source, 'upload');
+
+  // Done → SMALL celebration first (not blocking), then the BIG monthly-set one
+  await layer.locator('.sticky-b[data-close]').click();
+  const small = page.locator('#cel .toastc');
+  await small.waitFor({ timeout: 4000 });
+  assert.equal(await page.locator('#cel .tapbtn').count(), 0, 'the session ends with the small one');
+  await page.waitForTimeout(300);
+  await shot('photo-celebration');
+  const seen = [];
+  for (let i = 0; i < 60; i++) {
+    const s = await page.evaluate(() => {
+      const c = document.getElementById('cel');
+      return c?.querySelector('.lvup')?.textContent ?? c?.querySelector('.toastc .t1')?.textContent ?? '';
+    });
+    if (s && seen[seen.length - 1] !== s) seen.push(s);
+    if (/MONTHLY SET/i.test(s)) break;
+    await page.waitForTimeout(150);
+  }
+  assert.ok(
+    seen.some((s) => /MONTHLY SET/i.test(s)),
+    `big monthly-set celebration follows (${seen.join(' → ')})`,
+  );
+  assert.ok(!/MONTHLY SET/i.test(seen[0]), 'small one comes first');
+  await clearCel();
+  console.log(`  ✔ photo session: 4 slots, EXIF date, add several, move, delete; small → big (${seen.join(' → ')})`);
+  assert.match(await page.locator('.pmonth').innerText(), /Done for October/);
+  await go('home');
+  assert.equal(await page.locator('.quest[data-go="progress/body"] .qbox.done').count(), 1, 'quest done today');
+
+  // A second, older session (EXIF 1 Sep) → timeline order + before/after by date
+  await go('progress/body');
+  await page.locator('[data-act="psNew"]').click();
+  await pick('front', 'pose-front-sep.jpg');
+  assert.equal(await layer.locator('#psdate').inputValue(), '2026-09-01');
+  await layer.locator('.sticky-b[data-close]').click();
+  await settle();
+  await clearCel();
+  await page.locator('[data-act="psTimeline"]').click();
+  await layer.locator('.ptimeline').waitFor();
+  const order = async () => (await layer.locator('.ptimeline .psession .xb').allInnerTexts()).join(' | ');
+  assert.match(await order(), /1 Sept? 2026.*\|.*18 Oct 2026/, 'chronological');
+  await page.waitForTimeout(700); // let the sheet finish sliding in
+  await shot('photo-timeline');
+  // Compare (Front): before = 1 Sep, now = 18 Oct
+  await page.keyboard.press('Escape');
+  await settle();
+  await page.locator('[data-act="psCompare"]').click();
+  await layer.locator('.cmp').waitFor();
+  const caps = async () => (await layer.locator('.cmp figcaption').allInnerTexts()).join(' | ');
+  assert.match(await caps(), /Before · 1 Sep.*\|.*Now · 18 Oct/);
+  await page.waitForTimeout(700); // let the sheet finish sliding in
+  await shot('photo-compare');
+  await layer.locator('.pseg [data-v="back"]').click();
+  await settle();
+  assert.match(await caps(), /^Before \| Now · 18 Oct/, 'one photo: it is "Now", before empty');
+  assert.match(await layer.innerText(), /No earlier photo of this pose yet/);
+  await page.keyboard.press('Escape');
+  await settle();
+
+  // Edit the September session's date (taken 19 Oct, say) → timeline + before/after re-sort
+  await page.locator('[data-act="psTimeline"]').click();
+  await layer.locator('.ptimeline .psession').first().click();
+  await layer.locator('#psdate').fill(today);
+  await layer.locator('#psdate').dispatchEvent('change');
+  await settle();
+  assert.match(await layer.innerText(), /Date set by you/);
+  await page.keyboard.press('Escape'); // session
+  await settle();
+  await clearCel();
+  assert.match(await order(), /^18 Oct 2026[^|]*\| (?!1 Sep)\d+ Oct 2026/, 're-sorted after the edit');
+  assert.equal(await layer.locator('.ptimeline li:last-child .chip.warm').count(), 1, '"Date set by you"');
+  await page.keyboard.press('Escape'); // timeline
+  await settle();
+  await page.locator('[data-act="psCompare"]').click();
+  await layer.locator('.cmp').waitFor();
+  assert.match(await caps(), /Before · 18 Oct.*\|.*Now · /, 'edited date moves it to "Now"');
+  await page.keyboard.press('Escape');
+  await settle();
+  console.log('  ✔ timeline, pose compare, editable date re-sorts both');
+
+  // 2 → 3 migration: an old-style photo row (no session) survives a reload as a Front session
+  await page.evaluate(
+    () =>
+      new Promise((res, rej) => {
+        const r = indexedDB.open('vidrichka-fitness');
+        r.onerror = () => rej(r.error);
+        r.onsuccess = () => {
+          const tx = r.result.transaction(['photos', 'kv'], 'readwrite');
+          tx.objectStore('photos').put({
+            id: 'old1',
+            date: '2026-08-10',
+            blob: new Blob([new Uint8Array(500)], { type: 'image/jpeg' }),
+          });
+          const kv = tx.objectStore('kv');
+          const m = kv.get('meta');
+          m.onsuccess = () => kv.put({ id: 'meta', value: { ...(m.result?.value ?? {}), dataVersion: 2 } });
+          tx.oncomplete = () => (r.result.close(), res(null));
+        };
+      }),
+  );
+  await page.reload();
+  await page.locator('#nav .t').first().waitFor();
+  await settle();
+  await clearCel();
+  const old = /** @type {any[]} */ (await rows('photos')).find((p) => p.id === 'old1');
+  assert.deepEqual(
+    { s: old.session, p: old.pose, d: old.date, b: old.blob },
+    { s: 'ps_old1', p: 'front', d: '2026-08-10', b: 500 },
+    'migrated, never lost',
+  );
+  assert.equal(/** @type {any[]} */ (await rows('photos')).length, 6);
+  console.log('  ✔ migration 2 → 3 keeps old photos (Front slot, original date)');
+
+  // C1: two weigh-ins the same day → the card shows the latest at once (no reload)
+  await go('progress/body');
+  for (const w of ['60', '61.5']) {
+    await page.locator('[data-act="add"]').click();
+    await layer.locator('#m_weight').fill(w);
+    await layer.locator('[data-act="save"]').click();
+    await settle();
+  }
+  await clearCel();
+  assert.match(await page.locator('.weightcard').innerText(), /61\.5/, 'latest same-day weight');
+
+  // C2 (source build only, needs the app's own store module): a partial workout
+  if (await page.evaluate(() => !!document.querySelector('script[src*="src/main.js"]'))) {
+    await page.evaluate(async () => {
+      const st = await import('/src/core/store.js');
+      const now = Date.now();
+      st.put('sessions', {
+        id: 'partial-e2e',
+        name: 'Partial e2e',
+        startedAt: now - 600e3,
+        endedAt: now,
+        durationSec: 600,
+        items: [],
+        setsDone: 2,
+        setsPlanned: 12,
+        volume: 3960,
+        prs: [],
+        kcal: 40,
+        xp: 20,
+        partial: true,
+      });
+    });
+    await go('progress/calendar');
+    await page.locator('#page .cd').first().waitFor();
+    const cal = await page.locator('#page').innerText();
+    assert.match(cal, /Workouts\n\d+ \+\d+ partial/, 'calendar counts the partial one separately');
+    assert.ok((await page.locator('.cd.part, .cd.on').count()) > 0);
+    await go('summary/partial-e2e');
+    await settle();
+    const sum = await page.locator('#page').innerText();
+    assert.doesNotMatch(sum, /complete/i, 'not "… complete"');
+    assert.match(sum, /3,960/, 'volume with thousands separator');
+    await clearCel();
+  }
+
+  // C5: Reset all data → the welcome shows at once; C4: empty weight card → add-weight action
+  await go('profile');
+  await page.locator('[data-act="reset"]').click();
+  await layer.locator('.btn.danger').click();
+  await page.getByRole('heading', { name: /Vidrichka/ }).waitFor({ timeout: 4000 });
+  assert.equal(await layer.locator('.onboard').count(), 1, 'onboarding without a reload');
+  await layer.locator('input').first().fill('Maria');
+  await page.getByRole('button', { name: "Let's go" }).click();
+  await settle();
+  await clearCel();
+  await go('progress/body');
+  await page.locator('.weightcard').click();
+  await layer.locator('.wempty').waitFor();
+  assert.match(await layer.innerText(), /No weight yet/);
+  await page.waitForTimeout(700); // let the sheet finish sliding in
+  await shot('weight-empty');
+  await layer.locator('[data-act="addw"]').click();
+  await layer.locator('#m_weight').waitFor();
+  await page.keyboard.press('Escape');
+  await settle();
+  console.log('  ✔ C1 latest weight, C2 partial, C4 empty weight card, C5 reset → welcome at once');
   await page.removeLocatorHandler(layer.locator('.dprompt'));
 }

@@ -1,15 +1,19 @@
 /**
- * Public API of the body feature: measurements and progress photos.
+ * Public API of the body feature: measurements and progress photos (sessions, pose slots,
+ * monthly set).
  * @module features/body/api
  */
 import { all } from '../../core/store.js';
+import { monthComplete, monthPoses, photoStreak, sessionsOf, sortPhotos } from './photo-logic.js';
+
+export { POSES, PHOTO_DAY } from './photo-logic.js';
 
 /** Default body weight (kg) for calorie estimates when none is recorded. */
 export const DEFAULT_WEIGHT = 65;
 
-/** Measurements, oldest first. @returns {any[]} */
+/** Measurements, oldest first (same day: by save time). @returns {any[]} */
 export const measurements = () =>
-  all('measurements').sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.ts - b.ts));
+  all('measurements').sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.ts ?? 0) - (b.ts ?? 0)));
 
 /** Latest value of a field (e.g. 'weight') or undefined. @param {string} field */
 export const latest = (field) =>
@@ -20,5 +24,14 @@ export const latest = (field) =>
 /** Latest body weight or the default. */
 export const bodyWeight = () => Number(latest('weight')) || DEFAULT_WEIGHT;
 
-/** Photos, oldest first. */
-export const photos = () => all('photos').sort((a, b) => (a.date < b.date ? -1 : 1));
+/** Photos, oldest first (session date, then time, then upload time). @returns {import('./photo-logic.js').Photo[]} */
+export const photos = () => sortPhotos(all('photos'));
+
+/** Photo sessions, oldest first. */
+export const photoSessions = () => sessionsOf(all('photos'));
+
+/** This month's photo set: poses done, complete, streak. @param {string} month `YYYY-MM` */
+export const photoMonth = (month) => {
+  const ph = all('photos');
+  return { poses: monthPoses(ph, month), done: monthComplete(ph, month), streak: photoStreak(ph, month) };
+};

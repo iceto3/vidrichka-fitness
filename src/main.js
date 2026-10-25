@@ -92,27 +92,38 @@ const genderRow = () =>
 
 /** "What's new in 1.2" — shown once to people who used an earlier version. */
 function whatsNew() {
-  if (kv('seenWhatsNew', '') === WHATS_NEW) return;
+  const seen = /** @type {string} */ (kv('seenWhatsNew', ''));
+  if (seen === WHATS_NEW) return;
   setKv('seenWhatsNew', WHATS_NEW);
-  const push = !!pushUrl(); // push items only once the server is deployed
+  // Coming from 1.2.0 ("1.2" seen): only the 1.2.1 items; from older, the 1.2 items and the
+  // gender choice too.
+  const had12 = seen === '1.2' || seen.startsWith('1.2.');
+  const push = !had12 && !!pushUrl(); // push items only once the server is deployed
   const items = /** @type {[string, string][]} */ ([
-    ...(push
-      ? [
-          ['bell', 'whatsNew.push'],
-          ['sun', 'whatsNew.pushIos'],
-          ['check', 'whatsNew.pushStop'],
-        ]
-      : []),
-    ['clock', 'whatsNew.proteinBar'],
-    ['food', 'whatsNew.breakfast'],
-    ['drop', 'whatsNew.micro'],
+    ['camera', 'whatsNew.photos'],
+    ['calendar', 'whatsNew.photoMonth'],
+    ['check', 'whatsNew.fixes121'],
+    ...(had12
+      ? []
+      : /** @type {[string, string][]} */ ([
+          ...(push
+            ? [
+                ['bell', 'whatsNew.push'],
+                ['sun', 'whatsNew.pushIos'],
+                ['check', 'whatsNew.pushStop'],
+              ]
+            : []),
+          ['clock', 'whatsNew.proteinBar'],
+          ['food', 'whatsNew.breakfast'],
+          ['drop', 'whatsNew.micro'],
+        ])),
   ]);
   openSheet({
     kind: 'dialog',
     render:
       () => html`<div class="center">${otter({ size: 110, pose: 'cheer' })}<h1 class="h2 mt8">${t('whatsNew.title', { v: WHATS_NEW })}</h1></div>
 <div class="col gap10 mt12 whatsnew">${items.map(([i, k]) => html`<div class="row gap10"><span class="sq acc">${ic(i, 18, 2.3)}</span><span class="f1 b small">${t(k)}</span></div>`)}</div>
-<div class="card mt12"><p class="small b">${t('whatsNew.gender')}</p>${genderRow()}</div>
+${had12 ? '' : html`<div class="card mt12"><p class="small b">${t('whatsNew.gender')}</p>${genderRow()}</div>`}
 ${
   push
     ? html`<p class="muted xs b mt12">${t('whatsNew.pushHow')}</p>
@@ -196,6 +207,10 @@ async function start() {
     seedPlans();
     refresh(true);
   });
+  // After "Reset all data": show the first-run welcome right away (after the nav to Home).
+  on('app:reset', () =>
+    setTimeout(() => whenSettled(() => !settings().onboarded && (setKv('seenWhatsNew', WHATS_NEW), onboarding())), 300),
+  );
   addEventListener('pointerdown', unlockAudio, { once: true });
   startMotivation();
   startCelebrations();

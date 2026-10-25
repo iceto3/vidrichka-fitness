@@ -23,7 +23,7 @@ const PUSH_HOSTS = [
 ];
 export const EVENTS = ['awake', 'protein-done', 'protein-skipped', 'water-logged', 'checkin-done', 'goodnight-done'];
 /** Notification text kinds the app may provide. */
-export const TEXT_KINDS = ['wake', 'loud', 'protein', 'water', 'checkinAm', 'checkinPm', 'bed'];
+export const TEXT_KINDS = ['wake', 'loud', 'protein', 'water', 'checkinAm', 'checkinPm', 'bed', 'photos'];
 const ACTIONS = ['protein-yes', 'water-add'];
 
 export class Invalid extends Error {}
