@@ -13,7 +13,7 @@ import { levelInfo } from './xp.js';
 import './badges.js';
 import './quests.js';
 
-export { levelInfo, xpForWorkout, XP } from './xp.js';
+export { levelInfo, xpForWorkout, isCompleteWorkout, minSetsForWorkout, XP } from './xp.js';
 
 /** @type {import('./stats.js').Stats|null} */
 let cache = null;
@@ -54,6 +54,18 @@ export function award(id, amt) {
   const after = level().level;
   if (after > before) emit('level:up', after);
   return true;
+}
+
+/**
+ * Correct an XP entry after its source changed (e.g. a deleted workout, or a later workout
+ * whose PRs changed). 0 removes it. Never celebrates.
+ * @param {string} id @param {number} amt
+ */
+export function setAward(id, amt) {
+  const ledger = { ...kv('xp', {}) };
+  if (amt > 0) ledger[id] = { amt, ts: ledger[id]?.ts ?? Date.now() };
+  else delete ledger[id];
+  setKv('xp', ledger);
 }
 
 /** Stats context (cached until data changes). */

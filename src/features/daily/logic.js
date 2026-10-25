@@ -331,3 +331,18 @@ export function dueSlots(slots, now, recs) {
   });
   return { show: [...latest.values()], seen };
 }
+
+/**
+ * How many daily-rhythm reminders are switched on (for the Profile › Reminders summary).
+ * @param {{morning?: boolean, protein?: boolean, water?: {on: boolean}[], checkinAm?: {on: boolean}, checkinPm?: {on: boolean}, bedtime?: {on: boolean}}} d
+ */
+export const dailyOnCount = (d) =>
+  [d.morning, d.protein, d.checkinAm?.on, d.checkinPm?.on, d.bedtime?.on].filter(Boolean).length +
+  (d.water ?? []).filter((w) => w.on).length;
+
+/**
+ * In-app morning prompt only in the morning (04:00–12:00) and not once a workout was done
+ * that day (1.1 showed "Still sleeping?" over a finished workout's summary).
+ * @param {number} hour Local hour 0–23. @param {boolean} workedOutToday
+ */
+export const morningPromptOk = (hour, workedOutToday) => hour >= 4 && hour < 12 && !workedOutToday;

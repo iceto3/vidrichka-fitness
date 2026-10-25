@@ -8,7 +8,7 @@ import { fmtDate, fmtNum, t } from '../../../core/i18n.js';
 import { addDays, dayKey } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { delta, empty, seg } from '../../../ui/components.js';
-import { lineChart } from '../../../ui/chart.js';
+import { lineChart, mergeSameX } from '../../../ui/chart.js';
 import { openSheet } from '../../../ui/sheet.js';
 import { exById, exName } from '../../library/api.js';
 import { sessions } from '../../workouts/api.js';
@@ -56,7 +56,7 @@ export default () => ({
     if (!trained.includes(state.ex)) state.ex = trained.find((id) => exById(id)?.weighted) ?? trained[0];
     const weighted = exById(state.ex)?.weighted ?? true;
     const since = Date.now() - RANGES[state.range] * 864e5;
-    const pts = [...all]
+    let pts = [...all]
       .reverse()
       .filter((s) => s.endedAt >= since)
       .map((s) => {
@@ -71,6 +71,7 @@ export default () => ({
           : null;
       })
       .filter((p) => p != null);
+    pts = mergeSameX(pts, 'max'); // two workouts on one day → one point (the best)
     const best = pts.length ? Math.max(...pts.map((p) => p.y)) : 0;
     const unit = weighted ? 'kg' : t('unit.repsShort');
     const hm = heatmap();

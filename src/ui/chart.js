@@ -12,7 +12,24 @@ const gid = (s) => {
 };
 
 /**
- * Line chart.
+ * One point per x label (per day): points sharing a label are merged — `last` keeps the
+ * latest value (body measurements), `max` the best (lifts). Order is kept.
+ * @param {{x: string, y: number}[]} pts @param {'last'|'max'} [how]
+ */
+export function mergeSameX(pts, how = 'last') {
+  /** @type {{x: string, y: number}[]} */
+  const out = [];
+  for (const p of pts) {
+    const i = out.findIndex((q) => q.x === p.x);
+    if (i < 0) out.push({ ...p });
+    else out[i].y = how === 'max' ? Math.max(out[i].y, p.y) : p.y;
+  }
+  return out;
+}
+
+/**
+ * Line chart. Points with the same label are merged (see `mergeSameX`), so the x-axis never
+ * shows the same date twice.
  * @param {{x: string, y: number}[]} pts  Points in order; `x` is the axis label.
  * @param {{w?: number, h?: number, unit?: string, color?: string, label?: string}} [o]
  */
@@ -24,6 +41,7 @@ export function lineChart(pts, o = {}) {
     pt = 26,
     pb = 22,
     color = o.color ?? 'var(--accent)';
+  pts = mergeSameX(pts);
   if (!pts.length) return html``;
   const ys = pts.map((p) => p.y);
   let lo = Math.min(...ys),

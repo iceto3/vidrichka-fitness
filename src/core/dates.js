@@ -69,6 +69,17 @@ export const clock = (sec) => {
   return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`;
 };
 
+/**
+ * Workout minutes, the one rounding used everywhere (summary, share card, celebration,
+ * calendar, history, recap): to the nearest minute, but any workout of 1 s or more shows
+ * at least 1 min.
+ * @param {number} sec
+ */
+export const durationMin = (sec) => (sec > 0 ? Math.max(1, Math.round(sec / 60)) : 0);
+
+/** Total minutes of several workouts (sum of the per-workout minutes, so the parts add up). @param {{durationSec?: number}[]} list */
+export const totalMin = (list) => list.reduce((a, s) => a + durationMin(s.durationSec ?? 0), 0);
+
 /** Whole days between two dates (b - a). @param {Date|number} a @param {Date|number} b */
 export const daysBetween = (a, b) => Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 864e5);
 

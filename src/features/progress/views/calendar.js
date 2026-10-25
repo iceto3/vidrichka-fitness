@@ -4,7 +4,7 @@
  */
 import { html } from '../../../ui/dom.js';
 import { fmtDate, fmtNum, t, weekdayName } from '../../../core/i18n.js';
-import { dayKey, monthKey, weekdayMon } from '../../../core/dates.js';
+import { dayKey, durationMin, monthKey, totalMin, weekdayMon } from '../../../core/dates.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { empty } from '../../../ui/components.js';
@@ -33,7 +33,7 @@ ${Array.from({ length: days }, (_, i) => {
   return html`<span class="cd${byDay.has(k) ? ' on' : ''}${k === today ? ' today' : ''}">${i + 1}</span>`;
 })}</div></div>
 <div class="grid3 mt12"><div class="stat"><div class="l">${ic('dumbbell', 15, 2.3)}${t('calendar.workouts')}</div><div class="v num">${list.length}</div></div>
-<div class="stat"><div class="l">${ic('clock', 15, 2.3)}${t('calendar.time')}</div><div class="v num">${Math.round(list.reduce((a, s) => a + s.durationSec, 0) / 60)} <small>${t('unit.min')}</small></div></div>
+<div class="stat"><div class="l">${ic('clock', 15, 2.3)}${t('calendar.time')}</div><div class="v num">${totalMin(list)} <small>${t('unit.min')}</small></div></div>
 <div class="stat"><div class="l">${ic('bolt', 15, 2.3)}${t('summary.volume')}</div><div class="v num">${fmtNum(list.reduce((a, s) => a + s.volume, 0) / 1000, 1)} <small>t</small></div></div></div>
 ${list.length && !isNow ? html`<button class="btn sec w100 mt12" data-act="recap">${ic('gift', 18, 2.2)}${t('calendar.recap', { month: fmtDate(first, { month: 'long' }) })}</button>` : ''}
 <div class="section-title"><h2 class="h3">${t('calendar.history')}</h2></div>
@@ -42,8 +42,9 @@ ${
     ? html`<div class="card list">${list.map(
         (
           s,
-        ) => html`<button class="lrow" data-go="summary/${s.id}"><span class="f1 left"><span class="b block">${planName(s)}</span>
-<span class="muted xs b">${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })} · ${Math.round(s.durationSec / 60)} ${t('unit.min')} · ${fmtNum(s.volume)} kg</span></span>
+        ) => html`<button class="lrow" data-go="history/${s.id}"><span class="f1 left"><span class="b block">${planName(s)}</span>
+<span class="muted xs b">${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })} · ${durationMin(s.durationSec)} ${t('unit.min')} · ${fmtNum(s.volume)} kg</span></span>
+${s.partial ? html`<span class="chip chip-sm">${t('summary.partial')}</span>` : ''}
 ${s.prs.length ? html`<span class="chip warm chip-sm">${ic('trophy', 13, 2.4)}${s.prs.length}</span>` : ''}${ic('right', 16, 2.2, 'var(--muted)')}</button>`,
       )}</div>`
     : empty('calendar', t('calendar.none'))

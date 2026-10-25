@@ -82,3 +82,23 @@ export const MEASURE_FIELDS = [
     },
   },
 ];
+
+/** Plausible range per unit: values outside are rejected with an inline error. */
+export const MEASURE_RANGES = /** @type {const} */ ({ kg: [20, 300], cm: [10, 250], '%': [1, 75] });
+
+/**
+ * Check one typed measurement. '' is fine (all fields are optional).
+ * @param {MeasureField} f @param {string} raw
+ * @returns {{value?: number, error?: string, range?: readonly [number, number]}}
+ */
+export function checkMeasure(f, raw) {
+  const x = String(raw ?? '')
+    .trim()
+    .replace(',', '.');
+  if (x === '') return {};
+  const range = MEASURE_RANGES[f.unit];
+  if (!/^-?\d*\.?\d+$/.test(x)) return { error: 'body.errNumber', range };
+  const n = Number(x);
+  if (n < range[0] || n > range[1]) return { error: 'body.errRange', range };
+  return { value: n };
+}

@@ -12,6 +12,8 @@ There are no dependencies. Encryption follows RFC 8291 (`aes128gcm`) and VAPID f
 | `daily`   | per device and local day: when she was up, protein done or skipped, check-ins done, goodnight done (flags and times only) |
 | `sent`    | which reminder kinds were already sent that day (dedupe)                                                                  |
 
+The notification texts are rendered on the phone in the user's language and grammatical gender (Bulgarian `{ f, m }` strings). The app sends them again on `POST /settings` whenever the language, gender, names or times change, so the server needs no translations or gender logic.
+
 Rows older than 3 days are cleaned up every hour. A device is deleted on `/unsubscribe` or when the push service answers 404 or 410.
 
 ## API

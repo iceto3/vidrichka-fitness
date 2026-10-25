@@ -43,6 +43,8 @@ tools/                serve.mjs (dev server), build.mjs (esbuild → dist), ligh
 3. Views are pure-ish render functions that return HTML strings via `html```. User input is delegated: elements carry `data-act`, `data-change`, `data-input`, `data-go`or`data-back`, and the router calls the matching function from the view's `actions`. An action that returns `false` skips the re-render; otherwise the view re-renders. Re-renders are **in place** (`morph`in`ui/dom.js`): the new HTML is diffed against the live DOM, so unchanged nodes, focus, scroll position and running CSS animations survive a tap. Only navigating to a new page replaces the DOM (`swap`). Keep generated ids deterministic (no random/counter ids in SVG gradients or clip paths), or morph has to replace those nodes.
 4. Cross-feature effects go through the bus. Saving a finished session emits `store:sessions` and `store:any`. The motivation rewards engine listens, awards XP and badges, and emits `level:up` / `badge:earned`; these show as toasts and on the summary screen.
 
+   **Partial workouts (1.2):** `minSetsForWorkout(planned)` in `features/motivation/xp.js` is half of the planned sets rounded up, at least 3 (or all sets when fewer than 3 are planned). A session below that is saved with `partial: true`. It earns only the per-set XP (no workout bonus), does not count for the weekly streak, goal or week dots, and still counts for volume, sets and PRs. Deleting a session (`deleteSession` in `features/workouts/session.js`) recomputes the PRs and XP awards of later sessions with `recomputeAfterDelete` and removes its own award. Badges stay earned.
+
 ## Extension points (registry)
 
 `register(kind, ...items)` in `core/registry.js` accepts:

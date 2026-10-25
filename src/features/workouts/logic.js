@@ -168,3 +168,27 @@ export function activeSet(items) {
   const hit = [...flat.slice(start), ...flat.slice(0, start)].find(([, , d]) => !d);
   return hit ? [hit[0], hit[1]] : null;
 }
+
+/**
+ * After deleting a workout: the later workouts whose PRs (and so XP) change once it is gone.
+ * @param {(WSession & {prs?: any[], xp?: number, setsDone: number, partial?: boolean})[]} rest Remaining sessions.
+ * @param {number} goneAt `endedAt` of the deleted workout.
+ * @param {(id: string) => {weighted: boolean}|undefined} exById
+ * @param {(s: {setsDone: number, prs: number, partial?: boolean}) => number} xpFor
+ * @returns {{id: string, prs: any[], xp: number}[]}
+ */
+export function recomputeAfterDelete(rest, goneAt, exById, xpFor) {
+  const out = [];
+  /** @type {WSession[]} */
+  const history = [];
+  for (const s of [...rest].sort((a, b) => a.endedAt - b.endedAt)) {
+    if (s.endedAt > goneAt) {
+      const done = s.items.filter((it) => it.sets.some((x) => x.done));
+      const prs = detectPRs(done, history, exById);
+      const xp = xpFor({ setsDone: s.setsDone, prs: prs.length, partial: !!s.partial });
+      if (JSON.stringify(prs) !== JSON.stringify(s.prs ?? []) || xp !== s.xp) out.push({ id: s.id, prs, xp });
+    }
+    history.push(s);
+  }
+  return out;
+}

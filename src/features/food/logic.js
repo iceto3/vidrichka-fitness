@@ -67,3 +67,42 @@ export function fromOff(p) {
   if (kcal == null) return null;
   return { kcal: Math.round(kcal), p: +(n.proteins_100g ?? 0), c: +(n.carbohydrates_100g ?? 0), f: +(n.fat_100g ?? 0) };
 }
+
+/** Parse a typed number ("12,5" works); '' → 0; anything else → NaN. @param {string} v */
+export const parseNum = (v) => {
+  const x = String(v ?? '')
+    .trim()
+    .replace(',', '.');
+  return x === '' ? 0 : /^-?\d*\.?\d+$/.test(x) ? Number(x) : NaN;
+};
+
+/**
+ * Check a manual food (values per 100 g). Errors block saving; `warn` (kcal far from
+ * 4·P + 4·C + 9·F) only asks for a second tap. No value is silently clamped.
+ * @param {Record<string, string>} v  Raw field values: kcal, p, c, f, portion.
+ * @returns {{errors: Record<string, string>, warn: string|null, est: number, values: {kcal: number, p: number, c: number, f: number, portion: number}}}
+ */
+export function validateFood(v) {
+  /** @type {Record<string, string>} */
+  const errors = {};
+  const n = Object.fromEntries(['kcal', 'p', 'c', 'f', 'portion'].map((k) => [k, parseNum(v[k])]));
+  for (const k of ['kcal', 'p', 'c', 'f', 'portion'])
+    if (!Number.isFinite(n[k])) errors[k] = 'manual.errNumber';
+    else if (n[k] < 0) errors[k] = 'manual.errNegative';
+  if (!errors.kcal && n.kcal > 900) errors.kcal = 'manual.errKcalMax';
+  for (const k of ['p', 'c', 'f']) if (!errors[k] && n[k] > 100) errors[k] = 'manual.errOver100';
+  if (!errors.p && !errors.c && !errors.f && n.p + n.c + n.f > 100)
+    for (const k of ['p', 'c', 'f']) errors[k] = 'manual.errSum';
+  if (!errors.portion && n.portion > 5000) errors.portion = 'manual.errPortion';
+  let warn = null;
+  const est = Math.round(4 * (n.p || 0) + 4 * (n.c || 0) + 9 * (n.f || 0));
+  if (!Object.keys(errors).length && n.p + n.c + n.f > 0) {
+    if (Math.abs(n.kcal - est) > Math.max(40, est * 0.25)) warn = 'manual.warnKcal';
+  }
+  return {
+    errors,
+    warn,
+    est,
+    values: { kcal: n.kcal, p: n.p, c: n.c, f: n.f, portion: n.portion || 100 },
+  };
+}

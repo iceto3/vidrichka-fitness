@@ -2,7 +2,7 @@
  * Monthly "Wrapped" numbers, computed purely from stored rows (unit-testable).
  * @module features/motivation/recap
  */
-import { dayKey, monthKey } from '../../core/dates.js';
+import { dayKey, monthKey, totalMin } from '../../core/dates.js';
 
 /**
  * @param {string} month `YYYY-MM`
@@ -30,7 +30,7 @@ export function monthRecap(month, d) {
     month,
     workouts: ss.length,
     days: days.size,
-    minutes: Math.round(ss.reduce((a, s) => a + (s.durationSec || 0), 0) / 60),
+    minutes: totalMin(ss),
     volume: Math.round(ss.reduce((a, s) => a + (s.volume || 0), 0)),
     sets: ss.reduce((a, s) => a + (s.setsDone || 0), 0),
     kcalBurned: Math.round(ss.reduce((a, s) => a + (s.kcal || 0), 0)),

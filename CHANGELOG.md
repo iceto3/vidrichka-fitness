@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows
 - **Protein breakfast bar on Home:** a live `mm:ss` countdown ("Eat 30 g of protein · 23:41 left") with **Ate it** and **Skipped** buttons. Only the timer text updates each second, so there is no re-render and no flicker. After 30 minutes without an answer, the bar turns dark red and the `00:00` blinks (shown boxed, without blinking, with reduced motion). It stays red, also after a reload, until she answers. **Skipped** stops the reminders with no celebration or quest credit.
 - **Log the protein breakfast:** **Ate it** or **Yes, I ate** (on the bar, the morning page or the Android notification button) marks protein done, then opens the Food logger on today's **Breakfast** with the hint "What did you have for your 30 g protein breakfast?". Logging there completes the **Log breakfast** quest. Closing it without adding anything still counts protein as done.
 - **Micro animations** on every log: each water **+** drops into a glass with a ripple while mini Vidrichka takes a sip, and each food item pops with a bounce and sparkles by its meal. Each one is shorter than a second, with the soft "Warm hello" sound. It plays in its own click-through layer (no overlay, no re-render, so the + flicker fix stays). Rapid taps restart it instead of queueing. It follows reduced motion and the **Celebration sounds** switch.
+- **Grammatical gender for Bulgarian texts.** Onboarding asks "You are: Female / Male", and it can be changed any time in **Profile › Address me as**. People updating from 1.1 get the same choice once in the What's new note, with Female preselected. The setting is stored as `gender` in the settings (missing means female, so no migration is needed). Gendered strings are `{ f, m }` variants that `t()` and `L()` resolve, so the code has no gender checks. An audit of every Bulgarian string found the forms that address the user: the water celebration ("Хидратирана/Хидратиран и щастлива/щастлив"), the level-up line ("Вие двете/двамата"), the 8:15 alarm hint ("докоснала/докоснал") and two exercise steps ("Изправена/Изправен"). Everything else is already neutral, or refers to Vidrichka, who stays feminine. Push notification texts are rendered on the phone and re-sent to the server when the gender changes, so server-sent reminders match too. English is unchanged.
 - A one-time **What's new in 1.2** note. The push items only appear once the push server is configured.
 
 ### Changed
@@ -22,6 +23,21 @@ All notable changes to this project are documented here. The format follows
 - The small water toast now only appears when the daily goal is reached. Every other glass gets the micro animation.
 - No data or schema changes. The push state is a small `kv` entry, and the new `proteinSkip` day field is optional. The service worker cache is bumped to the 1.2.0 build.
 - Privacy: only a random device id, the push subscription, the time zone, the reminder times or switches and the notification texts are sent to the server. No health data is sent.
+
+### Fixed (tester findings on 1.1.0)
+
+1. The workout celebration showed `[object Object]` instead of the plan name. It now shows the plan name in the current language.
+2. The celebration, summary, calendar, plans and recap rounded the workout time differently. All of them now use one shared calculation (`durationMin`), and totals add up the per-workout minutes.
+3. Opening a past workout from the calendar replayed the summary and celebration. It now opens a read-only detail in **Progress** with the sets of every exercise and a **Delete workout** button (asks first). Deleting recalculates XP, the streak and PRs. Badges stay earned.
+4. Daily prompts could pop up during a workout, on the summary or over a celebration. They now wait until she is done. The morning check-in is only offered in the morning (4:00–12:00) and not after a workout today.
+5. The reminder time fields were clipped and mixed 12 h and 24 h. They now show one style per language: 24 h in Bulgarian, and the phone's style in English (24 h for en-GB). The Profile row no longer says "Off" while daily reminders are on.
+6. Manual food entry silently accepted impossible values. It now shows inline errors for negative numbers and non-numbers, for more than 100 g of a macro or of P + C + F per 100 g, and for kcal above 900. If the kcal don't match the macros, it warns once and offers **Save anyway**. Body measurements outside a sane range (weight 20–300 kg, sizes 10–250 cm, body fat 1–75 %) show an error instead of saving.
+7. The "Set done" toast lagged a set behind on fast taps. Its count is now read when it is shown, and repeated toasts update in place.
+8. A workout could be finished after a single set for the full XP. A workout now needs at least half of its planned sets (at least 3, or all of them for plans with fewer than 3 sets). Otherwise it is saved as **Partial** and earns only the per-set XP. A partial workout does not count for the weekly streak or goal. Its sets, volume and PRs still count.
+9. Charts showed the same date more than once when there were several entries on one day. Entries are now grouped per day: the best lift, or the last body measurement.
+10. The outfit picker listed a non-existent "Dumbbell 3" unlock. The unlock list now only names real outfits.
+11. Sheets could not be closed with Esc, and the outfit sheet stayed open after a pick. Esc, a tap on the backdrop and the Android back gesture now close every sheet, and picking an outfit closes it.
+12. **Ate it** in the morning prompt now ticks the **Protein within 30 min** quest and opens the breakfast logger, like the Home bar does.
 
 ## [1.1.0] – 2026-10-24
 

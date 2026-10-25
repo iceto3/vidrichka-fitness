@@ -90,7 +90,7 @@ async function run(name, browser, P) {
   });
   const page = await ctx.newPage();
   // Fixed, flowing clock (Sofia, UTC+3 until 25 Oct) so the daily reminders are deterministic.
-  await page.clock.install({ time: new Date('2026-10-20T06:00:00+03:00') });
+  await page.clock.install({ time: new Date('2026-10-19T06:00:00+03:00') });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on(
@@ -138,6 +138,7 @@ async function run(name, browser, P) {
   // Onboarding
   await page.goto(BASE);
   await page.getByRole('heading', { name: /Vidrichka/ }).waitFor();
+  assert.match(await layer.locator('.genderrow .on').innerText(), /Female/, 'onboarding asks; female preselected');
   await layer.locator('input').first().fill('Maria');
   await page.getByRole('button', { name: "Let's go" }).click();
   await settle();
@@ -166,6 +167,11 @@ async function run(name, browser, P) {
   await layer.getByRole('button', { name: /^Finish$/ }).click(); // confirm: remaining sets stay unfinished
   await page.locator('.summary').waitFor();
   assert.match(await page.locator('.summary .grid3').innerText(), /3\s*of/i);
+  // 1.2 fixes #1/#8: the celebration names the plan; 3 sets of a long plan is a partial workout.
+  const celSub = await page.locator('#cel .msub').first().innerText({ timeout: 8000 });
+  assert.doesNotMatch(celSub, /object/i, 'no [object Object] in the celebration');
+  assert.match(celSub, /^[^·]*\p{L}[^·]* · \d+ exercises · \d+ min$/u);
+  assert.match(await page.locator('.summary .chip.warm').innerText(), /Partial/i, 'partial workout chip');
   await page.waitForTimeout(2600);
   await clearCel();
   await shot('summary');
@@ -284,6 +290,7 @@ async function run(name, browser, P) {
   }
 
   await daily(page, { go, settle, shot, clearCel, tag, same, layer });
+  if (name === 'android') await fixes(page, { go, settle, shot, clearCel, layer });
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -322,7 +329,12 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
   };
 
   // 7:31 – the silent morning reminder shows in-app; it opens the full-screen morning page.
+  // 1.2 fix #4: no morning prompt after a workout today (the smoke workout ran on the 19th).
   await go('home');
+  await at(19, '07:31');
+  await page.waitForTimeout(3000);
+  assert.equal(await layer.locator('.dprompt').count(), 0, 'no morning prompt after a workout today');
+  console.log('  ✔ #4 no morning prompt after a workout today');
   await at(20, '07:31');
   await layer.locator('.dprompt').waitFor();
   assert.match(await layer.locator('.dprompt').innerText(), /morning/i);
@@ -515,4 +527,150 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
   await shot('progress-sleep');
   await go('home');
   await page.evaluate(() => scrollTo(0, 0));
+}
+
+/**
+ * 1.2: the tester's 1.1.0 findings, in the UI (the logic has unit tests in v12-fixes.test.js).
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function fixes(page, { go, settle, shot, clearCel, layer }) {
+  const panels = () => layer.locator('.panel').count();
+  await page.addLocatorHandler(layer.locator('.dprompt'), async (l) => {
+    await l
+      .locator('[data-close]')
+      .first()
+      .evaluate((b) => /** @type {HTMLElement} */ (b).click());
+  });
+
+  // #11 Esc, the backdrop and picking close sheets
+  await go('profile');
+  await page.locator('[data-act="outfit"]').click();
+  await layer.locator('.outfits').waitFor();
+  // #10 the unlock line lists only real gear
+  assert.doesNotMatch(await layer.innerText(), /Dumbbell/i, 'no "Dumbbell 3" unlock');
+  await page.keyboard.press('Escape');
+  await settle();
+  assert.equal(await panels(), 0, 'Esc closes the outfit sheet');
+  await page.locator('[data-act="outfit"]').click();
+  await layer.locator('.outfits').waitFor();
+  await layer.locator('.overlay').click({ position: { x: 10, y: 10 } });
+  await settle();
+  assert.equal(await panels(), 0, 'a tap on the backdrop closes it');
+  await page.locator('[data-act="outfit"]').click();
+  await layer.locator('.outfit[data-id="classic"]').click();
+  await settle();
+  assert.equal(await panels(), 0, 'picking an outfit closes the sheet');
+  assert.match(await page.locator('.outfitrow').innerText(), /Classic/);
+  await page.locator('[data-act="outfit"]').click();
+  await layer.locator('.outfit[data-id="auto"]').click();
+  await settle();
+  await page.locator('[data-act="outfit"]').click();
+  await layer.locator('.outfits').waitFor();
+  await page.goBack(); // Android back gesture
+  await settle();
+  assert.equal(await panels(), 0, 'back closes the sheet');
+  console.log('  ✔ #10 #11 outfit unlocks, Esc / backdrop / back / pick close sheets');
+
+  // 1.2 grammatical gender: Profile switch → Bulgarian texts follow (and back)
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
+  await go('profile/reminders');
+  assert.match(await page.locator('#page').innerText(), /не си докоснала първото/, 'female by default');
+  await go('profile');
+  await page.locator('[data-act="gender"][data-v="m"]').click();
+  await settle();
+  await go('profile/reminders');
+  const txt = await page.locator('#page').innerText();
+  assert.match(txt, /не си докоснал първото/, 'male form');
+  assert.doesNotMatch(txt, /докоснала/);
+  await shot('gender-male-bg');
+  await go('profile');
+  await page.locator('[data-act="gender"][data-v="f"]').click();
+  await page.locator('.lang [data-v="en"]').click();
+  await settle();
+  console.log('  ✔ gender: onboarding asks, Profile switch changes the Bulgarian forms');
+
+  // #5 the Reminders row reflects the real state; times are one style and never clipped
+  await go('profile');
+  const row = await page.locator('[data-go="profile/reminders"]').innerText();
+  assert.doesNotMatch(row, /\bOff\b/, 'daily reminders are on → not "Off"');
+  assert.match(row, /daily reminders/);
+  await go('profile/reminders');
+  const times = await page.locator('.tbox').evaluateAll((els) =>
+    els.map((e) => {
+      const v = /** @type {HTMLElement} */ (e.querySelector('.tval'));
+      return { text: v.textContent, clipped: v.scrollWidth > e.clientWidth };
+    }),
+  );
+  assert.ok(times.length >= 8);
+  for (const x of times) {
+    assert.match(String(x.text), /^\d{2}:\d{2}$/, `en-GB → 24 h (${x.text})`);
+    assert.equal(x.clipped, false, `${x.text} is not clipped`);
+  }
+  await shot('fix-reminders');
+  console.log('  ✔ #5 reminder times: one 24 h style, not clipped; summary not "Off"');
+
+  // #6 manual food: inline errors, no silent clamping; odd kcal asks once
+  // keep the test offline-deterministic: Open Food Facts answers "nothing found"
+  await page.route('**/*openfoodfacts.org/**', (r) =>
+    r.fulfill({ json: { count: 0, products: [] }, headers: { 'access-control-allow-origin': '*' } }),
+  );
+  await go('food/add/lunch');
+  await page.locator('#fq').fill('zzqx homemade bar');
+  await settle();
+  await page.locator('[data-act="manual"]').first().click();
+  await layer.locator('#mname').fill('Test bar');
+  await layer.locator('#mkcal').fill('150');
+  await layer.locator('#mp').fill('90');
+  await layer.locator('#mc').fill('90');
+  await layer.locator('[data-act="save"]').click();
+  await settle();
+  assert.match(await layer.locator('.ferr').first().innerText(), /100 g/, 'P+C+F > 100 g is an error');
+  assert.equal(await panels(), 1, 'nothing saved');
+  await shot('fix-manual-food');
+  await layer.locator('#mp').fill('20');
+  await layer.locator('#mc').fill('30');
+  await layer.locator('#mf').fill('10');
+  await layer.locator('#mkcal').fill('50');
+  await layer.locator('[data-act="save"]').click();
+  await settle();
+  assert.equal(await layer.locator('.ferr').count(), 0);
+  assert.match(await layer.locator('.fwarn').innerText(), /290 kcal/);
+  assert.match(await layer.locator('[data-act="save"]').innerText(), /Save anyway/);
+  await page.keyboard.press('Escape');
+  await settle();
+  // body weight
+  await go('progress/body');
+  await page.locator('[data-act="add"]').click();
+  await layer.locator('#m_weight').fill('-60');
+  await layer.locator('[data-act="save"]').click();
+  await settle();
+  assert.match(await layer.locator('#h_weight.ferr').innerText(), /between 20 and 300 kg/);
+  assert.equal(await panels(), 1, 'negative weight is not saved');
+  await page.keyboard.press('Escape');
+  await settle();
+  console.log('  ✔ #6 manual food and body weight validation');
+
+  // #3 a past workout opens as a read-only detail in Progress, and can be deleted
+  await go('progress/calendar');
+  await page.locator('.lrow[data-go^="history/"]').first().click();
+  await page.locator('.history').waitFor();
+  assert.equal(await page.locator('#page .confetti').count(), 0, 'no confetti');
+  assert.equal(await page.locator('#page .summary').count(), 0, 'not the summary');
+  await page.waitForTimeout(800);
+  assert.equal(await page.evaluate(() => document.getElementById('cel')?.children.length ?? 0), 0, 'no celebration');
+  assert.match(await page.locator('#nav .t.on').innerText(), /Progress/, 'Progress tab stays active');
+  assert.ok((await page.locator('.history .hex').count()) > 0, 'per-exercise detail');
+  assert.match(await page.locator('.history .hsets').first().innerText(), /kg × \d+|reps/);
+  await shot('fix-history');
+  await page.locator('.history [data-act="del"]').click();
+  await layer.locator('.btn.danger').click();
+  await page.waitForURL(/#\/progress\/calendar/);
+  await settle();
+  assert.equal(await page.locator('.lrow[data-go^="history/"]').count(), 0, 'the workout is gone');
+  await clearCel();
+  console.log('  ✔ #3 past workout: read-only detail in Progress, delete with confirm');
+  await page.removeLocatorHandler(layer.locator('.dprompt'));
 }

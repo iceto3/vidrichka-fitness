@@ -89,7 +89,11 @@ const greetKey = (/** @type {number} */ h) =>
 function weekDots() {
   const mon = startOfWeek(),
     today = dayKey();
-  const done = new Set(sessions().map((s) => dayKey(s.endedAt)));
+  const done = new Set(
+    sessions()
+      .filter((s) => !s.partial)
+      .map((s) => dayKey(s.endedAt)),
+  );
   return html`<div class="days" aria-hidden="true">${[0, 1, 2, 3, 4, 5, 6].map((i) => {
     const k = dayKey(addDays(mon, i));
     return html`<div><i class="${done.has(k) ? 'done' : k === today ? 'today' : ''}"></i>${weekdayName(i, 'narrow')}</div>`;

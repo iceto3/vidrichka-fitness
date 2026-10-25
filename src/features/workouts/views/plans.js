@@ -5,7 +5,7 @@
  */
 import { html } from '../../../ui/dom.js';
 import { fmtDate, t, weekdayName } from '../../../core/i18n.js';
-import { weekdayMon } from '../../../core/dates.js';
+import { weekdayMon, durationMin } from '../../../core/dates.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { confirmDialog } from '../../../ui/sheet.js';
@@ -37,8 +37,8 @@ ${
     ? html`<h2 class="sect mt16">${t('workouts.recent')}</h2><div class="card list">${sessions()
         .slice(0, 5)
         .map(
-          (s) => html`<button class="lrow" data-go="summary/${s.id}">
-<span class="f1"><span class="b">${planName(s)}</span><span class="muted xs b block">${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })} · ${Math.round(s.durationSec / 60)} ${t('unit.min')}</span></span>
+          (s) => html`<button class="lrow" data-go="workouts/history/${s.id}">
+<span class="f1"><span class="b">${planName(s)}</span><span class="muted xs b block">${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })} · ${durationMin(s.durationSec)} ${t('unit.min')}</span></span>
 <span class="muted small b">${t('workouts.setsN', { n: s.setsDone })}</span>${ic('right', 16, 2.2, 'var(--muted)')}</button>`,
         )}</div>`
     : ''

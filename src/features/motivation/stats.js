@@ -46,7 +46,9 @@ export function computeStats(i) {
   const now = i.now ?? new Date(),
     today = dayKey(now),
     month = monthKey(now);
-  const sessions = [...i.sessions].sort((a, b) => a.endedAt - b.endedAt);
+  const all = [...i.sessions].sort((a, b) => a.endedAt - b.endedAt);
+  // Partial workouts (too few sets, see xp.js) are kept in the history but don't count as workouts.
+  const sessions = all.filter((s) => !s.partial);
   const workoutDays = sessions.map((s) => dayKey(s.endedAt));
   const last = sessions[sessions.length - 1];
   const meals = i.food.filter((f) => f.type !== 'water');
@@ -63,11 +65,11 @@ export function computeStats(i) {
     month,
     level: i.level ?? 1,
     totalWorkouts: sessions.length,
-    totalKg: sessions.reduce((a, s) => a + (s.volume || 0), 0),
-    prCount: sessions.reduce((a, s) => a + (s.prs?.length || 0), 0),
+    totalKg: all.reduce((a, s) => a + (s.volume || 0), 0),
+    prCount: all.reduce((a, s) => a + (s.prs?.length || 0), 0),
     streak: weeklyStreak(workoutDays, i.goalAt, now),
     workedOutToday: workoutDays.includes(today),
-    prToday: sessions.some((s) => dayKey(s.endedAt) === today && s.prs?.length),
+    prToday: all.some((s) => dayKey(s.endedAt) === today && s.prs?.length),
     daysSinceWorkout: last ? daysBetween(last.endedAt, now) : null,
     lastSession: last ?? null,
     food: dayRuns(foodDays, now),

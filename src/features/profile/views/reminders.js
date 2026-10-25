@@ -7,7 +7,7 @@ import { html } from '../../../ui/dom.js';
 import { t, weekdayName } from '../../../core/i18n.js';
 import { dailySettings, settings, setSettings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
-import { toggle, topBar } from '../../../ui/components.js';
+import { timeInput, toggle, topBar } from '../../../ui/components.js';
 import { notify } from '../../../ui/feedback.js';
 import { requestPermission, scheduleReminders, support } from '../reminders.js';
 import { installApp, isIOS } from '../install.js';
@@ -46,7 +46,7 @@ ${ios ? html`<p class="muted xs b mt10 lh">${t('push.iosSound')}</p>` : ''}</div
  */
 const drow = (k, label, time, on, sub = '') =>
   html`<div class="row between gap8 drow mt10"><div class="f1 minw0"><div class="b small">${label}</div>${sub ? html`<div class="muted xs b">${sub}</div>` : ''}</div>
-<input class="input tinput" type="time" data-change="dtime" data-k="${k}" value="${time}" aria-label="${label}" ${on ? '' : 'disabled'}>${k === 'loud' ? html`<span class="tgph"></span>` : toggle(on, 'dtog', label, { k })}</div>`;
+${timeInput({ value: time, act: 'dtime', k, label, disabled: !on, cls: 'tinput' })}${k === 'loud' ? html`<span class="tgph"></span>` : toggle(on, 'dtog', label, { k })}</div>`;
 
 /** @returns {import('../../../core/registry.js').View} */
 export default () => {
@@ -85,7 +85,7 @@ export default () => {
       return html`<div class="content">${topBar(t('profile.reminders'))}
 ${pushSupport().configured ? pushCard() : ''}
 <div class="card mt12 row between"><div><div class="b">${t('reminders.enable')}</div><div class="muted xs b">${t('reminders.enableSub')}</div></div>${toggle(r.enabled, 'on', t('reminders.enable'))}</div>
-<div class="card mt12 ${r.enabled ? '' : 'dim'}"><label class="field"><span>${t('reminders.time')}</span><input class="input" type="time" data-change="time" value="${r.time}"></label>
+<div class="card mt12 ${r.enabled ? '' : 'dim'}"><div class="field"><span>${t('reminders.time')}</span>${timeInput({ value: r.time, act: 'time', label: t('reminders.time'), cls: 'wide' })}</div>
 <div class="field mt12"><span>${t('reminders.days')}</span><div class="days7">${[0, 1, 2, 3, 4, 5, 6].map((i) => html`<button class="dbtn${r.days.includes(i) ? ' on' : ''}" data-act="day" data-i="${i}" aria-pressed="${String(r.days.includes(i))}" aria-label="${weekdayName(i, 'long')}">${weekdayName(i, 'narrow')}</button>`)}</div></div></div>
 <div class="section-title"><h2 class="h3">${t('daily.settingsTitle')}</h2></div>
 <div class="card dailyset">

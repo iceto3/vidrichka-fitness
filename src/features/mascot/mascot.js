@@ -4,8 +4,12 @@
  * @module features/mascot/mascot
  */
 
-/** Gear unlocked at a level (look grows with level). */
-export const GEAR_LEVELS = { headband: 1, dumbbell: 3, tank: 5, medal: 8, crown: 12 };
+/**
+ * Wearable gear unlocked at a level (look grows with level). These are exactly the pieces
+ * the outfits use; the dumbbell is a pose, not gear, so it is not listed (1.1 showed a
+ * "Dumbbell 3" unlock that did not exist).
+ */
+export const GEAR_LEVELS = { headband: 1, tank: 5, medal: 8, crown: 12 };
 
 /** Outfit presets the user can choose from once unlocked. */
 export const OUTFITS = [
@@ -27,7 +31,7 @@ export function gearFor(level, outfit = 'auto') {
   const pick = OUTFITS.find((o) => o.id === outfit && o.level <= level);
   if (pick?.gear) return pick.gear;
   const gear = Object.entries(GEAR_LEVELS)
-    .filter(([g, l]) => l <= level && g !== 'dumbbell')
+    .filter(([, l]) => l <= level)
     .map(([g]) => g);
   return gear.includes('crown') ? gear.filter((g) => g !== 'headband') : gear;
 }

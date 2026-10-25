@@ -4,12 +4,12 @@
  * @module features/workouts/session
  */
 import { emit } from '../../core/bus.js';
-import { put, setKv } from '../../core/store.js';
+import { get, put, remove, setKv } from '../../core/store.js';
 import { exById } from '../library/api.js';
 import { bodyWeight } from '../body/api.js';
-import { award, xpForWorkout } from '../motivation/api.js';
+import { award, isCompleteWorkout, setAward, xpForWorkout } from '../motivation/api.js';
 import { activeWorkout, sessions } from './api.js';
-import { detectPRs, estimateKcal, sessionMet, summarize } from './logic.js';
+import { detectPRs, estimateKcal, recomputeAfterDelete, sessionMet, summarize } from './logic.js';
 
 /** @typedef {import('./logic.js').WItem} WItem */
 
@@ -104,7 +104,10 @@ export function finish() {
   const prs = detectPRs(items, sessions(), exById);
   const bodyKg = bodyWeight();
   const kcal = estimateKcal(sessionMet(items, exById), bodyKg, durationSec);
-  const xp = xpForWorkout({ setsDone: totals.setsDone, prs: prs.length });
+  // Too few sets → saved as a partial workout: per-set XP only, no workout bonus, and it
+  // does not count for the streak / weekly goal (see motivation/xp.js).
+  const partial = !isCompleteWorkout(totals);
+  const xp = xpForWorkout({ setsDone: totals.setsDone, prs: prs.length, partial });
   const session = {
     id: w.id,
     planId: w.planId,
@@ -118,10 +121,32 @@ export function finish() {
     kcal,
     bodyKg,
     xp,
+    ...(partial ? { partial: true } : {}),
   };
   put('sessions', session);
   setKv('active', null);
   emit('workout:finished', session); // → medium celebration (queued before any level-up)
   award(`session:${session.id}`, xp);
   return session;
+}
+
+/**
+ * Delete a finished workout and keep everything derived from it consistent: its XP entry is
+ * removed, and every later workout's PRs (and so its XP) are recomputed against the history
+ * without it. Streak, weekly goal and Lifts are derived from the sessions, so they follow.
+ * Badges already earned are kept.
+ * @param {string} id
+ * @returns {boolean} false if there was no such workout.
+ */
+export function deleteSession(id) {
+  const gone = get('sessions', id);
+  if (!gone) return false;
+  remove('sessions', id);
+  setAward(`session:${id}`, 0);
+  for (const c of recomputeAfterDelete(sessions(), gone.endedAt, exById, xpForWorkout)) {
+    put('sessions', { ...get('sessions', c.id), prs: c.prs, xp: c.xp });
+    setAward(`session:${c.id}`, c.xp);
+  }
+  emit('workout:deleted', { id });
+  return true;
 }

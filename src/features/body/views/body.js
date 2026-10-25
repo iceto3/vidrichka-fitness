@@ -11,9 +11,9 @@ import { put, remove, uid } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { delta } from '../../../ui/components.js';
-import { lineChart, sparkline } from '../../../ui/chart.js';
+import { lineChart, mergeSameX, sparkline } from '../../../ui/chart.js';
 import { closeSheet, confirmDialog, openSheet } from '../../../ui/sheet.js';
-import { MEASURE_FIELDS } from '../../../data/measurements.js';
+import { MEASURE_FIELDS, checkMeasure } from '../../../data/measurements.js';
 import { measurements, photos } from '../api.js';
 import { addPhoto, photoUrl } from '../photos.js';
 
@@ -43,9 +43,12 @@ function latestAndBase(rows, f) {
 /** Chart sheet for one field. @param {string} f */
 function openChart(f) {
   const unit = MEASURE_FIELDS.find((x) => x.id === f)?.unit ?? '';
-  const pts = measurements()
-    .filter((r) => r[f] != null)
-    .map((r) => ({ x: fmtDate(parseDay(r.date), { day: 'numeric', month: 'numeric' }), y: Number(r[f]) }));
+  // Two entries on one day → one point (the latest).
+  const pts = mergeSameX(
+    measurements()
+      .filter((r) => r[f] != null)
+      .map((r) => ({ x: fmtDate(parseDay(r.date), { day: 'numeric', month: 'numeric' }), y: Number(r[f]) })),
+  );
   openSheet({
     render:
       () => html`<h2 class="h2">${t(`measure.${f}`)}</h2><div class="mt12">${pts.length ? lineChart(pts, { unit, color: f === 'weight' ? '#1FB46B' : undefined, label: t(`measure.${f}`) }) : ''}</div>
@@ -72,6 +75,8 @@ export function openMeasureForm() {
   const last = Object.fromEntries(MEASURE_FIELDS.map((f) => [f.id, latestAndBase(measurements(), f.id).v]));
   /** @type {Record<string, string>} */
   const v = { date: dayKey() };
+  /** @type {Record<string, {error?: string, range?: readonly [number, number]}>} */
+  let bad = {};
   openSheet({
     kind: 'full',
     render:
@@ -80,8 +85,12 @@ export function openMeasureForm() {
 <label class="field mt12"><span>${t('body.date')}</span><input class="input" type="date" id="mdate" data-input="v" data-k="date" value="${v.date}" max="${dayKey()}"></label>
 ${MEASURE_FIELDS.map(
   (f) => html`<label class="field mt10"><span>${t(`measure.${f.id}`)} <small class="muted">(${f.unit})</small></span>
-<input class="input" id="m_${f.id}" inputmode="decimal" data-input="v" data-k="${f.id}" value="${v[f.id] ?? ''}" placeholder="${last[f.id] != null ? fmt1(last[f.id]) : ''}" aria-describedby="h_${f.id}">
-<small class="hint" id="h_${f.id}">${L(f.hint)}</small></label>`,
+<input class="input${bad[f.id] ? ' bad' : ''}" id="m_${f.id}" inputmode="decimal" data-input="v" data-k="${f.id}" value="${v[f.id] ?? ''}" placeholder="${last[f.id] != null ? fmt1(last[f.id]) : ''}" aria-describedby="h_${f.id}" aria-invalid="${String(!!bad[f.id])}">
+${
+  bad[f.id]
+    ? html`<small class="ferr" id="h_${f.id}" role="alert">${t(String(bad[f.id].error), { min: bad[f.id].range?.[0] ?? '', max: bad[f.id].range?.[1] ?? '', unit: f.unit })}</small>`
+    : html`<small class="hint" id="h_${f.id}">${L(f.hint)}</small>`
+}</label>`,
 )}
 <button class="btn w100 mt16 sticky-b" data-act="save">${ic('check', 20, 3)}${t('common.save')}</button>`,
     actions: {
@@ -89,10 +98,13 @@ ${MEASURE_FIELDS.map(
       save: () => {
         /** @type {Record<string, any>} */
         const row = { id: uid('m'), date: v.date || dayKey(), ts: Date.now() };
+        bad = {};
         for (const f of MEASURE_FIELDS) {
-          const n = parseFloat((v[f.id] ?? '').replace(',', '.'));
-          if (Number.isFinite(n) && n > 0 && n < 400) row[f.id] = n;
+          const c = checkMeasure(f, v[f.id] ?? '');
+          if (c.error) bad[f.id] = c;
+          else if (c.value != null) row[f.id] = c.value;
         }
+        if (Object.keys(bad).length) return; // re-render with the inline errors, nothing saved
         if (Object.keys(row).length <= 3) return (emit('toast', { key: 'body.needValue' }), false);
         put('measurements', /** @type {any} */ (row));
         closeSheet();

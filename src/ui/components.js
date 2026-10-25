@@ -4,7 +4,7 @@
  * @module ui/components
  */
 import { html, raw } from './dom.js';
-import { t } from '../core/i18n.js';
+import { fmtHM, t } from '../core/i18n.js';
 import { ic } from './icons.js';
 
 /**
@@ -114,3 +114,23 @@ export function delta(d, unit = '', digits = 1) {
 /** Empty-state block. @param {string} icon @param {string} text */
 export const empty = (icon, text) =>
   html`<div class="empty">${ic(icon, 28, 2)}<div class="b muted">${text}</div></div>`;
+
+/**
+ * Time field that always shows the app's clock style (24 h for BG, the locale's for EN),
+ * however the browser would draw a native time input. The native input sits invisibly on
+ * top, so a tap still opens the system time picker; `data-change` gets its "HH:MM" value.
+ * @param {{value: string, act: string, label: string, k?: string, disabled?: boolean, cls?: string}} o
+ */
+export const timeInput = (o) =>
+  html`<span class="input tbox ${o.cls ?? ''}${o.disabled ? ' off' : ''}"><span class="tval num" aria-hidden="true">${fmtHM(o.value)}</span><input class="tnative" type="time" data-change="${o.act}" ${o.k ? raw(`data-k="${o.k}"`) : ''} value="${o.value}" aria-label="${o.label}" ${o.disabled ? raw('disabled') : ''}></span>`;
+
+// Desktop browsers only open the picker from their own icon: open it on any tap.
+if (typeof document !== 'undefined')
+  document.addEventListener('click', (e) => {
+    const i = /** @type {HTMLInputElement|null} */ (/** @type {HTMLElement} */ (e.target)?.closest?.('.tnative'));
+    try {
+      if (i && !i.disabled) i.showPicker?.();
+    } catch {
+      /* not allowed here (e.g. cross-origin frame): the input still works */
+    }
+  });

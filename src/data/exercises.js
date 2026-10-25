@@ -16,7 +16,7 @@
  *  tips       technique tips
  */
 
-/** @typedef {{en: string, bg: string}} Text */
+/** A Bulgarian text may be a `{ f, m }` gender variant (see core/i18n). @typedef {{en: string, bg: string | {f: string, m: string}}} Text */
 /**
  * @typedef {object} Exercise
  * @property {string} id
@@ -110,7 +110,7 @@ export const EXERCISES = [
     met: 6,
     fig: 'hinge',
     steps: [
-      { en: 'Stand tall, soft knees', bg: 'Изправена, меки колене' },
+      { en: 'Stand tall, soft knees', bg: { f: 'Изправена, меки колене', m: 'Изправен, меки колене' } },
       { en: 'Hinge, bar close', bg: 'Наклон, щанга до краката' },
       { en: 'Hips forward', bg: 'Таза напред' },
     ],
@@ -396,7 +396,10 @@ export const EXERCISES = [
     tips: [
       { en: 'Keep elbows fixed; only the forearms move.', bg: 'Лактите са фиксирани; движат се само предмишниците.' },
       { en: 'Fully straighten the arms at the bottom.', bg: 'Изпъни напълно ръцете долу.' },
-      { en: 'Stand tall with a slight forward lean.', bg: 'Стой изправена с лек наклон напред.' },
+      {
+        en: 'Stand tall with a slight forward lean.',
+        bg: { f: 'Стой изправена с лек наклон напред.', m: 'Стой изправен с лек наклон напред.' },
+      },
     ],
   },
   {

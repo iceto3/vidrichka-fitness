@@ -189,7 +189,7 @@ export async function startPush() {
   on(
     'settings:changed',
     (/** @type {Record<string, any>} */ p) =>
-      ('daily' in p || 'lang' in p || 'userName' in p || 'otterName' in p) && syncPushSettings(),
+      ('daily' in p || 'lang' in p || 'gender' in p || 'userName' in p || 'otterName' in p) && syncPushSettings(),
   );
   addEventListener('online', () => flushPush());
   if (!pushOn() || !pushSupport().api) return;

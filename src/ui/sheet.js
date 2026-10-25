@@ -1,6 +1,7 @@
 /**
  * Bottom sheets, dialogs and toasts rendered into the #layer element.
- * Each sheet is a View (render + actions); the Android back gesture closes the top sheet.
+ * Each sheet is a View (render + actions). The top sheet closes with Esc, a tap on the
+ * backdrop, or the Android back gesture / browser back.
  * @module ui/sheet
  */
 import { on } from '../core/bus.js';
@@ -137,6 +138,11 @@ export function initSheets(root) {
       return;
     }
     if (stack.length) closeSheet(undefined, true);
+  });
+  addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !stack.length || e.defaultPrevented) return;
+    e.preventDefault();
+    closeSheet();
   });
   on('ui:refresh', () => stack.forEach(render));
   on('toast', (/** @type {{key?: string, text?: string, vars?: any}} */ p) => toast(p.text ?? t(p.key ?? '', p.vars)));

@@ -343,7 +343,7 @@ html[lang='bg'] .nav .t {
 .field {
   display: block;
 }
-.field > span {
+.field > span:not(.tbox) {
   display: block;
   font-size: 12px;
   font-weight: 700;
@@ -525,4 +525,29 @@ html[lang='bg'] .nav .t {
 }
 .step .sv:has(small) small {
   margin-left: 3px;
+}
+
+/* time field: our own text over an invisible native time input (ui/components.js › timeInput) */
+.tbox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+.tbox.wide {
+  justify-content: flex-start;
+}
+.tbox .tnative {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.tbox:focus-within {
+  border-color: var(--accent);
 }

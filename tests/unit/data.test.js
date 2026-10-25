@@ -43,7 +43,11 @@ test('migrations chain runs every step in order', () => {
 
 test('every language has exactly the English keys with the same {placeholders}', () => {
   assert.deepEqual(Object.keys(LANGUAGES).sort(), ['bg', 'en']);
-  const ph = (s) => (String(s).match(/\{\w+\}/g) ?? []).sort().join();
+  /** Placeholders of every variant (plain, plural `{one, other}`, gender `{f, m}`), deduplicated. */
+  const ph = (/** @type {any} */ s) =>
+    [...new Set((JSON.stringify(s).match(/\{\w+\}/g) ?? []).filter((x) => !/^\{(one|other|f|m)\}$/.test(x)))]
+      .sort()
+      .join();
   const missing = Object.keys(en).filter((k) => !(k in bg));
   const extra = Object.keys(bg).filter((k) => !(k in en));
   assert.deepEqual(missing, [], 'missing in bg');

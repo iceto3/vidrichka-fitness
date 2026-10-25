@@ -26,6 +26,7 @@ export const DAILY = {
 /** @typedef {typeof DEFAULTS} Settings */
 export const DEFAULTS = {
   lang: '', // '' = detect from the device on first run
+  gender: 'f', // 1.2: grammatical gender for Bulgarian texts ('f' | 'm'); missing = 'f'
   theme: 'auto', // 'light' | 'dark' | 'auto'
   userName: '',
   otterName: '', // '' = localized default ("Vidrichka" / "Видричка")

@@ -16,6 +16,8 @@ import { rig } from '../mascot/api.js';
  * @property {string} [sub]
  * @property {'drop'|'check'|'moon'|'egg'} [icon] SMALL: icon on the right.
  * @property {[number, number]} [progress] SMALL: progress bar from → to (0…1).
+ * @property {() => {sub: string, pct: number}|null} [live] SMALL: read the text and bar from the
+ *   current state while it is on screen (set counter while tapping fast).
  * @property {{text: string, tone?: string}[]} [chips] MEDIUM/BIG chips (tone: warm|ok|accent|g).
  * @property {string} [kicker] BIG: small line above the title (e.g. "LEVEL UP").
  * @property {string} [button] BIG: button label.
@@ -653,9 +655,23 @@ const SCENES = { small, medium, big };
  */
 export async function playScene(host, c, o) {
   const s = stage(o.reduce, o.cue);
+  const live = c.live;
+  // Computed at render time and kept current while the toast is up (no stale "14 of 18").
+  const tick = () => {
+    const v = live?.();
+    const t2 = host.querySelector('.toastc .t2'),
+      bar = /** @type {HTMLElement|null} */ (host.querySelector('.toastc .pbar i'));
+    if (!v) return;
+    if (t2 && t2.textContent !== v.sub) t2.textContent = v.sub;
+    if (bar) bar.style.width = `${Math.round(v.pct * 100)}%`;
+  };
+  const v0 = live?.();
+  if (v0) c = { ...c, sub: v0.sub };
+  const iv = live ? setInterval(tick, 120) : 0;
   try {
     await SCENES[c.size](host, c, s);
   } finally {
+    clearInterval(iv);
     s.stop();
   }
 }

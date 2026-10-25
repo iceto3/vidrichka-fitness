@@ -7,11 +7,19 @@
  * @module features/celebrations
  */
 import { on } from '../../core/bus.js';
-import { t } from '../../core/i18n.js';
+import { L, t } from '../../core/i18n.js';
+import { durationMin } from '../../core/dates.js';
 import { settings } from '../../core/settings.js';
 import { celebrate, preloadSounds } from './api.js';
 import { exName } from '../library/api.js';
 import { stats, XP } from '../motivation/api.js';
+import { activeWorkout } from '../workouts/api.js';
+
+/** Done / total sets of a workout, or null. @param {any} w @returns {{done: number, total: number}|null} */
+export const setCount = (w) => {
+  const sets = w?.items?.flatMap((/** @type {any} */ it) => it.sets) ?? [];
+  return sets.length ? { done: sets.filter((/** @type {any} */ x) => x.done).length, total: sets.length } : null;
+};
 
 const tap = () => t('cel.continue');
 
@@ -37,7 +45,8 @@ export function startCelebrations() {
       });
   });
   on('food:logged', async (/** @type {{emoji?: string}} */ e) => (await import('./micro.js')).microFood(e.emoji));
-  on('set:done', (/** @type {{done: number, total: number}} */ e) =>
+  on('set:done', (/** @type {{done: number, total: number}} */ e) => {
+    let last = e;
     celebrate({
       size: 'small',
       key: 'set',
@@ -45,8 +54,13 @@ export function startCelebrations() {
       title: t('cel.set'),
       sub: t('cel.setSub', { n: e.done, total: e.total }),
       progress: [(e.done - 1) / e.total, e.done / e.total],
-    }),
-  );
+      // Fast taps: one toast, counting from the workout as it is now (not when it was queued).
+      live: () => {
+        last = setCount(activeWorkout()) ?? last;
+        return { sub: t('cel.setSub', { n: last.done, total: last.total }), pct: last.done / last.total };
+      },
+    });
+  });
   on('protein:done', (/** @type {{onTime: boolean}} */ e) =>
     celebrate({
       size: 'small',
@@ -64,15 +78,15 @@ export function startCelebrations() {
     const pr = s.prs?.[0];
     celebrate({
       size: 'medium',
-      title: t('cel.workout'),
+      title: s.partial ? t('cel.workoutPartial') : t('cel.workout'),
       sub: t('cel.workoutSub', {
-        name: s.name,
+        name: L(s.name) || '—', // the plan name is stored per language ({en, bg})
         n: s.items?.length ?? 0,
-        min: Math.max(1, Math.round(s.durationSec / 60)),
+        min: durationMin(s.durationSec),
       }),
       chips: [
         { text: `+${s.xp} XP`, tone: 'warm' },
-        { text: t('cel.weekOf', { n: st.streak.thisWeek, goal: st.streak.goal }), tone: 'ok' },
+        ...(s.partial ? [] : [{ text: t('cel.weekOf', { n: st.streak.thisWeek, goal: st.streak.goal }), tone: 'ok' }]),
         ...(pr ? [{ text: t('cel.pr', { name: exName(pr.exId) }), tone: 'accent' }] : []),
       ],
     });

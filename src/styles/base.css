@@ -461,6 +461,23 @@ body.no-nav .toast {
   margin: 5px 2px 0;
   line-height: 1.35;
 }
+.ferr {
+  display: block;
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 700;
+  margin: 5px 2px 0;
+  line-height: 1.35;
+}
+.fwarn {
+  color: var(--warm);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.input.bad {
+  border-color: var(--red);
+}
 .danger-t {
   color: var(--red) !important;
 }

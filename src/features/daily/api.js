@@ -11,7 +11,16 @@ import { dailySettings } from '../../core/settings.js';
 import { award } from '../motivation/api.js';
 import { eveningKey, fillBedtime, isEvening, isMorning, nights, proteinOnTime, sleepStreak } from './logic.js';
 
-export { BREAKFAST_LOGGER, proteinBar, proteinState, sleepHours, isEvening, isMorning, eveningKey } from './logic.js';
+export {
+  BREAKFAST_LOGGER,
+  dailyOnCount,
+  proteinBar,
+  proteinState,
+  sleepHours,
+  isEvening,
+  isMorning,
+  eveningKey,
+} from './logic.js';
 export { dailyEnabled, syncDaily, checkDaily } from './notify.js';
 export { pushOn } from './push.js';
 

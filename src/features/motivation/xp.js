@@ -23,7 +23,22 @@ export function levelInfo(total) {
 }
 
 /**
- * XP earned for a finished workout.
- * @param {{setsDone: number, prs: number}} s
+ * Sets needed for a workout to count as completed (XP bonus, streak, weekly goal): half of
+ * the planned sets rounded up, but at least 3 (or every set when fewer than 3 are planned).
+ * @param {number} planned
  */
-export const xpForWorkout = (s) => (s.setsDone > 0 ? XP.workout + XP.perSet * s.setsDone + XP.pr * s.prs : 0);
+export const minSetsForWorkout = (planned) => Math.min(Math.max(1, planned), Math.max(3, Math.ceil(planned / 2)));
+
+/**
+ * Whether a finished workout counts as completed (otherwise it is saved as partial).
+ * @param {{setsDone: number, setsPlanned: number}} s
+ */
+export const isCompleteWorkout = (s) => s.setsDone > 0 && s.setsDone >= minSetsForWorkout(s.setsPlanned);
+
+/**
+ * XP earned for a finished workout. A partial workout earns only the per-set XP (no
+ * workout bonus, no PR bonus).
+ * @param {{setsDone: number, prs: number, partial?: boolean}} s
+ */
+export const xpForWorkout = (s) =>
+  s.setsDone <= 0 ? 0 : s.partial ? XP.perSet * s.setsDone : XP.workout + XP.perSet * s.setsDone + XP.pr * s.prs;

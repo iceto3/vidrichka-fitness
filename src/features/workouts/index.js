@@ -15,6 +15,14 @@ register(
   },
   { pattern: 'workout', load: async () => (await import('./views/active.js')).default() },
   {
+    pattern: 'history/:id',
+    load: async (p) => (await import('./views/history.js')).default({ id: String(p.id), tab: 'progress' }),
+  },
+  {
+    pattern: 'workouts/history/:id',
+    load: async (p) => (await import('./views/history.js')).default({ id: String(p.id), tab: 'workouts' }),
+  },
+  {
     pattern: 'summary/:id',
     load: async (p) => (await import('./views/summary.js')).default(/** @type {{id: string}} */ (p)),
   },

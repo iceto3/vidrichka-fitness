@@ -6,7 +6,7 @@
 import { kv, load, setKv } from './core/store.js';
 import { WHATS_NEW } from './core/version.js';
 import { settings, setSettings } from './core/settings.js';
-import { detectLang, getLang, setLang, t } from './core/i18n.js';
+import { detectLang, getGender, getLang, setGender, setLang, t } from './core/i18n.js';
 import { applyTheme, watchTheme } from './core/theme.js';
 import { on, emit } from './core/bus.js';
 import { back, navigate, refresh, startRouter } from './core/router.js';
@@ -29,6 +29,7 @@ async function applySettings() {
   const s = settings();
   if (!s.lang) setSettings({ lang: detectLang(navigator.languages ?? [navigator.language]) });
   if (settings().lang !== getLang()) await setLang(settings().lang);
+  setGender(settings().gender);
   applyTheme(s.theme);
 }
 
@@ -48,6 +49,7 @@ function onboarding() {
         'lang',
         'mini',
       )}</div>
+${genderRow()}
 <label class="field mt12"><span>${t('profile.yourName')}</span><input class="input" id="obname" data-input="name" value="${s.name}" autocomplete="given-name" placeholder="${t('onboard.namePh')}"></label>
 <div class="row between mt12"><span class="b">${t('profile.weeklyGoal')}</span>${stepper({ act: 'goal', value: s.goal, label: t('profile.weeklyGoal') })}</div>
 <p class="muted xs b mt6">${t('onboard.goalHint')}</p>
@@ -55,6 +57,7 @@ function onboarding() {
 <p class="muted xs b center mt10">${t('onboard.private')}</p>`,
     actions: {
       lang: async (el) => void setSettings({ lang: el.dataset.v }),
+      gender: (el) => void setSettings({ gender: el.dataset.v }),
       name: (el) => ((s.name = /** @type {HTMLInputElement} */ (el).value), false),
       goal: (el, ev) =>
         void (s.goal = Math.min(
@@ -74,6 +77,18 @@ function onboarding() {
     onClose: () => !settings().onboarded && setSettings({ onboarded: true }),
   });
 }
+
+/** "You are: female / male" (onboarding and the 1.2 note; Profile has its own row). */
+const genderRow = () =>
+  html`<div class="row between mt12 genderrow"><span class="b">${t('onboard.gender')}</span>${seg(
+    [
+      { value: 'f', label: t('profile.genderF') },
+      { value: 'm', label: t('profile.genderM') },
+    ],
+    getGender(),
+    'gender',
+    'mini',
+  )}</div>`;
 
 /** "What's new in 1.2" — shown once to people who used an earlier version. */
 function whatsNew() {
@@ -97,13 +112,17 @@ function whatsNew() {
     render:
       () => html`<div class="center">${otter({ size: 110, pose: 'cheer' })}<h1 class="h2 mt8">${t('whatsNew.title', { v: WHATS_NEW })}</h1></div>
 <div class="col gap10 mt12 whatsnew">${items.map(([i, k]) => html`<div class="row gap10"><span class="sq acc">${ic(i, 18, 2.3)}</span><span class="f1 b small">${t(k)}</span></div>`)}</div>
+<div class="card mt12"><p class="small b">${t('whatsNew.gender')}</p>${genderRow()}</div>
 ${
   push
     ? html`<p class="muted xs b mt12">${t('whatsNew.pushHow')}</p>
 <div class="row gap10 mt12"><button class="btn sec f1" data-act="times">${t('whatsNew.turnOn')}</button><button class="btn f1" data-close>${t('whatsNew.ok')}</button></div>`
     : html`<button class="btn w100 mt16" data-close>${t('whatsNew.ok')}</button>`
 }`,
-    actions: { times: () => (emit('nav', { path: 'profile/reminders' }), false) },
+    actions: {
+      times: () => (emit('nav', { path: 'profile/reminders' }), false),
+      gender: (el) => void setSettings({ gender: el.dataset.v }),
+    },
   });
 }
 
@@ -168,8 +187,9 @@ async function start() {
   });
   on('settings:changed', async (/** @type {Record<string, any>} */ patch) => {
     if ('lang' in patch) await setLang(settings().lang);
+    if ('gender' in patch) setGender(settings().gender);
     if ('theme' in patch) applyTheme(settings().theme);
-    if ('lang' in patch || 'theme' in patch) emit('ui:refresh');
+    if ('lang' in patch || 'theme' in patch || 'gender' in patch) emit('ui:refresh');
   });
   on('store:replaced', async () => {
     await applySettings();

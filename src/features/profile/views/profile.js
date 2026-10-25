@@ -6,8 +6,8 @@
  */
 import { html, raw } from '../../../ui/dom.js';
 import { LANGUAGES } from '../../../data/i18n/index.js';
-import { fmtDate, getLang, t, weekdayName } from '../../../core/i18n.js';
-import { settings, setSettings } from '../../../core/settings.js';
+import { fmtDate, fmtHM, getLang, t, weekdayName } from '../../../core/i18n.js';
+import { dailySettings, settings, setSettings } from '../../../core/settings.js';
 import { kv } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
@@ -17,7 +17,17 @@ import { canVibrate } from '../../../ui/feedback.js';
 import { GEAR_LEVELS, OUTFITS, otter, otterName } from '../../mascot/api.js';
 import { badges, level, recordGoal, stats } from '../../motivation/api.js';
 import { canInstall, installApp, isIOS } from '../install.js';
+import { dailyOnCount } from '../../daily/api.js';
 import { APP_VERSION } from '../../../core/version.js';
+
+/** The Reminders row's summary: workout days (or off) plus the daily-rhythm reminders that are on. @param {{enabled: boolean, days: number[]}} r */
+function remindersSummary(r) {
+  const n = dailyOnCount(dailySettings());
+  if (!r.enabled && !n) return t('common.off');
+  const parts = [r.enabled ? r.days.map((d) => weekdayName(d)).join(' · ') : t('profile.workoutRemOff')];
+  if (n) parts.push(t('profile.dailyOn', { n }));
+  return parts.join(' · ');
+}
 
 /** Settings row. @param {string} icon @param {string} cls @param {any} title @param {any} sub @param {any} right @param {string} [attrs] */
 const srow = (icon, cls, title, sub, right, attrs = '') =>
@@ -80,7 +90,7 @@ function outfitSheet() {
           .join(' · '),
       })}</p>`;
     },
-    actions: { pick: (el) => void setSettings({ outfit: el.dataset.id }) },
+    actions: { pick: (el) => (setSettings({ outfit: el.dataset.id }), closeSheet(), emit('ui:refresh'), false) },
   });
 }
 
@@ -114,6 +124,18 @@ export default () => ({
 <div class="card p0">
 ${srow('globe', 'teal', t('profile.language'), langs.map((l) => l.name).join(' / '), seg(langs, getLang(), 'lang', 'mini'))}
 ${srow(
+  'user',
+  'violet',
+  t('profile.gender'),
+  t('profile.genderSub'),
+  seg(
+    ['f', 'm'].map((v) => ({ value: v, label: t(v === 'f' ? 'profile.genderF' : 'profile.genderM') })),
+    s.gender === 'm' ? 'm' : 'f',
+    'gender',
+    'mini',
+  ),
+)}
+${srow(
   'moon',
   'violet',
   t('profile.theme'),
@@ -125,7 +147,7 @@ ${srow(
     'mini',
   ),
 )}
-<button class="srow" data-go="profile/reminders"><span class="sic orange">${ic('bell', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.reminders')}</span><span class="muted xs b">${r.enabled ? r.days.map((d) => weekdayName(d)).join(' · ') : t('common.off')}</span></span>${r.enabled ? html`<span class="b num acc">${r.time}</span>` : ''}${ic('right', 17, 2.2, 'var(--muted)')}</button>
+<button class="srow" data-go="profile/reminders"><span class="sic orange">${ic('bell', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.reminders')}</span><span class="muted xs b">${remindersSummary(r)}</span></span>${r.enabled ? html`<span class="b num acc">${fmtHM(r.time)}</span>` : ''}${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${srow('target', 'teal', t('profile.weeklyGoal'), t('profile.weeklyGoalSub'), stepper({ act: 'goal', value: s.weeklyGoal, label: t('profile.weeklyGoal') }))}
 <button class="srow" data-act="nutrition"><span class="sic green">${ic('food', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.nutrition')}</span><span class="muted xs b">${s.kcalGoal} kcal · P ${s.proteinGoal} · C ${s.carbsGoal} · F ${s.fatGoal} · ${t('profile.waterN', { n: s.waterGoal })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${srow('timer', 'blue', t('profile.restAlert'), canVibrate() ? t('profile.restAlertSub') : t('profile.noVibrate'), html`<div class="row gap8"><span class="muted">${ic('volume', 17, 2.2)}</span>${toggle(s.restSound, 'tg', t('profile.sound'), { k: 'restSound' })}${canVibrate() ? html`<span class="muted">${ic('vibrate', 17, 2.2)}</span>${toggle(s.restVibrate, 'tg', t('profile.vibration'), { k: 'restVibrate' })}` : ''}</div>`)}
@@ -160,6 +182,7 @@ ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic t
   },
   actions: {
     lang: (el) => void setSettings({ lang: el.dataset.v }),
+    gender: (el) => void setSettings({ gender: el.dataset.v === 'm' ? 'm' : 'f' }),
     theme: (el) => void setSettings({ theme: /** @type {any} */ (el.dataset.v) }),
     goal: (el, ev) => {
       const cur = settings().weeklyGoal;
