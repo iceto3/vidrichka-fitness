@@ -8,6 +8,8 @@
  *     prompt when the app is on screen, or a system notification while it is in the
  *     background. Missed slots are caught up on open (only the latest of each group).
  * Every slot is shown at most once (`days.shown`), wherever it was shown.
+ * 1.2: when Web Push is on (push.js), the server sends the reminders instead, and all of
+ * the above is switched off so nothing is shown twice.
  * @module features/daily/notify
  */
 import { all, reload } from '../../core/store.js';
@@ -19,8 +21,9 @@ import { otterName } from '../mascot/api.js';
 import { isIOS } from '../profile/install.js';
 import { day, patchDay } from './api.js';
 import { dueSlots, planRange } from './logic.js';
+import { pushOn } from './push.js';
 
-/** Is any daily reminder switched on? */
+/** Is any daily reminder switched on? (Regardless of who sends it: push server or this device.) */
 export function dailyEnabled() {
   const c = dailySettings();
   return c.morning || c.water.some((w) => w.on) || c.checkinAm.on || c.checkinPm.on || c.bedtime.on;
@@ -58,7 +61,7 @@ export async function syncDaily() {
   const reg = await swReg();
   if (!reg) return;
   const now = Date.now(),
-    on = dailyEnabled();
+    on = dailyEnabled() && !pushOn(); // push on: the server sends them, plan nothing locally
   const slots = on ? planRange(now, 7, dailySettings(), records()).map(slotText) : [];
   reg.active?.postMessage({
     type: 'daily',
@@ -95,7 +98,7 @@ export async function syncDaily() {
  * @returns {import('./logic.js').Slot[]} the slots shown
  */
 export function checkDaily(now = Date.now()) {
-  if (!dailyEnabled() || !settings().onboarded) return [];
+  if (!dailyEnabled() || !settings().onboarded || pushOn()) return [];
   const { show, seen } = dueSlots(planRange(now, 1, dailySettings(), records()), now, records());
   seen.forEach((s) => patchDay(s.day, { shown: { ...day(s.day).shown, [s.kind]: now } }));
   if (!show.length) return [];

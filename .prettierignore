@@ -5,3 +5,4 @@ assets/fonts/
 screenshots/
 package-lock.json
 *.png
+server/.wrangler/

@@ -11,8 +11,9 @@ import { dailySettings } from '../../core/settings.js';
 import { award } from '../motivation/api.js';
 import { eveningKey, fillBedtime, isEvening, isMorning, nights, proteinOnTime, sleepStreak } from './logic.js';
 
-export { proteinState, sleepHours, isEvening, isMorning, eveningKey } from './logic.js';
+export { BREAKFAST_LOGGER, proteinBar, proteinState, sleepHours, isEvening, isMorning, eveningKey } from './logic.js';
 export { dailyEnabled, syncDaily, checkDaily } from './notify.js';
+export { pushOn } from './push.js';
 
 /** XP for tucking Vidrichka in (small, once per evening). */
 export const GOODNIGHT_XP = 10;
@@ -38,6 +39,7 @@ export function wakeUp(now = Date.now()) {
   const est = fillBedtime(get('days', yesterday(id)));
   if (est) patchDay(yesterday(id), est);
   patchDay(id, { wake: now, ack: rec.ack ?? now, ...(dailySettings().protein ? { proteinStart: now } : {}) });
+  emit('daily:wake');
   emit('daily:changed');
   return true;
 }
@@ -49,6 +51,20 @@ export function proteinYes(now = Date.now()) {
   if (rec.proteinAt) return false;
   const next = patchDay(id, { proteinAt: now, proteinStart: rec.proteinStart ?? now, proteinCelebrated: true });
   emit('protein:done', { onTime: proteinOnTime(next) });
+  emit('daily:changed');
+  return true;
+}
+
+/**
+ * "Skipped" — no protein breakfast today: stops the reminders (here and on the push
+ * server) without a celebration or quest credit. @param {number} [now]
+ */
+export function proteinSkip(now = Date.now()) {
+  const id = dayKey(now),
+    rec = day(id);
+  if (!rec.proteinStart || rec.proteinAt || rec.proteinSkip) return false;
+  patchDay(id, { proteinSkip: now });
+  emit('protein:skipped');
   emit('daily:changed');
   return true;
 }
@@ -83,6 +99,7 @@ export function goodnight(now = Date.now()) {
   const id = eveningKey(now);
   patchDay(id, { bed: now, bedEst: false });
   award(`sleep:${id}`, GOODNIGHT_XP);
+  emit('daily:goodnight', id);
   emit('daily:changed');
   return id;
 }

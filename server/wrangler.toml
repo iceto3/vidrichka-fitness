@@ -1,0 +1,26 @@
+# Cloudflare Worker for Vidrichka push reminders. Secrets are NOT in this file:
+#   wrangler secret put VAPID_PRIVATE_KEY   (the private key as a JWK JSON string)
+name = "vidrichka-push"
+main = "src/index.js"
+compatibility_date = "2026-05-01"
+workers_dev = true
+
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vidrichka-push-db"
+# Filled in after `wrangler d1 create vidrichka-push-db`.
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[vars]
+VAPID_PUBLIC_KEY = "BO9JFEsnJLOmHpg2N_M9-ayXuGGZiPSJikbvjhPVEwtQjXtt3oLME6uWM3JBtmqywZrrrpB2QTC_v14cF-vqbuY"
+VAPID_SUBJECT = "https://iceto3.github.io/vidrichka-fitness/"
+ALLOWED_ORIGINS = "https://iceto3.github.io"
+MAX_DEVICES = "50"
+MAX_SENDS_PER_RUN = "20"
+
+[observability]
+enabled = true

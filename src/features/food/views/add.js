@@ -2,6 +2,8 @@
  * Add food: search (local + Open Food Facts), barcode scan, quick picks, recents,
  * saved meals (one tap), 8 category tiles (most used first) → grams sheet → Done.
  * Items accumulate in a "basket" for the meal; finishing offers "Save as a regular meal?".
+ * 1.2: `food/add/breakfast?protein` (after "Ate it" on the protein breakfast) logs to
+ * today's breakfast and shows a hint; closing without adding anything is fine.
  * @module features/food/views/add
  */
 import { html, patch } from '../../../ui/dom.js';
@@ -35,6 +37,8 @@ const foodRow = (
 
 /** @param {{meal: string}} p @returns {import('../../../core/registry.js').View} */
 export default ({ meal }) => {
+  const protein = /[?&]protein\b/.test(location.hash);
+  if (protein) view.date = dayKey(); // always today's breakfast
   /** @type {any[]} */
   const basket = [];
   /** @type {Map<string, any>} */
@@ -148,6 +152,7 @@ ${
 <div class="row gap6 wrap mt8">${basket.map((r, i) => html`<span class="chip">${r.emoji} ${foodName(r)} · ${r.grams} g<button class="x" data-act="undo" data-i="${i}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('close', 14, 2.6)}</button></span>`)}</div></div>`
     : ''
 }
+${protein ? html`<div class="card mt12 row gap10 phint" role="note"><span class="sq">🍳</span><span class="f1 b small">${t('food.proteinHint')}</span></div>` : ''}
 <div id="results">${q ? results() : ''}</div>
 ${
   q

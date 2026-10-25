@@ -13,7 +13,7 @@ import { dayKey, weekdayMon } from '../../core/dates.js';
 import { t } from '../../core/i18n.js';
 import { notify } from '../../ui/feedback.js';
 import { isIOS, isStandalone } from './install.js';
-import { dailyEnabled, syncDaily } from '../daily/api.js';
+import { dailyEnabled, pushOn, syncDaily } from '../daily/api.js';
 
 /** What the current device supports. */
 export function support() {
@@ -54,7 +54,7 @@ export async function scheduleReminders() {
     try {
       // Daily-rhythm reminders need frequent wake-ups; Chrome decides the real interval
       // (from site engagement), so this is a wish, not a promise.
-      const daily = dailyEnabled();
+      const daily = dailyEnabled() && !pushOn(); // push on: the server sends them
       if (settings().reminders.enabled || daily)
         await /** @type {any} */ (reg).periodicSync.register('reminder', {
           minInterval: (daily ? 15 : 60) * 60 * 1000,

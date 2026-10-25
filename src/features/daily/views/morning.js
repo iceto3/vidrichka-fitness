@@ -14,7 +14,7 @@ import { ic } from '../../../ui/icons.js';
 import { rig } from '../../mascot/api.js';
 import { PROTEIN_WINDOW, MIN } from '../logic.js';
 import { closeNotifications } from '../notify.js';
-import { day, isMorning, lastNight, proteinState, proteinYes, sleepHours, wakeUp } from '../api.js';
+import { BREAKFAST_LOGGER, day, isMorning, lastNight, proteinState, proteinYes, sleepHours, wakeUp } from '../api.js';
 
 const R = 92,
   C = 2 * Math.PI * R;
@@ -35,6 +35,8 @@ function proteinCard() {
   if (ps.state === 'done')
     return html`<div class="pcard done"><span class="sq green">${ic('check', 22, 3)}</span><div class="f1"><div class="b">${t('morning.proteinDone')}</div>
 <div class="muted xs b">${ps.onTime ? t('morning.onTime', { time: hm(rec.proteinAt) }) : t('morning.late', { time: hm(rec.proteinAt) })}</div></div></div>`;
+  if (ps.state === 'skipped')
+    return html`<div class="pcard done"><span class="sq">${ic('skip', 22, 2.6)}</span><div class="f1 b">${t('home.proteinSkipped')}</div></div>`;
   if (ps.state === 'idle') return '';
   return html`<div class="pcard">
 ${ps.state === 'running' ? countdown(ps.left) : html`<div class="b center">${t('morning.stillCounts')}</div>`}
@@ -87,6 +89,8 @@ ${proteinCard()}
       yes: () => {
         proteinYes();
         closeNotifications(['protein']);
+        emit('nav', { path: BREAKFAST_LOGGER }); // what did she eat? (optional)
+        return false;
       },
     },
   };

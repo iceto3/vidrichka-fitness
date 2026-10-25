@@ -73,7 +73,7 @@ test('protein reminders at +10/+20/+30 min stop after "yes"', () => {
 test('protein countdown survives reloads (computed from the stored start)', () => {
   const start = T('07:40');
   assert.equal(proteinState({ proteinStart: start }, start + 12 * MIN).left, 18 * MIN);
-  assert.equal(proteinState({ proteinStart: start }, start + 31 * MIN).state, 'late');
+  assert.equal(proteinState({ proteinStart: start }, start + 31 * MIN).state, 'overdue');
   const done = proteinState({ proteinStart: start, proteinAt: start + 25 * MIN }, start + 40 * MIN);
   assert.deepEqual([done.state, done.onTime], ['done', true]);
   assert.equal(proteinState({ proteinStart: start, proteinAt: start + 70 * MIN }, start + 80 * MIN).onTime, false);

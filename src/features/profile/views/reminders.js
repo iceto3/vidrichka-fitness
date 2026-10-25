@@ -1,5 +1,6 @@
 /**
  * Reminders settings with an honest explanation of what the device can do.
+ * 1.2: "Reminders on this phone" turns server-sent Web Push on/off (features/daily/push.js).
  * @module features/profile/views/reminders
  */
 import { html } from '../../../ui/dom.js';
@@ -10,6 +11,33 @@ import { toggle, topBar } from '../../../ui/components.js';
 import { notify } from '../../../ui/feedback.js';
 import { requestPermission, scheduleReminders, support } from '../reminders.js';
 import { installApp, isIOS } from '../install.js';
+import { disablePush, enablePush, pushOn, pushSupport } from '../../daily/push.js';
+
+let busy = false;
+
+/** Push card: status, on/off button and the platform hints. */
+function pushCard() {
+  const p = pushSupport(),
+    on = pushOn(),
+    ios = isIOS();
+  const hint = !p.configured
+    ? 'push.notConfigured'
+    : p.iosNeedsInstall
+      ? 'push.iosInstall'
+      : !p.api
+        ? ios
+          ? 'push.iosOld'
+          : 'push.unsupported'
+        : p.permission === 'denied'
+          ? 'push.denied'
+          : '';
+  const can = !hint;
+  return html`<div class="card mt12 pushcard"><div class="row between gap8"><div class="f1 minw0"><div class="b">${t('push.title')}</div><div class="muted xs b">${t(on ? 'push.onSub' : 'push.offSub')}</div></div><span class="pushstate${on ? ' on' : ''}">${t(on ? 'common.on' : 'common.off')}</span></div>
+${hint ? html`<p class="small b muted mt10 lh">${t(hint)}</p>` : ''}
+${p.iosNeedsInstall ? html`<button class="btn sec w100 mt10" data-act="install">${t('install.cta')}</button>` : ''}
+${can || on ? html`<button class="btn ${on ? 'sec' : ''} w100 mt10" data-act="push" ${busy ? 'disabled' : ''}>${t(busy ? 'push.working' : on ? 'push.turnOff' : 'push.turnOn')}</button>` : ''}
+${ios ? html`<p class="muted xs b mt10 lh">${t('push.iosSound')}</p>` : ''}</div>`;
+}
 
 /**
  * Daily-rhythm row: label, time input and on/off switch. `k` addresses the setting:
@@ -41,18 +69,21 @@ export default () => {
       const r = settings().reminders,
         d = dailySettings(),
         s = support();
-      const how = s.iosNeedsInstall
-        ? 'reminders.iosInstall'
-        : !s.notif
-          ? 'reminders.unsupported'
-          : s.permission === 'denied'
-            ? 'reminders.denied'
-            : s.triggers
-              ? 'reminders.triggers'
-              : s.periodic
-                ? 'reminders.periodic'
-                : 'reminders.inApp';
+      const how = pushOn()
+        ? 'reminders.push'
+        : s.iosNeedsInstall
+          ? 'reminders.iosInstall'
+          : !s.notif
+            ? 'reminders.unsupported'
+            : s.permission === 'denied'
+              ? 'reminders.denied'
+              : s.triggers
+                ? 'reminders.triggers'
+                : s.periodic
+                  ? 'reminders.periodic'
+                  : 'reminders.inApp';
       return html`<div class="content">${topBar(t('profile.reminders'))}
+${pushSupport().configured ? pushCard() : ''}
 <div class="card mt12 row between"><div><div class="b">${t('reminders.enable')}</div><div class="muted xs b">${t('reminders.enableSub')}</div></div>${toggle(r.enabled, 'on', t('reminders.enable'))}</div>
 <div class="card mt12 ${r.enabled ? '' : 'dim'}"><label class="field"><span>${t('reminders.time')}</span><input class="input" type="time" data-change="time" value="${r.time}"></label>
 <div class="field mt12"><span>${t('reminders.days')}</span><div class="days7">${[0, 1, 2, 3, 4, 5, 6].map((i) => html`<button class="dbtn${r.days.includes(i) ? ' on' : ''}" data-act="day" data-i="${i}" aria-pressed="${String(r.days.includes(i))}" aria-label="${weekdayName(i, 'long')}">${weekdayName(i, 'narrow')}</button>`)}</div></div></div>
@@ -106,6 +137,27 @@ ${s.notif && s.permission === 'granted' ? html`<button class="btn sec w100 mt10"
         scheduleReminders();
       },
       install: () => installApp(),
+      push: async () => {
+        if (busy) return false;
+        busy = true;
+        emit('ui:refresh');
+        try {
+          if (pushOn()) {
+            await disablePush();
+            emit('toast', { key: 'push.offToast' });
+          } else {
+            const r = await enablePush();
+            if (r === 'on') emit('toast', { key: 'push.onToast' });
+            else if (r === 'denied') emit('toast', { key: 'reminders.deniedToast' });
+          }
+        } catch (e) {
+          console.warn('[push]', e);
+          emit('toast', { key: 'push.failed' });
+        } finally {
+          busy = false;
+        }
+        scheduleReminders();
+      },
       test: () => void notify(t('reminder.title'), t('reminder.body'), 'test'),
     },
   };

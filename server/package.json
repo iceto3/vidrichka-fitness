@@ -1,0 +1,18 @@
+{
+  "name": "vidrichka-push",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web Push reminder server for Vidrichka Fitness (Cloudflare Worker + D1, cron every minute).",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev": "wrangler dev --test-scheduled",
+    "db:migrate": "wrangler d1 migrations apply vidrichka-push-db --remote",
+    "db:migrate:local": "wrangler d1 migrations apply vidrichka-push-db --local",
+    "deploy": "wrangler deploy",
+    "e2e": "node test/e2e/push-e2e.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

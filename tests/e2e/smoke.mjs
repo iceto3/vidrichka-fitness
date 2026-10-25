@@ -333,12 +333,49 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
   await page.reload();
   await page.locator('.pclock').waitFor({ timeout: 8000 });
   assert.match(await page.locator('.pclock').innerText(), /^(2\d:\d\d|30:00)$/, 'countdown survives a reload');
-  await page.locator('.yes').click();
+  // 1.2: Home shows the live protein bar; only its timer text ticks (same nodes, no re-render).
+  await go('home');
+  await page.locator('.pbar.running .ptime').waitFor();
+  await tag('.pbar');
+  await tag('.pbar .ptime');
+  const t1 = await page.locator('.pbar .ptime').innerText();
+  assert.match(t1, /^[0-3]\d:[0-5]\d$/, 'mm:ss countdown');
+  await page.waitForTimeout(2200);
+  const t2 = await page.locator('.pbar .ptime').innerText();
+  assert.notEqual(t1, t2, 'the timer ticks');
+  assert.ok((await same('.pbar')) && (await same('.pbar .ptime')), 'timer updates in place');
+  await shot('home-protein-running');
+  await page.locator('.pbar [data-act="proteinYes"]').click();
   await page.locator('.cel .toastc').waitFor();
-  console.log('  ✔ morning → protein yes → small celebration');
+  // …then the Food logger opens on today's breakfast with a hint; logging there also
+  // completes the "Log breakfast" quest.
+  await page.locator('.add .phint').waitFor();
+  assert.match(page.url(), /#\/food\/add\/breakfast\?protein$/);
+  assert.match(await page.locator('.add .topbar').innerText(), /breakfast/i);
+  await clearCel();
+  await shot('protein-breakfast-logger');
+  await page.locator('.add .chips [data-act="pick"]').first().click();
+  await layer.locator('[data-act="done"]').click();
+  await page.locator('#micro .micro.food').waitFor({ timeout: 2000 });
+  await page.waitForTimeout(200);
+  await shot('micro-food');
+  await page.locator('#micro .micro.food').waitFor({ state: 'detached', timeout: 2000 });
+  await page.locator('.add .topbar [data-act="finish"]').first().click();
+  await settle();
+  await go('home');
+  await page.locator('.pbar.done').waitFor();
+  await page.locator('.quest[data-go="food/add/breakfast"] .qbox.done').waitFor();
+  console.log('  ✔ Home protein bar ticks in place → "Ate it" → celebration → breakfast logger → quest done');
   // From here on, answer "Later" whenever a reminder prompt pops up in the way (on a slow CI
   // runner one can appear between steps, exactly as it would for a person).
-  await page.addLocatorHandler(layer.locator('.dprompt'), (l) => l.locator('[data-close]').click());
+  // (A DOM click: the sheet may still be sliding in, which Playwright calls "not stable".)
+  await page.addLocatorHandler(layer.locator('.dprompt'), async (l) => {
+    await l
+      .locator('[data-close]')
+      .first()
+      .evaluate((b) => /** @type {HTMLElement} */ (b).click());
+    await l.waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+  });
   await clearCel();
   await closePrompts();
 
@@ -358,6 +395,19 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
   await settle();
   assert.equal(await page.locator('.glass.on').count(), n + 1, '+1 glass');
   assert.ok((await same('.bluebtn')) && (await same('.glasses')), 'water + updates in place');
+  // 1.2 micro animation: rapid taps restart one animation (no queue), in its own layer.
+  await page.locator('.bluebtn').click();
+  await page.waitForTimeout(120);
+  await page.locator('.bluebtn').click();
+  await page.waitForTimeout(120);
+  await page.locator('.bluebtn').click();
+  await page.waitForTimeout(250);
+  assert.equal(await page.locator('#micro .micro.water').count(), 1, 'one water animation, restarted');
+  assert.equal(await page.locator('.glass.on').count(), n + 4, 'every rapid tap counted');
+  assert.ok((await same('.bluebtn')) && (await same('.glasses')), 'no re-render from the animation');
+  assert.equal(await page.locator('#page #micro').count(), 0, 'animation layer is outside the page');
+  await shot('micro-water');
+  await page.locator('#micro .micro.water').waitFor({ state: 'detached', timeout: 2000 });
   assert.equal(await page.evaluate(() => scrollY), y, 'scroll position kept');
   await clearCel();
   await go('checkin/morning');
@@ -392,12 +442,21 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
     [22, '07:45', '22:50', [5, 4], 5],
     [23, '07:10', '23:30', [3, 5], 4],
   ];
+  let first = true;
   for (const [d, wake, bed, [mood, sq], energy] of nights) {
     await at(d, wake);
     await closePrompts();
     await go('morning');
     await page.locator('.yes').click();
+    await page.waitForURL(/#\/food\/add\/breakfast\?protein$/);
     await clearCel();
+    if (first) {
+      // Closing the breakfast logger without adding anything: protein still counts.
+      await page.locator('.add .topbar [data-act="finish"]').first().click();
+      await go('morning');
+      await page.locator('.pcard.done').waitFor();
+      first = false;
+    }
     await at(d, '11:10');
     await closePrompts();
     await go('checkin/morning');
@@ -424,8 +483,31 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer }) {
   assert.match(await page.locator('body').innerText(), /\d+[.,]?\d*\s*h/, 'slept hours shown');
   await page.waitForTimeout(1500);
   await shot('morning');
-  await page.locator('.yes').click();
-  await clearCel();
+  // 1.2: no answer for 30 min → the Home bar turns dark red at 00:00 (also after a reload),
+  // and "Skipped" ends it without a celebration.
+  await at(24, '07:40');
+  await closePrompts();
+  await go('home');
+  await page.locator('.pbar.overdue').waitFor();
+  assert.equal(await page.locator('.pbar .ptime').innerText(), '00:00');
+  await page.reload();
+  await page.locator('.pbar.overdue').waitFor({ timeout: 8000 });
+  await closePrompts();
+  assert.notEqual(
+    await page.locator('.pbar .ptime').evaluate((n) => getComputedStyle(n).animationName),
+    'none',
+    'the zeros blink',
+  );
+  assert.equal(
+    await page.locator('.pbar').evaluate((n) => getComputedStyle(n).animationName),
+    'none',
+    'the bar itself does not',
+  );
+  await shot('home-protein-overdue');
+  await page.locator('.pbar [data-act="proteinSkip"]').click();
+  await page.locator('.pbar.skipped').waitFor();
+  assert.equal(await layer.locator('.cel .toastc').count(), 0, 'no celebration for a skip');
+  console.log('  ✔ protein overdue (red, blinking 00:00, survives reload) → "Skipped"');
   await closePrompts();
   await go('progress/sleep');
   await page.locator('.sbars').waitFor();

@@ -1,6 +1,7 @@
 /**
  * Celebrations feature: maps app events to the three celebration sizes.
- *  SMALL  – water logged, set finished, protein on time, check-ins
+ *  MICRO  – each + glass of water and each food item (micro.js, no overlay, no queue)
+ *  SMALL  – water goal reached, set finished, protein on time, check-ins
  *  MEDIUM – workout finished (incl. new PRs), all daily quests done
  *  BIG    – level up, badge earned, new streak week, monthly challenge complete
  * @module features/celebrations
@@ -19,18 +20,23 @@ export function startCelebrations() {
   // Sounds need the tap-unlocked audio context: decode them right after the first tap.
   addEventListener('pointerdown', () => setTimeout(preloadSounds, 50), { once: true, capture: true });
 
-  on('water:added', (/** @type {{glasses: number, before: number}} */ e) => {
+  // 1.2: every + glass and every food item gets a light micro animation where she tapped
+  // (no overlay, no queue). Reaching the water goal still gets the SMALL celebration.
+  on('water:added', async (/** @type {{glasses: number, before: number}} */ e) => {
+    (await import('./micro.js')).microWater();
     const s = settings(),
       goal = s.waterGoal || 8;
-    celebrate({
-      size: 'small',
-      key: 'water',
-      icon: 'drop',
-      title: t('cel.water', { ml: (e.glasses - e.before) * s.glassMl }),
-      sub: t('cel.waterSub', { n: e.glasses, goal }),
-      progress: [Math.min(1, e.before / goal), Math.min(1, e.glasses / goal)],
-    });
+    if (e.before < goal && e.glasses >= goal)
+      celebrate({
+        size: 'small',
+        key: 'water',
+        icon: 'drop',
+        title: t('cel.water', { ml: (e.glasses - e.before) * s.glassMl }),
+        sub: t('cel.waterSub', { n: e.glasses, goal }),
+        progress: [Math.min(1, e.before / goal), Math.min(1, e.glasses / goal)],
+      });
   });
+  on('food:logged', async (/** @type {{emoji?: string}} */ e) => (await import('./micro.js')).microFood(e.emoji));
   on('set:done', (/** @type {{done: number, total: number}} */ e) =>
     celebrate({
       size: 'small',

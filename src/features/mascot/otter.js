@@ -1,6 +1,6 @@
 /**
  * Vidrichka the otter — flat sporty SVG mascot (ported from the approved mockups).
- * Poses: wave | cheer | dumbbell | bust. Moods: happy | excited | sleepy.
+ * Poses: wave | cheer | dumbbell | bust | sip. Moods: happy | excited | sleepy.
  * Gear (unlocked by level): headband, tank, medal, crown.
  * Pure string output so it can also be drawn onto canvases (share cards, icons).
  * @module features/mascot/otter
@@ -26,6 +26,12 @@ const ARMS = {
     '<rect x="152" y="104" width="38" height="6" rx="3" fill="#56646D"/><rect x="146" y="94" width="10" height="26" rx="4" fill="#33424B"/><rect x="186" y="94" width="10" height="26" rx="4" fill="#33424B"/>' +
     paw(170, 113),
   bust: '',
+  // 1.2: sipping from a little glass of water (the water micro animation)
+  sip:
+    limb('M64 138 Q50 152 56 168') +
+    limb('M136 140 Q150 124 132 112') +
+    '<g transform="rotate(-18 126 100)"><path d="M114 84 h22 l-3 30 h-16z" fill="#DDF0FF" stroke="#2F80ED" stroke-width="3" stroke-linejoin="round"/><path d="M116 96 h18 l-2 16 h-14z" fill="#7DB8F5"/></g>' +
+    paw(132, 112),
 };
 
 /** @param {string} mood @param {string} id */

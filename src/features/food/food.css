@@ -280,3 +280,12 @@
     transform: translateY(30px);
   }
 }
+/* 1.2: logging the protein breakfast */
+.phint {
+  background: linear-gradient(120deg, #ffe2b8, #ffd0a1);
+  color: #5a2e0e;
+}
+.phint .sq {
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 20px;
+}

@@ -40,7 +40,7 @@ export function setWater(date, glasses) {
   const before = water(date),
     n = Math.max(0, glasses);
   put('food', { id: `water_${date}`, type: 'water', date, glasses: n });
-  if (n > before && date === dayKey()) emit('water:added', { glasses: n, before });
+  if (n > before && date === dayKey()) emit('water:added', { glasses: n, before }); // micro animation
 }
 
 /**
@@ -55,7 +55,7 @@ export function logFood(food, grams, meal, date = view.date) {
   const use = kv('foodUse', {});
   setKv('foodUse', { ...use, [food.id]: { n: (use[food.id]?.n ?? 0) + 1, ts: Date.now(), cat: food.cat } });
   const ts = date === dayKey() ? Date.now() : new Date(`${date}T12:00`).getTime();
-  return put('food', {
+  const row = put('food', {
     id: uid('f'),
     date,
     meal,
@@ -67,6 +67,8 @@ export function logFood(food, grams, meal, date = view.date) {
     grams,
     ...portion(food, grams),
   });
+  emit('food:logged', { meal, emoji: row.emoji ?? '🍽️' });
+  return row;
 }
 
 /** Remove a diary row. @param {string} id */
@@ -110,6 +112,7 @@ export function logSavedMeal(id, meal) {
     put('food', { ...it, id: uid('f'), date: view.date, meal, ts: ts + i, time: hhmm(new Date(ts)) }),
   );
   put('meals', { ...m, uses: (m.uses ?? 0) + 1 });
+  emit('food:logged', { meal, emoji: m.items[0]?.emoji ?? '🍽️' });
 }
 
 /** Category ids ordered by usage (most used first, ties keep default order). */

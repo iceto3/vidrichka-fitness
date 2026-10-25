@@ -16,14 +16,44 @@ import { messageFor, moodFor, otter, otterName } from '../../mascot/api.js';
 import { level, quests, stats } from '../../motivation/api.js';
 import { activeWorkout, nextPlan, planFor, planMinutes, planName, sessions, startWorkout } from '../../workouts/api.js';
 import { backupDue, canInstall, installApp } from '../../profile/api.js';
-import { day, goodnight, isEvening, morningPending, proteinState, tuckedIn } from '../../daily/api.js';
+import {
+  BREAKFAST_LOGGER,
+  day,
+  goodnight,
+  isEvening,
+  morningPending,
+  proteinBar,
+  proteinSkip,
+  proteinYes,
+  tuckedIn,
+} from '../../daily/api.js';
+import { closeNotifications } from '../../daily/notify.js';
+
+/**
+ * The protein-breakfast bar (1.2): a live mm:ss countdown with "Ate it" / "Skipped".
+ * After 30 min it turns dark red and only the 00:00 blinks, until she answers. Only the
+ * `.ptime` text node is updated every second (see mount) — no re-render, no flicker.
+ */
+const barNow = () => (dailySettings().protein ? proteinBar(day(), Date.now()) : null);
+
+function proteinBarCard() {
+  const b = barNow();
+  if (!b) return '';
+  if (b.mode === 'done' || b.mode === 'skipped')
+    return html`<div class="card mt12 pbar small ${b.mode}" role="status"><span class="sq">${ic(b.mode === 'done' ? 'check' : 'skip', 18, 2.6)}</span><span class="b small">${t(b.mode === 'done' ? 'morning.proteinDone' : 'home.proteinSkipped')}</span></div>`;
+  const [pre, post] = t(b.mode === 'running' ? 'home.proteinLeft' : 'home.proteinOver', { time: '\u0000' }).split(
+    '\u0000',
+  );
+  return html`<div class="card mt12 pbar ${b.mode}" role="group" aria-label="${t('home.proteinTitle')}">
+<button class="row gap12 phead" data-go="morning"><span class="sq">${ic('clock', 22, 2.3)}</span><span class="f1 minw0"><span class="b block">${t('home.proteinTitle')}</span><span class="xs b ptext">${pre}<span class="ptime num" role="timer">${b.time}</span>${post}</span></span>${ic('right', 18, 2.4)}</button>
+<div class="row gap8 mt10"><button class="btn sm f1 pyes" data-act="proteinYes">${ic('check', 18, 3)}${t('home.proteinAte')}</button><button class="btn sm sec f1 pskip" data-act="proteinSkip">${t('home.proteinSkip')}</button></div></div>`;
+}
 
 /** Daily-rhythm cards: good morning, protein countdown, check-ins, goodnight moon. */
 function dailyCards() {
   const now = Date.now(),
     cfg = dailySettings(),
     rec = day(),
-    ps = proteinState(rec, now),
     hm = new Date(now).toTimeString().slice(0, 5);
   const card = (
     /** @type {string} */ cls,
@@ -36,20 +66,8 @@ function dailyCards() {
   const out = [];
   if (cfg.morning && morningPending(now))
     out.push(card('sunrise', 'data-go="morning"', 'sun', t('home.goodMorning'), t('home.goodMorningSub')));
-  if (ps.state === 'running' || ps.state === 'late')
-    out.push(
-      card(
-        'sunrise',
-        'data-go="morning"',
-        'clock',
-        t('home.proteinTitle'),
-        ps.state === 'running'
-          ? t('home.proteinUntil', {
-              time: fmtDate(rec.proteinStart + 30 * 60_000, { hour: '2-digit', minute: '2-digit' }),
-            })
-          : t('home.proteinLate'),
-      ),
-    );
+  const pb = proteinBarCard();
+  if (pb) out.push(pb);
   if (cfg.checkinAm.on && !rec.mood && hm >= cfg.checkinAm.time && hm < '18:00')
     out.push(card('', 'data-go="checkin/morning"', 'heart', t('home.checkinAm'), t('home.checkinAmSub')));
   if (cfg.checkinPm.on && !rec.energy && hm >= cfg.checkinPm.time)
@@ -96,38 +114,41 @@ function workoutCard() {
 }
 
 /** @returns {import('../../../core/registry.js').View} */
-export default () => ({
-  tab: 'home',
-  render: () => {
-    const s = stats(),
-      set = settings(),
-      lv = level(),
-      now = new Date(),
-      a = activeWorkout();
-    const st = s.streak,
-      plan = planFor();
-    const msg = messageFor({
-      streak: st.weeks,
-      weekCount: st.thisWeek,
-      goal: st.goal,
-      daysSinceWorkout: s.daysSinceWorkout,
-      workedOutToday: s.workedOutToday,
-      todayPlan: plan ? planName(plan) : undefined,
-      hour: now.getHours(),
-      totalWorkouts: s.totalWorkouts,
-    });
-    const mood = moodFor({
-      daysSinceWorkout: s.daysSinceWorkout,
-      workedOutToday: s.workedOutToday,
-      prToday: s.prToday,
-    });
-    const left = Math.max(0, st.goal - st.thisWeek);
-    const prevMonth = monthKey(addDays(new Date(now.getFullYear(), now.getMonth(), 1), -1));
-    const showRecap =
-      now.getDate() <= 7 &&
-      sessions().some((x) => monthKey(new Date(x.endedAt)) === prevMonth) &&
-      kv('recapSeen', '') !== prevMonth;
-    return html`<div class="content home">
+export default () => {
+  /** @type {number|undefined} */
+  let timer;
+  return {
+    tab: 'home',
+    render: () => {
+      const s = stats(),
+        set = settings(),
+        lv = level(),
+        now = new Date(),
+        a = activeWorkout();
+      const st = s.streak,
+        plan = planFor();
+      const msg = messageFor({
+        streak: st.weeks,
+        weekCount: st.thisWeek,
+        goal: st.goal,
+        daysSinceWorkout: s.daysSinceWorkout,
+        workedOutToday: s.workedOutToday,
+        todayPlan: plan ? planName(plan) : undefined,
+        hour: now.getHours(),
+        totalWorkouts: s.totalWorkouts,
+      });
+      const mood = moodFor({
+        daysSinceWorkout: s.daysSinceWorkout,
+        workedOutToday: s.workedOutToday,
+        prToday: s.prToday,
+      });
+      const left = Math.max(0, st.goal - st.thisWeek);
+      const prevMonth = monthKey(addDays(new Date(now.getFullYear(), now.getMonth(), 1), -1));
+      const showRecap =
+        now.getDate() <= 7 &&
+        sessions().some((x) => monthKey(new Date(x.endedAt)) === prevMonth) &&
+        kv('recapSeen', '') !== prevMonth;
+      return html`<div class="content home">
 <div class="row between"><div><div class="muted small b">${fmtDate(now, { weekday: 'long', day: 'numeric', month: 'long' })}</div>
 <h1 class="h1 mt2">${t(greetKey(now.getHours()))}${set.userName ? `, ${set.userName}` : ''}</h1></div>
 <button class="iconbtn" data-go="profile/reminders" aria-label="${t('profile.reminders')}">${ic('bell', 21)}${set.reminders.enabled ? '' : raw('<i class="nub" aria-hidden="true"></i>')}</button></div>
@@ -162,24 +183,45 @@ ${
     : ''
 }
 </div>`;
-  },
-  actions: {
-    start: (el) => {
-      startWorkout(el.dataset.id ?? '');
-      emit('nav', { path: 'workout' });
-      return false;
     },
-    recap: (el) => {
-      setKv('recapSeen', el.dataset.m);
-      emit('nav', { path: `recap/${el.dataset.m}` });
-      return false;
+    actions: {
+      start: (el) => {
+        startWorkout(el.dataset.id ?? '');
+        emit('nav', { path: 'workout' });
+        return false;
+      },
+      recap: (el) => {
+        setKv('recapSeen', el.dataset.m);
+        emit('nav', { path: `recap/${el.dataset.m}` });
+        return false;
+      },
+      tuck: () => {
+        goodnight();
+        emit('nav', { path: 'goodnight' });
+        return false;
+      },
+      install: () => installApp(),
+      noInstall: () => void setKv('installDismissed', true),
+      proteinYes: () => {
+        proteinYes(); // celebration + push "protein-done" via the bus
+        closeNotifications(['protein']);
+        emit('nav', { path: BREAKFAST_LOGGER }); // log what she ate (optional)
+        return false;
+      },
+      proteinSkip: () => {
+        proteinSkip(); // push "protein-skipped": follow-ups stop; no celebration, no quest
+        closeNotifications(['protein']);
+      },
     },
-    tuck: () => {
-      goodnight();
-      emit('nav', { path: 'goodnight' });
-      return false;
+    mount: (el) => {
+      let mode = barNow()?.mode ?? '';
+      timer = window.setInterval(() => {
+        const b = barNow();
+        if ((b?.mode ?? '') !== mode) return void ((mode = b?.mode ?? ''), emit('ui:refresh'));
+        const n = b?.mode === 'running' ? el.querySelector('.pbar .ptime') : null;
+        if (n && n.textContent !== b?.time) n.textContent = b?.time ?? '';
+      }, 1000);
     },
-    install: () => installApp(),
-    noInstall: () => void setKv('installDismissed', true),
-  },
-});
+    unmount: () => clearInterval(timer),
+  };
+};

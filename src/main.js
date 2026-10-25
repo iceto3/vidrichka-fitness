@@ -19,6 +19,7 @@ import { startCelebrations, startDaily, startMotivation } from './features/index
 import { seedPlans } from './features/workouts/api.js';
 import { otter } from './features/mascot/api.js';
 import { stats } from './features/motivation/api.js';
+import { pushUrl } from './features/daily/push-config.js';
 import './features/profile/install.js'; // catch beforeinstallprompt early
 
 const $id = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -74,24 +75,34 @@ function onboarding() {
   });
 }
 
-/** "What's new in 1.1" — shown once to people who used an earlier version. */
+/** "What's new in 1.2" — shown once to people who used an earlier version. */
 function whatsNew() {
   if (kv('seenWhatsNew', '') === WHATS_NEW) return;
   setKv('seenWhatsNew', WHATS_NEW);
-  const items = /** @type {const} */ ([
-    ['sun', 'whatsNew.morning'],
-    ['drop', 'whatsNew.water'],
-    ['heart', 'whatsNew.checkins'],
-    ['moon', 'whatsNew.goodnight'],
-    ['gift', 'whatsNew.celebrations'],
+  const push = !!pushUrl(); // push items only once the server is deployed
+  const items = /** @type {[string, string][]} */ ([
+    ...(push
+      ? [
+          ['bell', 'whatsNew.push'],
+          ['sun', 'whatsNew.pushIos'],
+          ['check', 'whatsNew.pushStop'],
+        ]
+      : []),
+    ['clock', 'whatsNew.proteinBar'],
+    ['food', 'whatsNew.breakfast'],
+    ['drop', 'whatsNew.micro'],
   ]);
   openSheet({
     kind: 'dialog',
     render:
       () => html`<div class="center">${otter({ size: 110, pose: 'cheer' })}<h1 class="h2 mt8">${t('whatsNew.title', { v: WHATS_NEW })}</h1></div>
 <div class="col gap10 mt12 whatsnew">${items.map(([i, k]) => html`<div class="row gap10"><span class="sq acc">${ic(i, 18, 2.3)}</span><span class="f1 b small">${t(k)}</span></div>`)}</div>
-<p class="muted xs b mt12">${t('whatsNew.times')}</p>
-<div class="row gap10 mt12"><button class="btn sec f1" data-act="times">${t('whatsNew.setTimes')}</button><button class="btn f1" data-close>${t('whatsNew.ok')}</button></div>`,
+${
+  push
+    ? html`<p class="muted xs b mt12">${t('whatsNew.pushHow')}</p>
+<div class="row gap10 mt12"><button class="btn sec f1" data-act="times">${t('whatsNew.turnOn')}</button><button class="btn f1" data-close>${t('whatsNew.ok')}</button></div>`
+    : html`<button class="btn w100 mt16" data-close>${t('whatsNew.ok')}</button>`
+}`,
     actions: { times: () => (emit('nav', { path: 'profile/reminders' }), false) },
   });
 }

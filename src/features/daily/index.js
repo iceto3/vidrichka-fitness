@@ -2,7 +2,8 @@
  * Daily rhythm feature: good-morning page with the protein countdown, water/check-in
  * reminders, goodnight ritual and the Progress › Sleep tab. Registers routes, the
  * "protein within 30 min" quest and the sleep sub-tab; `startDaily()` wires prompts,
- * evening-use tracking (bedtime estimate) and messages from the service worker.
+ * evening-use tracking (bedtime estimate), messages from the service worker and (1.2)
+ * the Web Push client.
  * @module features/daily
  */
 import { register } from '../../core/registry.js';
@@ -29,16 +30,18 @@ register('quests', {
 
 /** Start the in-app side of the daily rhythm (after the store is loaded). */
 export async function startDaily() {
-  const [api, notify, { prompt }] = await Promise.all([
+  const [api, notify, { prompt }, push] = await Promise.all([
     import('./api.js'),
     import('./notify.js'),
     import('./prompt.js'),
+    import('./push.js'),
   ]);
   addEventListener('pointerdown', () => api.touch(), { passive: true });
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'hidden') return api.touch();
     await notify.reloadFromSw();
     api.catchUpProtein();
+    push.flushPush().catch(() => {});
   });
   navigator.serviceWorker?.addEventListener('message', async (e) => {
     if (e.data?.type === 'open') emit('nav', { path: e.data.path });
@@ -59,5 +62,7 @@ export async function startDaily() {
       ('daily' in p || 'lang' in p || 'userName' in p) && notify.syncDaily().catch(() => {}),
   );
   api.catchUpProtein();
+  // Not awaited: it waits for the service worker; pushOn() alone already decides local planning.
+  push.startPush().catch((e) => console.warn('[push]', e));
   notify.syncDaily().catch(() => {});
 }

@@ -312,3 +312,189 @@
   height: 14px;
   margin: -7px 0 0 -7px;
 }
+
+/* 1.2 micro animations: own click-through layer, never part of the page DOM */
+#micro {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 65; /* above sheets, below the celebration stage */
+  overflow: hidden;
+}
+.micro {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  will-change: transform, opacity;
+  animation: mfade 0.9s ease-out forwards;
+}
+@keyframes mfade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* water */
+.micro.water {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  margin-top: -44px;
+}
+.mglass {
+  position: relative;
+  width: 24px;
+  height: 30px;
+  border: 2.5px solid #2f80ed;
+  border-top: 0;
+  border-radius: 0 0 7px 7px;
+  background: #eef6ff;
+  overflow: visible;
+}
+.mfill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40%;
+  background: #7db8f5;
+  border-radius: 0 0 4px 4px;
+  animation: mfill 0.6s 0.25s ease-out forwards;
+}
+.mdrop {
+  position: absolute;
+  left: 50%;
+  top: -20px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  background: #2f80ed;
+  border-radius: 0 50% 50% 50%;
+  transform: rotate(45deg);
+  animation: mdrop 0.32s ease-in forwards;
+}
+.mripple {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: 18px;
+  height: 6px;
+  margin-left: -9px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  opacity: 0;
+  animation: mripple 0.5s 0.3s ease-out;
+}
+.micro .motter {
+  animation: msip 0.8s ease-in-out;
+  transform-origin: 50% 100%;
+}
+@keyframes mdrop {
+  to {
+    top: 14px;
+    opacity: 0.4;
+  }
+}
+@keyframes mfill {
+  to {
+    height: 70%;
+  }
+}
+@keyframes mripple {
+  0% {
+    opacity: 1;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+@keyframes msip {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  40% {
+    transform: rotate(-6deg) translateY(-3px);
+  }
+}
+/* food */
+.micro.food {
+  width: 1px;
+  height: 1px;
+}
+.mpop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 30px;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  animation: mpop 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) forwards;
+}
+.msp {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  opacity: 0;
+  animation: msp 0.7s 0.1s ease-out forwards;
+}
+.msp.s0 {
+  --dx: -30px;
+  --dy: -24px;
+}
+.msp.s1 {
+  --dx: 28px;
+  --dy: -26px;
+}
+.msp.s2 {
+  --dx: -24px;
+  --dy: 20px;
+}
+.msp.s3 {
+  --dx: 30px;
+  --dy: 16px;
+}
+@keyframes mpop {
+  0% {
+    transform: translate(-50%, 10%) scale(0.2);
+  }
+  60% {
+    transform: translate(-50%, -80%) scale(1.25);
+  }
+  100% {
+    transform: translate(-50%, -60%) scale(1);
+  }
+}
+@keyframes msp {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1) rotate(90deg);
+  }
+}
+/* reduced motion: a static badge that fades (no falling, popping or sparkles) */
+.micro.still,
+.micro.still * {
+  animation: none !important;
+}
+.micro.still .mdrop,
+.micro.still .mripple,
+.micro.still .msp {
+  display: none;
+}
+.micro.still .mfill {
+  height: 70%;
+}
+.micro.still .mpop {
+  transform: translate(-50%, -60%);
+}

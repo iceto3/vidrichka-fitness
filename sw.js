@@ -9,6 +9,10 @@
  *   periodic sync shows the due ones, reading/writing the app's IndexedDB `days` store
  *   directly (never upgrading it). Notification actions work without opening the app:
  *   "Yes, I ate" records protein, "+1 glass" logs water. Taps open the right screen.
+ * - Web Push (1.2): the push server sends each reminder as a small JSON message, shown
+ *   here like a local one. Notification taps and actions also report the event to the
+ *   server ("awake", "protein-done", "water-logged") so it stops the follow-ups; when
+ *   offline they are queued in the config cache and sent by the app on its next open.
  */
 const VERSION = 'dev';
 const PRECACHE = ['./', 'index.html', 'manifest.json'];
@@ -33,6 +37,7 @@ self.addEventListener('message', (e) => {
   if (e.data?.type === 'daily') e.waitUntil(saveConfig({ daily: e.data.daily }));
   if (e.data?.type === 'daily-show') e.waitUntil(Promise.all(e.data.slots.map((/** @type {any} */ s) => showSlot(s))));
   if (e.data?.type === 'daily-close') e.waitUntil(closeTags(e.data.tags));
+  if (e.data?.type === 'push') e.waitUntil(saveConfig({ push: e.data.push }));
 });
 
 self.addEventListener('fetch', (e) => {
@@ -245,6 +250,80 @@ async function addWater() {
   });
 }
 
+// --- Web Push (1.2) -----------------------------------------------------------------
+
+const readConfig = async () => (await (await caches.open(CONFIG)).match('config'))?.json().catch(() => null);
+
+/**
+ * Report a notification action to the push server; queue it if offline (the app
+ * flushes the queue on its next open). @param {string} type
+ */
+async function postEvent(type) {
+  const p = (await readConfig())?.push;
+  if (!p?.url || !p.id) return;
+  const e = { type, at: Date.now() };
+  try {
+    const r = await fetch(`${p.url}/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ id: p.id, ...e }),
+    });
+    if (r.status >= 500) throw new Error(String(r.status));
+  } catch {
+    const c = await caches.open(CONFIG);
+    const q = (await (await c.match('push-queue'))?.json().catch(() => [])) || [];
+    await c.put('push-queue', new Response(JSON.stringify([...q, e].slice(-30))));
+  }
+}
+
+// A push message is one reminder slot ({title, body, tag, route, silent, loud, actions,
+// day, kind, group, at}). It is always shown (browsers require it) and marked as shown
+// in the day's record, like a locally planned one.
+self.addEventListener('push', (e) => {
+  /** @type {any} */
+  let m = {};
+  try {
+    m = e.data ? e.data.json() : {};
+  } catch {
+    m = { body: e.data?.text() };
+  }
+  const s = {
+    title: m.title || 'Vidrichka',
+    body: m.body || '',
+    group: m.group || 'push',
+    kind: m.kind || 'push',
+    day: m.day || today(),
+    route: typeof m.route === 'string' ? m.route : '',
+    silent: !!m.silent,
+    loud: !!m.loud,
+    at: m.at || Date.now(),
+    actions: Array.isArray(m.actions) ? m.actions.slice(0, 2) : [],
+  };
+  e.waitUntil(
+    Promise.all([
+      showSlot(s),
+      update('days', [s.day], (r) => ({ ...r, shown: { ...r.shown, [s.kind]: Date.now() } })).catch(() => {}),
+    ]),
+  );
+});
+
+// The browser renewed the subscription: register the new one with the same device id.
+self.addEventListener('pushsubscriptionchange', (e) => {
+  e.waitUntil(
+    (async () => {
+      const p = (await readConfig())?.push;
+      if (!p?.url || !p.id || !p.key) return;
+      const key = Uint8Array.from(atob(p.key.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+      const sub = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      await fetch(`${p.url}/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ id: p.id, subscription: sub.toJSON(), ...p.reg }),
+      });
+    })().catch(() => {}),
+  );
+});
+
 self.addEventListener(
   'periodicsync',
   (e) => e.tag === 'reminder' && e.waitUntil(Promise.allSettled([maybeRemind(), runDaily()])),
@@ -256,17 +335,24 @@ self.addEventListener('notificationclick', (e) => {
   n.close();
   e.waitUntil(
     (async () => {
-      if (e.action === 'water-add') return addWater();
+      let route = d.route;
+      if (e.action === 'water-add') return Promise.all([addWater(), postEvent('water-logged')]);
       if (e.action === 'protein-yes') {
-        await update('days', [d.day], (r) => (r.proteinAt ? r : { ...r, proteinAt: Date.now() }));
-        return closeTags(['vf-protein']);
-      }
-      if (d.group === 'morning') {
+        await Promise.all([
+          update('days', [d.day], (r) => (r.proteinAt ? r : { ...r, proteinAt: Date.now() })),
+          postEvent('protein-done'),
+        ]);
+        await closeTags(['vf-protein']);
+        route = 'food/add/breakfast?protein'; // then log what she ate (Food › Breakfast)
+      } else if (d.group === 'morning') {
         // Tapped the 7:30 (or 8:15) one: she is up – the 8:15 alarm must not fire.
-        await update('days', [d.day], (r) => ({ ...r, ack: r.ack || Date.now() })).catch(() => {});
+        await Promise.all([
+          update('days', [d.day], (r) => ({ ...r, ack: r.ack || Date.now() })).catch(() => {}),
+          postEvent('awake'),
+        ]);
         await closeTags(['vf-morning']);
       }
-      const url = d.route ? `./#/${d.route}` : n.tag === 'reminder' ? './#/workouts' : './';
+      const url = route ? `./#/${route}` : n.tag === 'reminder' ? './#/workouts' : './';
       const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       if (wins[0]) {
         wins[0].postMessage({ type: 'open', path: url.replace('./#/', '') });

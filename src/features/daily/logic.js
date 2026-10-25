@@ -3,7 +3,7 @@
  * which reminders fire when, the protein countdown, sleep hours and the bedtime estimate.
  *
  * One record per day (`days` store, id = day key) holds:
- *   wake, ack (morning notification tapped), proteinStart, proteinAt, mood, sleepQ, energy
+ *   wake, ack (morning notification tapped), proteinStart, proteinAt, proteinSkip, mood, sleepQ, energy
  *   (that day), and bed, bedEst, lastUse (that day's EVENING, until 04:00 next morning),
  *   plus `shown: {kind: ts}` so every reminder is shown at most once.
  * @module features/daily/logic
@@ -95,14 +95,44 @@ export const proteinOnTime = (rec) =>
 /**
  * Protein countdown state.
  * @param {any} rec Today's record. @param {number} now
- * @returns {{state: 'idle'|'running'|'late'|'done', left: number, onTime?: boolean}} left in ms
+ * @returns {{state: 'idle'|'running'|'overdue'|'done'|'skipped', left: number, onTime?: boolean}} left in ms
  */
 export function proteinState(rec, now) {
   if (!rec?.proteinStart) return { state: 'idle', left: 0 };
   if (rec.proteinAt) return { state: 'done', left: 0, onTime: proteinOnTime(rec) };
+  if (rec.proteinSkip) return { state: 'skipped', left: 0 };
   // Clamped: a clock that moved back (time sync, time-zone change) must not show 30:01.
   const left = Math.min(PROTEIN_WINDOW * MIN, rec.proteinStart + PROTEIN_WINDOW * MIN - now);
-  return left > 0 ? { state: 'running', left } : { state: 'late', left: 0 };
+  return left > 0 ? { state: 'running', left } : { state: 'overdue', left: 0 };
+}
+
+/** Where "Ate it" / "Yes, I ate" leads: the Food logger on today's breakfast, with a hint (sw.js uses the same route). */
+export const BREAKFAST_LOGGER = 'food/add/breakfast?protein';
+
+/** How long the Home bar keeps a small "done"/"skipped" state after she answers. */
+export const PROTEIN_ANSWERED_SHOW = 10 * MIN;
+
+/** Remaining time as mm:ss (seconds rounded up, so it reads 30:00 → 00:01 → 00:00). @param {number} ms */
+export const mmss = (ms) => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+};
+
+/**
+ * The Home protein bar: running (ticking), overdue (dark red, 00:00 until she answers —
+ * survives reloads because it is computed from the stored start), then a short
+ * done/skipped state; null when there is nothing to show.
+ * @param {any} rec Today's record. @param {number} now
+ * @returns {{mode: 'running'|'overdue'|'done'|'skipped', time: string} | null}
+ */
+export function proteinBar(rec, now) {
+  const ps = proteinState(rec, now);
+  if (ps.state === 'idle') return null;
+  if (ps.state === 'done' || ps.state === 'skipped') {
+    const at = ps.state === 'done' ? rec.proteinAt : rec.proteinSkip;
+    return now - at < PROTEIN_ANSWERED_SHOW && now >= at ? { mode: ps.state, time: '' } : null;
+  }
+  return { mode: ps.state, time: mmss(ps.left) };
 }
 
 /**
@@ -210,7 +240,7 @@ export function planDay(day, cfg, rec = {}) {
         route: 'morning',
         actions: ['protein-yes'],
         needs: ['proteinStart'],
-        skipIf: ['proteinAt'],
+        skipIf: ['proteinAt', 'proteinSkip'],
       }),
     );
   const water = cfg.water.filter((w) => w.on).map((w) => at(day, w.time));

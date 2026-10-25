@@ -344,3 +344,83 @@
 .whatsnew .sq {
   flex: none;
 }
+
+/* home › protein bar (1.2): live countdown, then dark red with blinking 00:00 */
+.pbar {
+  background: linear-gradient(120deg, #ffe2b8, #ffd0a1);
+  color: #5a2e0e;
+}
+.pbar .phead {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+}
+.pbar .sq {
+  background: rgba(255, 255, 255, 0.55);
+  color: inherit;
+}
+.pbar .ptime {
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.pbar .pyes {
+  background: #5a2e0e;
+  box-shadow: none;
+}
+.pbar .pskip {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: transparent;
+  color: inherit;
+  box-shadow: none;
+}
+.pbar.overdue {
+  background: #7a1414;
+  color: #fff;
+}
+.pbar.overdue .sq {
+  background: rgba(255, 255, 255, 0.16);
+}
+.pbar.overdue .ptime {
+  color: #ffd4d4;
+  animation: pblink 1s steps(1, end) infinite;
+}
+.pbar.overdue .pyes {
+  background: #fff;
+  color: #7a1414;
+}
+.pbar.overdue .pskip {
+  background: rgba(255, 255, 255, 0.14);
+}
+.pbar.small {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+}
+.pbar.small .sq {
+  width: 32px;
+  height: 32px;
+}
+.pbar.done {
+  background: var(--ok-soft);
+  color: var(--ok-t);
+}
+.pbar.skipped {
+  background: var(--soft);
+  color: var(--muted);
+}
+@keyframes pblink {
+  50% {
+    opacity: 0.15;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No blinking: the zeros are shown boxed instead. */
+  .pbar.overdue .ptime {
+    animation: none !important;
+    padding: 0 5px;
+    border-radius: 6px;
+    background: #fff;
+    color: #7a1414;
+  }
+}
