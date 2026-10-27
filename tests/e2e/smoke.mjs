@@ -337,6 +337,7 @@ async function run(name, browser, P) {
   await voice13(page, h);
   await v131(page, h);
   await v132(page, h);
+  await v133(page, h, name);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -1521,7 +1522,7 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
  * @param {import('playwright-core').Page} page
  * @param {any} h helpers from run()
  */
-async function v132(page, { go, settle, shot, clearCel, layer }) {
+async function v132(page, { go, settle, clearCel, layer }) {
   await clearCel();
   await go('profile');
   await page.locator('.lang [data-v="bg"]').click();
@@ -1543,17 +1544,322 @@ async function v132(page, { go, settle, shot, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.3\.2/);
-  assert.match(txt, /Отмени/, 'the pill item');
-  assert.match(txt, /преименуваш/, 'the rename item');
-  assert.doesNotMatch(txt, /What's new|Undo|Rename/, 'no English');
-  assert.equal(await layer.locator('.whatsnew > div').count(), 3, 'only the 1.3.2 items');
-  await page.waitForTimeout(700);
-  await shot('whats-new-132');
+  assert.match(txt, /Какво ново в 1\.3\.3/);
+  assert.match(txt, /Отмени/, 'the 1.3.2 pill item');
+  assert.match(txt, /преименуваш/, 'the 1.3.2 rename item');
+  assert.match(txt, /Запиши/, 'the 1.3.3 recording item');
+  assert.doesNotMatch(txt, /What's new|Undo|Rename|Record/, 'no English');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 5, 'the 1.3.3 and 1.3.2 items');
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
   await page.locator('.lang [data-v="en"]').click();
   await settle();
-  console.log("  ✔ 1.3.2 What's new in Bulgarian after an update from 1.3.1");
+  console.log("  ✔ What's new in Bulgarian after an update from 1.3.1 (1.3.3 + 1.3.2 items)");
+}
+
+/**
+ * 1.3.3 (in Bulgarian): in-app recording („Запиши“, mocked MediaRecorder + microphone and a
+ * mocked /transcribe) with timer, level meter, „Разпознаване…“, the text in the box for
+ * review, the 30 s auto-stop and the errors; Android Chrome keeps „Диктувай“. Then the
+ * tester fixes: the Undo pill does not survive a tab switch, gendered combination names and
+ * the shorter over-100 text; and the 1.3.3 What's new.
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ * @param {string} name profile
+ */
+async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
+  const URL = 'https://voice.test';
+  const cors = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json',
+  };
+  /** @type {any[]} */
+  const stt = [];
+  let sttReply = /** @type {any} */ ({ text: 'За обяд изядох 150 г сьомга с ориз и салата от домати.', duration: 4.2 });
+  let sttDelay = 900;
+  await page.route(`${URL}/**`, async (route) => {
+    const req = route.request();
+    const u = new globalThis.URL(req.url());
+    if (u.pathname === '/health')
+      return route.fulfill({
+        headers: cors,
+        body: JSON.stringify({ ok: true, configured: true, transcribe: true, version: 'mock' }),
+      });
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    if (u.pathname === '/transcribe') {
+      stt.push({
+        lang: u.searchParams.get('lang'),
+        ct: req.headers()['content-type'],
+        size: req.postDataBuffer()?.length,
+      });
+      await new Promise((r) => setTimeout(r, sttDelay));
+      if (sttReply === 'abort') return route.abort();
+      return route.fulfill({ headers: cors, body: JSON.stringify(sttReply) });
+    }
+    const b = JSON.parse(req.postData() ?? '{}');
+    const lunch = /обяд/.test(b.text);
+    const e = (/** @type {any} */ o) => ({
+      type: 'food',
+      meal: lunch ? 'lunch' : 'breakfast',
+      meal_named: lunch,
+      date: b.today,
+      time: lunch ? null : b.time,
+      ...o,
+    });
+    return route.fulfill({
+      headers: cors,
+      body: JSON.stringify({
+        entries: [
+          e({ name: 'сьомга', amount: '150 г', grams: 150, kcal: 312, protein: 30, carbs: 0, fat: 21 }),
+          e({ name: 'ориз', amount: '1 порция', grams: 150, kcal: 195, protein: 4, carbs: 42, fat: 0.5 }),
+        ],
+        model: 'mock',
+      }),
+    });
+  });
+  // A fake microphone (a quiet tone, so the level meter moves) and a fake MediaRecorder.
+  await page.addInitScript(
+    (types) => {
+      const w = /** @type {any} */ (window);
+      w.__mic = { stopped: 0, opts: null, deny: false };
+      if (localStorage.getItem('e2e-no-sr')) {
+        delete w.SpeechRecognition;
+        delete w.webkitSpeechRecognition;
+      }
+      // On the prototype: WebKit may hand out a fresh navigator.mediaDevices later.
+      const md = globalThis.MediaDevices?.prototype ?? navigator.mediaDevices;
+      md.getUserMedia = async () => {
+        if (w.__mic.deny) throw new DOMException('denied', 'NotAllowedError');
+        const ac = new AudioContext();
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        gain.gain.value = 0.3;
+        const dst = ac.createMediaStreamDestination();
+        osc.connect(gain).connect(dst);
+        osc.start();
+        // Count releases (the same track objects every time, also on WebKit).
+        const tracks = dst.stream.getTracks();
+        for (const tr of tracks) {
+          const stop = tr.stop.bind(tr);
+          tr.stop = () => (w.__mic.stopped++, stop());
+        }
+        dst.stream.getTracks = () => tracks;
+        return dst.stream;
+      };
+      w.MediaRecorder = class {
+        static isTypeSupported(/** @type {string} */ t) {
+          return types.includes(t);
+        }
+        constructor(/** @type {any} */ _s, /** @type {any} */ o) {
+          w.__mic.opts = o;
+          this.mimeType = o?.mimeType ?? '';
+          this.state = 'inactive';
+        }
+        start() {
+          this.state = 'recording';
+        }
+        stop() {
+          this.state = 'inactive';
+          /** @type {any} */ (this).ondataavailable?.({
+            data: new Blob([new Uint8Array(6000)], { type: this.mimeType }),
+          });
+          setTimeout(() => /** @type {any} */ (this).onstop?.(), 0);
+        }
+      };
+    },
+    name === 'iphone' ? ['audio/mp4'] : ['audio/webm;codecs=opus', 'audio/webm'],
+  );
+  await page.evaluate((u) => localStorage.setItem('vf-voice-url', u), URL);
+  await clearCel();
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
+  const open = async () => {
+    await page.reload();
+    await page.locator('#nav .t').first().waitFor();
+    await layer
+      .locator('.whatsnew')
+      .waitFor({ timeout: 1500 })
+      .then(() => layer.locator('[data-close]').first().click())
+      .catch(() => {});
+    await go('home');
+    await clearCel();
+    await page.locator('#page [data-act="voice"]').click({ timeout: 8000 });
+    await layer.locator('.voice').waitFor();
+  };
+  const recBtn = layer.locator('[data-act="record"]');
+  /** Wait for the recording state (fails with the sheet's error text, if any). */
+  const recording = async () => {
+    await layer.locator('.vrec, .verr').first().waitFor();
+    if (!(await layer.locator('.vrec').count()))
+      assert.fail(`not recording: ${await layer.locator('.verr').innerText()}`);
+  };
+
+  if (name === 'android') {
+    // Android Chrome keeps the browser's own speech recognition
+    await open();
+    assert.equal(await layer.locator('[data-act="listen"]').count(), 1, 'Диктувай on Android Chrome');
+    assert.equal(await recBtn.count(), 0, 'no recorder there');
+    await page.keyboard.press('Escape');
+    await settle();
+    // An Android browser without working speech recognition gets the recorder
+    await page.evaluate(() => localStorage.setItem('e2e-no-sr', '1'));
+  }
+  await open();
+  assert.equal(await layer.locator('[data-act="listen"]').count(), 0, 'no browser dictation button');
+  assert.equal((await recBtn.innerText()).trim(), 'Запиши');
+  assert.match(await layer.locator('.voice').innerText(), /Докосни „Запиши“/);
+  await recBtn.click();
+  await recording();
+  assert.equal((await recBtn.innerText()).trim(), 'Спри');
+  assert.equal(await recBtn.getAttribute('aria-pressed'), 'true');
+  const opts = await page.evaluate(() => /** @type {any} */ (window).__mic.opts);
+  assert.equal(opts.audioBitsPerSecond, 32000, '32 kbps');
+  assert.equal(opts.mimeType, name === 'iphone' ? 'audio/mp4' : 'audio/webm;codecs=opus', 'mp4 first, else webm/opus');
+  await page.waitForTimeout(2300);
+  assert.match(await layer.locator('.vtimer').innerText(), /^0:0[1-9] \/ 0:30$/, 'timer runs');
+  assert.ok(await layer.locator('.vlevel[role="meter"]').count(), 'level meter');
+  await shot('voice-recording');
+  await recBtn.click();
+  await layer.locator('[data-act="record"]', { hasText: 'Разпознаване…' }).waitFor({ timeout: 3000 });
+  assert.ok(await recBtn.isDisabled(), 'busy while recognising');
+  assert.ok((await page.evaluate(() => /** @type {any} */ (window).__mic.stopped)) >= 1, 'mic released at once');
+  await shot('voice-recognising');
+  await layer.locator('[data-act="record"]', { hasText: 'Запиши' }).waitFor({ timeout: 5000 });
+  assert.equal(
+    await layer.locator('#vtext').inputValue(),
+    'За обяд изядох 150 г сьомга с ориз и салата от домати.',
+    'the text lands in the box for review',
+  );
+  assert.deepEqual(stt.at(-1), {
+    lang: 'bg',
+    ct: name === 'iphone' ? 'audio/mp4' : 'audio/webm',
+    size: name === 'iphone' ? undefined : 6000, // WebKit does not expose a Blob body to the route
+  });
+  assert.ok(!(await layer.locator('[data-act="parse"]').isDisabled()), '„Разчети“ is ready');
+  await page.waitForTimeout(300);
+  await shot('voice-transcribed');
+  // „Разчети“ → saved into lunch as before
+  await layer.locator('[data-act="parse"]').click();
+  await layer.locator('.voice').waitFor({ state: 'detached', timeout: 8000 });
+  await page.locator('.toast', { hasText: 'Добавено в обяд' }).waitFor({ timeout: 4000 });
+  console.log('  ✔ 1.3.3 Запиши: timer, level, Разпознаване…, mic released, text for review → Разчети');
+
+  // 30 s auto-stop
+  await open();
+  sttDelay = 50;
+  await recBtn.click();
+  await recording();
+  await page.clock.runFor(31_000);
+  await layer.locator('.vrec').waitFor({ state: 'detached', timeout: 5000 });
+  await layer.locator('[data-act="record"]', { hasText: 'Запиши' }).waitFor({ timeout: 5000 });
+  assert.match(await layer.locator('#vtext').inputValue(), /сьомга/, 'stopped by itself at 30 s and recognised');
+  // Errors: microphone denied, nothing heard, no connection
+  await layer.locator('#vtext').fill('');
+  await page.evaluate(() => /** @type {any} */ (window.__mic.deny = true));
+  await recBtn.click();
+  await layer.locator('.verr').waitFor();
+  assert.match(await layer.locator('.verr').innerText(), /Нямам достъп до микрофона/);
+  await shot('voice-mic-denied');
+  await page.evaluate(() => /** @type {any} */ (window.__mic.deny = false));
+  sttReply = { text: '', duration: 1 };
+  await recBtn.click();
+  await recording();
+  await recBtn.click();
+  await layer.locator('.verr', { hasText: 'Не чух нищо' }).waitFor({ timeout: 5000 });
+  sttReply = 'abort';
+  await recBtn.click();
+  await recording();
+  await recBtn.click();
+  await layer.locator('.verr', { hasText: 'Няма връзка' }).waitFor({ timeout: 5000 });
+  assert.equal(await layer.locator('#vtext').inputValue(), '', 'nothing put in the box on errors');
+  await page.keyboard.press('Escape');
+  await settle();
+  console.log('  ✔ 1.3.3 auto-stop at 30 s; errors: mic denied, nothing heard, offline');
+  await page.unroute(`${URL}/**`);
+  await page.evaluate(() => (localStorage.removeItem('vf-voice-url'), localStorage.removeItem('e2e-no-sr')));
+
+  // (a) The Undo pill does not follow a tab switch and does not come back on Food
+  await go('food');
+  await page.locator('.meal[data-m="lunch"]').click();
+  await layer.locator('.mealitems').waitFor();
+  await layer.locator('.lrow', { hasText: 'ориз' }).first().locator('[data-act="del"]').click();
+  await page.locator('.undopill').waitFor();
+  await page.keyboard.press('Escape');
+  await page.locator('#nav [data-go="home"]').click(); // straight away (within a second)
+  await page.waitForTimeout(250);
+  assert.equal(await page.locator('.undopill').count(), 0, 'gone after the tab switch');
+  await page.locator('#nav [data-go="food"]').click();
+  await page.waitForTimeout(600);
+  assert.equal(await page.locator('.undopill').count(), 0, 'not back on Food');
+  console.log('  ✔ 1.3.3 Undo pill gone on tab switch, not back on Food');
+
+  // (b) Suggested combination names agree with the meal
+  for (const [m, want] of [
+    ['lunch', 'Обичайният ти обяд'],
+    ['breakfast', 'Обичайната ти закуска'],
+  ]) {
+    if (!(await page.locator(`.meal[data-m="${m}"] .savecombo, .meal[data-m="${m}"]`).count())) continue;
+    await page.locator(`.meal[data-m="${m}"]`).click();
+    await layer.locator('.mealitems').waitFor();
+    if (!(await layer.locator('.savecombo').count())) {
+      await page.keyboard.press('Escape');
+      continue;
+    }
+    await layer.locator('.savecombo').click();
+    await layer.locator('#mealname').waitFor();
+    assert.equal(await layer.locator('#mealname').inputValue(), want);
+    if (m === 'lunch') await shot('combo-name-lunch');
+    for (let i = 0; i < 3 && (await layer.locator('.panel').count()); i++) {
+      await page.keyboard.press('Escape');
+      await settle();
+    }
+  }
+  // (c) Shorter over-100 text
+  await go('food/add/dinner');
+  await page.locator('[data-act="manual"]').first().click();
+  await layer.locator('#mname').fill('Тест');
+  await layer.locator('#mkcal').fill('100');
+  await layer.locator('#mp').fill('101');
+  await layer.locator('[data-act="save"]').click();
+  await settle();
+  assert.equal((await layer.locator('#e_p').innerText()).trim(), 'Най-много 100 г на 100 г продукт.');
+  for (let i = 0; i < 3 && (await layer.locator('.panel').count()); i++) {
+    await page.keyboard.press('Escape');
+    await settle();
+  }
+  console.log('  ✔ 1.3.3 combination names by gender, „Най-много 100 г на 100 г продукт.“');
+
+  // What's new in 1.3.3 after an update from 1.3.2 (voice deployed → the recording item)
+  await page.evaluate(
+    () =>
+      new Promise((res, rej) => {
+        const r = indexedDB.open('vidrichka-fitness');
+        r.onerror = () => rej(r.error);
+        r.onsuccess = () => {
+          const tx = r.result.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put({ id: 'seenWhatsNew', value: '1.3.2' });
+          tx.oncomplete = () => (r.result.close(), res(null));
+        };
+      }),
+  );
+  await page.reload();
+  await page.locator('#nav .t').first().waitFor();
+  await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
+  const txt = await layer.innerText();
+  assert.match(txt, /Какво ново в 1\.3\.3/);
+  assert.match(txt, /Запиши/);
+  assert.match(txt, /Обичайният ти обяд/);
+  assert.equal(await layer.locator('.whatsnew > div').count(), 2, 'only the 1.3.3 items');
+  await page.waitForTimeout(700);
+  await shot('whats-new-133');
+  await layer.locator('[data-close]').first().click();
+  await settle();
+  await go('profile');
+  await page.locator('.lang [data-v="en"]').click();
+  await settle();
+  void rows;
+  console.log("  ✔ 1.3.3 What's new in Bulgarian");
 }

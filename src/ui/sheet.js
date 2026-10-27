@@ -173,14 +173,18 @@ function repositionPills() {
  * @param {string} text What was deleted (read by screen readers, shown as a tooltip).
  * @param {() => void} onUndo
  * @param {number} [ms]
+ * @param {{follow?: boolean}} [o] `follow`: the same tap also navigates (delete in an editor →
+ *   back to the list), so the pill moves to that one next page. Otherwise (1.3.3) the pill
+ *   belongs to its page and leaving it removes the pill for good.
  * @returns {HTMLElement}
  */
-export function snack(text, onUndo, ms = SNACK_MS) {
+export function snack(text, onUndo, ms = SNACK_MS, o = {}) {
   document.querySelectorAll('.undopill').forEach((old) => old.remove());
   const el = document.createElement('button');
   el.type = 'button';
   el.className = 'undopill';
   el.dataset.born = String(Date.now());
+  if (o.follow) el.dataset.follow = '1';
   el.title = text;
   el.setAttribute('aria-label', `${text} – ${t('undo.undo')}`);
   el.style.setProperty('--ms', `${ms}ms`);
@@ -233,14 +237,20 @@ export function snack(text, onUndo, ms = SNACK_MS) {
 }
 
 /**
- * Remove the toasts and undo pills that belong to the page being left. One created in the
- * last moment (by the very tap that navigates, e.g. „Запиши“ in Regular meals) stays.
+ * Remove the toasts and undo pills that belong to the page being left. A toast created in
+ * the last moment (by the very tap that navigates, e.g. „Запиши“ in Regular meals) stays;
+ * an undo pill only stays when it was made to follow that one navigation (1.3.3: a pill
+ * from Food never survives a tab switch and so never shows up again on return).
  * @param {number} [fresh] Keep the ones younger than this (ms).
  */
 export const clearToasts = (fresh = 1000) =>
-  document
-    .querySelectorAll('.toast, .undopill')
-    .forEach((e) => Date.now() - Number(/** @type {HTMLElement} */ (e).dataset.born ?? 0) >= fresh && e.remove());
+  document.querySelectorAll('.toast, .undopill').forEach((n) => {
+    const e = /** @type {HTMLElement} */ (n);
+    const young = Date.now() - Number(e.dataset.born ?? 0) < fresh;
+    if (!e.classList.contains('undopill')) return void (!young && e.remove());
+    if (young && e.dataset.follow === '1') return void delete e.dataset.follow; // only one hop
+    e.remove();
+  });
 
 /**
  * Initialise the layer root and global listeners.

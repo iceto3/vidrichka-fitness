@@ -2,7 +2,8 @@
 
 A stateless Cloudflare Worker. It turns a dictated or typed sentence into food and water entries for Vidrichka Fitness with xAI and stores nothing (no D1 or KV).
 
-- `GET /health` returns `{ ok, version, configured }`.
+- `GET /health` returns `{ ok, version, configured, transcribe }`.
+- `POST /transcribe?lang=bg|en` (1.1.0) takes the recorded audio as the raw body (`Content-Type: audio/*`, e.g. `audio/mp4` from iPhone or `audio/webm;codecs=opus` from Android; at most 1 MB and 35 s). It runs Workers AI `@cf/openai/whisper-large-v3-turbo` (with `vad_filter`) and returns `{ text, duration }`.
 - `POST /parse` takes the body `{ text, today: 'YYYY-MM-DD', time: 'HH:MM', tz, lang: 'bg'|'en' }`, sent as `text/plain` JSON. It returns `{ entries, model, usage }`. Each entry is either `{type:'food', name, meal, meal_named, amount, grams, kcal, protein, carbs, fat, fiber, salt, date, time}` or `{type:'water', amount_ml, meal, meal_named, date, time}` (`fiber`/`salt` in grams for the portion, `null` if unknown; `meal_named` is true when the sentence named the meal).
 
 ## Protection
@@ -11,11 +12,12 @@ A stateless Cloudflare Worker. It turns a dictated or typed sentence into food a
 - **Methods:** only `OPTIONS`, `GET /health` and `POST /parse` are accepted. Anything else gets 404 or 405.
 - **Input:** text up to `MAX_TEXT` (500) characters and a body up to 4 KB. The xAI `max_tokens` is `MAX_TOKENS` (1200 since 1.3.1, also the hard cap), with temperature 0 and a strict JSON schema.
 - **Rate limit:** 8 requests a minute per IP with the free Workers Rate Limiting binding (`LIMITER`), plus a per-isolate fallback.
-- **Privacy:** user text is never logged. The key is only a Worker secret.
+- **Transcription:** `audio/*` only (415 otherwise), 1 MB (413), 35 s (413 `too-long`), 6 a minute per IP (`STT_LIMITER`, plus a per-isolate fallback). It uses the free Workers AI allocation (10,000 neurons a day; Whisper turbo is about 47 neurons per audio minute).
+- **Privacy:** user text is never logged. Audio is only held in memory for the request, never stored or logged. The key is only a Worker secret.
 
 ## Deploy
 
-The API token needs the account permission **Workers Scripts: Edit**.
+The API token needs the account permission **Workers Scripts: Edit** (and, for the `AI` binding, Workers AI access).
 
 ```sh
 cd voice

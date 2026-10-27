@@ -12,6 +12,12 @@ import { deleteWithUndo } from '../../../ui/undo.js';
 import { comboNameError, foodName, logSavedMeal, renameMeal, saveMeal } from '../api.js';
 import { totals } from '../logic.js';
 
+/** Meals with their own suggested name (the BG article agrees with each meal's gender). */
+const USUAL = ['breakfast', 'lunch', 'dinner', 'snack'];
+
+/** Suggested name for a combination of this meal, e.g. „Обичайният ти обяд“. @param {string} meal */
+export const usualName = (meal) => t(`food.usualMeal.${USUAL.includes(meal) ? meal : 'snack'}`);
+
 /**
  * The name field + inline error shared by the save and rename dialogs.
  * @param {string} name @param {string} err i18n key of the current error, or ''
@@ -34,7 +40,7 @@ const selectName = (el) => {
  */
 export function openSaveCombo({ rows, meal, title, body, cancel }) {
   return new Promise((resolve) => {
-    let name = t('food.usualMeal', { meal: t(`meal.${meal}`).toLowerCase() });
+    let name = usualName(meal);
     let err = '';
     let saved = /** @type {any} */ (null);
     openSheet({

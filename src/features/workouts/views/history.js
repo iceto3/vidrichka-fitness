@@ -74,7 +74,7 @@ ${(s.prs ?? []).map(
         });
         const tid = ok && deleteSession(id);
         if (!tid) return false;
-        snack(t('history.deleted'), () => restore(tid));
+        snack(t('history.deleted'), () => restore(tid), undefined, { follow: true });
         emit('nav', { path: backTo, replace: true });
         return false;
       },

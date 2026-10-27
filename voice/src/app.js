@@ -6,16 +6,21 @@
  *   POST /parse  body (JSON, sent as text/plain to skip the preflight, ≤ 4 kB):
  *                {text, today: 'YYYY-MM-DD', time: 'HH:MM', tz, lang}
  *                → 200 {entries: [...], model} | 400/413 bad input | 403 origin | 429 limit | 502/503
- *   GET  /health → {ok, version, configured}
- * Privacy: the text is forwarded to xAI and never logged or stored here.
+ *   POST /transcribe?lang=bg|en  body: the recorded audio (Content-Type audio/*, ≤ 1 MB, ≤ 35 s)
+ *                → 200 {text, duration} | 413/415/400 bad input | 403 origin | 429 limit | 502/503
+ *                (Workers AI Whisper, 6 per minute per IP)
+ *   GET  /health → {ok, version, configured, transcribe}
+ * Privacy: the text is forwarded to xAI and never logged or stored here; audio is only
+ * transcribed in memory by Workers AI and never stored or logged.
  * Cost guards: Origin check, text length cap, max_tokens cap, per-IP rate limit
  * (Workers Rate Limiting binding, plus a per-isolate fallback), one model call per request.
  * @module app
  */
 import { chatBody } from './prompt.js';
 import { Invalid, checkRequest, normalize } from './parse.js';
+import { readAudio, transcribe } from './transcribe.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 export const XAI_URL = 'https://api.x.ai/v1/chat/completions';
 const MAX_BODY = 4096;
 
@@ -26,6 +31,8 @@ const MAX_BODY = 4096;
  * @property {string} [ALLOW_LOCALHOST] "false" disables http://localhost origins
  * @property {string} [MAX_TEXT] @property {string} [MAX_TOKENS]
  * @property {{limit: (o: {key: string}) => Promise<{success: boolean}>}} [LIMITER] rate limiting binding
+ * @property {{limit: (o: {key: string}) => Promise<{success: boolean}>}} [STT_LIMITER] for /transcribe
+ * @property {{run: (model: string, input: any) => Promise<any>}} [AI] Workers AI binding (Whisper)
  */
 
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
@@ -78,12 +85,44 @@ export function isolateLimiter(perIp = 8, global = 60) {
   };
 }
 const fallback = isolateLimiter();
+const sttFallback = isolateLimiter(6, 60);
+
+/**
+ * POST /transcribe (origin already checked).
+ * @param {Request} req @param {Env} env @param {Record<string, string>} h
+ * @param {{limit?: (key: string) => boolean, sttLimit?: (key: string) => boolean}} deps
+ */
+async function handleTranscribe(req, env, h, deps) {
+  if (!env.AI) return reply(503, { error: 'not-configured' }, h);
+  const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+  const lim = deps.sttLimit ?? sttFallback;
+  const allowed = env.STT_LIMITER
+    ? (await env.STT_LIMITER.limit({ key: ip }).catch(() => ({ success: true }))).success && lim(ip)
+    : lim(ip);
+  if (!allowed) return reply(429, { error: 'rate-limit' }, { ...h, 'Retry-After': '60' });
+  const lang = new URL(req.url).searchParams.get('lang') === 'en' ? 'en' : 'bg';
+  try {
+    const bytes = await readAudio(req);
+    let out;
+    try {
+      out = await transcribe(env.AI, bytes, lang);
+    } catch (e) {
+      if (e instanceof Invalid) throw e;
+      console.log('stt', 'upstream'); // never the audio or the text
+      return reply(502, { error: 'upstream' }, h);
+    }
+    return reply(200, out, h);
+  } catch (e) {
+    if (e instanceof Invalid) return reply(e.status, { error: e.message }, h);
+    throw e;
+  }
+}
 
 /**
  * Handle one request.
  * @param {Request} req
  * @param {Env} env
- * @param {{fetch?: typeof fetch, limit?: (key: string) => boolean}} [deps] For tests.
+ * @param {{fetch?: typeof fetch, limit?: (key: string) => boolean, sttLimit?: (key: string) => boolean}} [deps] For tests.
  */
 export async function handle(req, env, deps = {}) {
   const url = new URL(req.url),
@@ -92,10 +131,11 @@ export async function handle(req, env, deps = {}) {
     h = cors(ok ? origin : null);
   if (req.method === 'OPTIONS') return reply(ok ? 204 : 403, null, h);
   if (url.pathname === '/health' && req.method === 'GET')
-    return reply(200, { ok: true, version: VERSION, configured: !!env.XAI_API_KEY }, h);
-  if (url.pathname !== '/parse') return reply(404, { error: 'not-found' }, h);
+    return reply(200, { ok: true, version: VERSION, configured: !!env.XAI_API_KEY, transcribe: !!env.AI }, h);
+  if (url.pathname !== '/parse' && url.pathname !== '/transcribe') return reply(404, { error: 'not-found' }, h);
   if (req.method !== 'POST') return reply(405, { error: 'method' }, { ...h, Allow: 'POST' });
   if (!ok) return reply(403, { error: 'origin' }, h);
+  if (url.pathname === '/transcribe') return handleTranscribe(req, env, h, deps);
   if (!env.XAI_API_KEY) return reply(503, { error: 'not-configured' }, h);
 
   const ip = req.headers.get('CF-Connecting-IP') || 'unknown';

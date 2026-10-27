@@ -14,10 +14,11 @@ import { snack } from './sheet.js';
  * @param {{store: string, row: any}[]} rows
  * @param {{label: string, sub?: string, emoji?: string, extra?: any}} meta
  * @param {string} [text] Text for screen readers / tooltip (default: „Изтрито: <label>“).
+ * @param {{follow?: boolean}} [o] The same tap navigates away (see {@link snack}).
  * @returns {string} The bin entry id.
  */
-export function deleteWithUndo(kind, rows, meta, text) {
+export function deleteWithUndo(kind, rows, meta, text, o = {}) {
   const id = trash(kind, rows, meta);
-  snack(text ?? t('undo.deleted', { name: meta.label }), () => restore(id));
+  snack(text ?? t('undo.deleted', { name: meta.label }), () => restore(id), undefined, o);
   return id;
 }

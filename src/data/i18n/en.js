@@ -257,7 +257,10 @@ export default {
   'food.recent': 'Recent',
   'food.noRecent': 'Foods you log will show up here.',
   'food.regularMeals': 'Regular meals',
-  'food.usualMeal': 'Your usual {meal}',
+  'food.usualMeal.breakfast': 'Your usual breakfast',
+  'food.usualMeal.lunch': 'Your usual lunch',
+  'food.usualMeal.dinner': 'Your usual dinner',
+  'food.usualMeal.snack': 'Your usual snack',
   'food.logNow': 'Log now',
   'food.noMeals': 'Save a meal you eat often to log it with one tap.',
   'food.deleteMeal': 'Delete saved meal?',
@@ -310,7 +313,7 @@ export default {
   'manual.errNumber': 'Enter a number.',
   'manual.errNegative': 'Can’t be negative.',
   'manual.errKcalMax': 'At most 900 kcal per 100 g.',
-  'manual.errOver100': 'The value can’t be over 100 g per 100 g of product.',
+  'manual.errOver100': 'At most 100 g per 100 g of product.',
   'manual.errSum': 'Protein + carbs + fat can’t be more than 100 g per 100 g.',
   'manual.errPortion': 'At most 5000 g.',
   'manual.warnKcal': 'These macros add up to about {est} kcal per 100 g. Check the calories, or save anyway.',
@@ -795,6 +798,16 @@ export default {
   'voice.err.rate-limit': 'Too many tries. Wait a minute and try again.',
   'voice.err.too-long': 'That’s too long (up to 500 characters).',
   'voice.err.server': 'I couldn’t read that. Try again in a moment.',
+  'voice.hintRec': 'Tap “Record” and say what you ate and drank (up to 30 seconds). Typing works too.',
+  'voice.privacyRec': 'The recording is not kept – only the text is sent to be read.',
+  'voice.record': 'Record',
+  'voice.transcribing': 'Recognising…',
+  'voice.level': 'Sound level',
+  'voice.err.mic-denied': 'No access to the microphone. Allow it in your browser settings and try again.',
+  'voice.err.no-mic': 'No microphone found on this device.',
+  'voice.err.mic-failed': 'Recording failed. Please try again.',
+  'voice.err.no-audio': 'I didn’t hear anything. Speak closer to the phone and try again.',
+  'voice.err.stt': 'Couldn’t recognise the recording. Try again in a moment or type it.',
   'voice.yesterday': 'Yesterday',
   'whatsNew.voice': 'New: “Say it” – say or type what you ate and drank, and AI turns it into food and water entries',
   // 1.3.1
@@ -870,4 +883,8 @@ export default {
   'whatsNew.comboRename': 'Combinations need a unique name, and you can rename them in “Regular meals”',
   'whatsNew.fixes132':
     'Fixes: Food refreshes right after a change, “vs 4 weeks ago” compares with an entry at least 4 weeks old, and Progress › Body shows every photo session',
+  'whatsNew.record':
+    'Dictate right in the app: tap “Record” in “Say it”, speak for up to 30 seconds and check the text before “Read it” – works on iPhone too',
+  'whatsNew.fixes133':
+    'Fixes: “Undo” goes away when you switch tabs, the suggested combination name fits the meal, and the over-100 g message is shorter',
 };

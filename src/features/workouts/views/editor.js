@@ -145,6 +145,7 @@ ${src ? html`<div class="row gap10 mt20"><button class="btn sec f1" data-act="du
             [{ store: 'plans', row: plan }],
             { label: planName(plan), emoji: '📋' },
             t('undo.deleted', { name: planName(plan) }),
+            { follow: true },
           );
         emit('nav', { back: 'workouts' });
         return false;

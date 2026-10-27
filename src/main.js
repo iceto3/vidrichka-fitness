@@ -95,10 +95,11 @@ const genderRow = () =>
 function whatsNew() {
   const seen = /** @type {string} */ (kv('seenWhatsNew', ''));
   if (seen === WHATS_NEW) return;
-  // Coming from 1.3.1: only the 1.3.2 items; from 1.3.0 also the 1.3.1 ones; from 1.2.1 also
+  // Coming from 1.3.2: only the 1.3.3 items; from 1.3.1 also the 1.3.2 ones; from 1.3.0 also the 1.3.1 ones; from 1.2.1 also
   // the 1.3 ones; from 1.2.0 ("1.2") also the 1.2.1 ones; from older, the 1.2 items and the
   // gender choice too. Voice items only once the voice server is set. (The 1.3.1 Undo item is
   // replaced by the 1.3.2 pill.) Shown in the app language, which is loaded before this runs.
+  const had132 = /^1\.3\.[2-9]/.test(seen);
   const had131 = /^1\.3\.[1-9]/.test(seen);
   const had13 = seen.startsWith('1.3');
   const had12 = had13 || seen === '1.2' || seen.startsWith('1.2.');
@@ -106,9 +107,15 @@ function whatsNew() {
   const push = !had12 && !!pushUrl(); // push items only once the server is deployed
   const voice = !!voiceUrl();
   const items = /** @type {[string, string][]} */ ([
-    ['undo', 'whatsNew.undoPill'],
-    ['star', 'whatsNew.comboRename'],
-    ['check', 'whatsNew.fixes132'],
+    ...(voice ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.record']]) : []),
+    ['check', 'whatsNew.fixes133'],
+    ...(had132
+      ? []
+      : /** @type {[string, string][]} */ ([
+          ['undo', 'whatsNew.undoPill'],
+          ['star', 'whatsNew.comboRename'],
+          ['check', 'whatsNew.fixes132'],
+        ])),
     ...(had131
       ? []
       : /** @type {[string, string][]} */ ([

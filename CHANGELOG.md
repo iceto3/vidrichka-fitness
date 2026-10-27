@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.3] – 2026-10-27
+
+### Added
+
+- **Dictation right in the app.** Where the browser's own speech recognition does not work well (everywhere except Chrome on Android, so also Safari and the home-screen app on iPhone), **Кажи** has a **Запиши** button: tap to start, tap again to stop (automatic stop at 30 s), with a timer, a sound level meter and **Разпознаване…** while the text is recognised. The text lands in the box for review; **Разчети** then logs it as before.
+- Recording uses MediaRecorder at 32 kbps mono (audio/mp4, else webm/opus) and releases the microphone as soon as it stops. Clear Bulgarian messages for a blocked microphone, no sound and no connection.
+- Voice server 1.1.0: `POST /transcribe` (Workers AI `@cf/openai/whisper-large-v3-turbo`, Bulgarian or English, VAD on) returning `{text, duration}`. Same allowed origins, `audio/*` only, at most 1 MB and 35 s, 6 a minute per IP. Audio is never stored or logged.
+- A **Какво ново в 1.3.3** note.
+
+### Fixed
+
+- The **Отмени** pill disappears when you switch tabs and does not come back when you return to Food (it only follows the one navigation made by the deleting tap itself, e.g. deleting a plan in its editor).
+- The suggested combination name agrees with the meal: „Обичайната ти закуска“, „Обичайният ти обяд“, „Обичайната ти вечеря“, „Обичайното ти междинно хранене“.
+- Shorter validation text: „Най-много 100 г на 100 г продукт.“
+
 ## [1.3.2] – 2026-10-25
 
 ### Changed

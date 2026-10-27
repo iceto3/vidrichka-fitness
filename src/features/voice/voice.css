@@ -52,3 +52,36 @@
   flex: 2;
   min-width: 0;
 }
+/* 1.3.3: in-app recording (timer, level meter). */
+.voice .vrec {
+  align-items: center;
+  color: var(--danger, #d64545);
+}
+.voice .vdot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: vpulse 1.2s ease-in-out infinite;
+}
+.voice .vlevel {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line, rgba(127, 127, 127, 0.2));
+  overflow: hidden;
+}
+.voice .vlevel > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: currentColor;
+  transform-origin: left;
+  transform: scaleX(var(--lv, 0));
+  transition: transform 80ms linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice .vdot {
+    animation: none;
+  }
+}

@@ -12,6 +12,7 @@ import { t, L, setLang, setGender, getGender, isGendered, byGender } from '../..
 
 /** Gendered keys found in the 1.2 audit of bg.js (the user is addressed with a participle/adjective). */
 const GENDERED = [
+  'voice.hintRec',
   'cel.waterSub',
   'cel.levelSub',
   'daily.loudSub',

@@ -5,6 +5,9 @@
  * sentence (else the screen's / current meal), the sheet closes and an Undo snackbar lists
  * what was added. Items can be fixed afterwards in the meal sheet (tap an item). Rows go
  * through the food API, so quests, XP and the micro animations work as usual.
+ * 1.3.3: everywhere except Android Chrome (iPhone Safari / PWA included) a "Запиши" button
+ * records up to 30 s in the app; the server turns it into text, which lands in the box for
+ * review before "Разчети".
  * @module features/voice/views/voice
  */
 import { html } from '../../../ui/dom.js';
@@ -15,15 +18,15 @@ import { ic } from '../../../ui/icons.js';
 import { closeSheet, openSheet, toast, whenSettled } from '../../../ui/sheet.js';
 import { logRows, setWater, water } from '../../food/api.js';
 import { mealFor } from '../../food/logic.js';
-import { isIOS } from '../../profile/api.js';
-import { parseText } from '../api.js';
+import { parseText, sttReady, transcribeAudio } from '../api.js';
+import { MAX_REC_MS, canRecord, clock, isAndroidChrome, startRecording } from '../recorder.js';
 import { MAX_TEXT, MEALS, assignMeals, foodRows, localDay, prepare, waterByDay } from '../logic.js';
 
-/** Browser speech recognition (Android Chrome); iOS users use the keyboard's mic instead. */
+/** Browser speech recognition, only on Android Chrome; elsewhere the in-app recorder is used. */
 const Speech = () =>
-  isIOS()
-    ? null
-    : /** @type {any} */ (globalThis).SpeechRecognition || /** @type {any} */ (globalThis).webkitSpeechRecognition;
+  isAndroidChrome()
+    ? /** @type {any} */ (globalThis).SpeechRecognition || /** @type {any} */ (globalThis).webkitSpeechRecognition
+    : null;
 
 /**
  * Open the dictation sheet.
@@ -37,6 +40,35 @@ export function openVoice(o = {}) {
   /** @type {any} */
   let rec = null;
   const SR = Speech();
+  /** In-app recorder state: idle → rec (recording) → stt (recognising). */
+  let recState = /** @type {'idle' | 'rec' | 'stt'} */ ('idle');
+  /** @type {import('../recorder.js').Recording | null} */
+  let recording = null;
+  let elapsed = 0;
+  const REC = !SR && canRecord() && sttReady();
+  /** Live timer / meter updates without re-rendering the sheet. */
+  const live = () => /** @type {HTMLElement | null} */ (document.querySelector('.voice'));
+
+  /** Send the finished recording for transcription and put the text in the box. */
+  let closed = false;
+  const recognise = async (/** @type {Promise<Blob>} */ done) => {
+    const audio = await done; // after a tap on Stop or the 30 s limit; the mic is off now
+    if (closed) return;
+    recState = 'stt';
+    emit('ui:refresh');
+    try {
+      const said = await transcribeAudio(audio);
+      if (closed) return;
+      text = `${text.trim() ? `${text.trim()} ` : ''}${said}`.slice(0, MAX_TEXT);
+      err = '';
+    } catch (e) {
+      if (closed) return;
+      err = t(`voice.err.${/** @type {Error} */ (e).message}`);
+    }
+    recState = 'idle';
+    recording = null;
+    emit('ui:refresh');
+  };
 
   const sync = (/** @type {HTMLElement} */ root) => {
     const n = root.querySelector('#vcount'),
@@ -47,16 +79,30 @@ export function openVoice(o = {}) {
 
   openSheet({
     kind: 'sheet',
-    onClose: () => rec?.abort?.(),
+    onClose: () => ((closed = true), rec?.abort?.(), recording?.cancel()),
     render: () => html`<div class="voice"><div class="row gap10"><span class="sq acc">${ic('mic', 20, 2.2)}</span>
 <h2 class="h2 f1">${t('voice.title')}</h2></div>
-<p class="muted small b mt6 lh">${t('voice.hint')}</p>
-<label class="field vbox mt12"><textarea id="vtext" class="bare" rows="4" maxlength="${MAX_TEXT}" data-input="text" placeholder="${t('voice.ph')}" aria-label="${t('voice.title')}" ${busy ? 'disabled' : ''}>${text}</textarea></label>
-<div class="row between mt6"><span class="muted xs b">${t('voice.privacy')}</span><span class="muted xs b num" id="vcount">${text.length}/${MAX_TEXT}</span></div>
+<p class="muted small b mt6 lh">${t(REC ? 'voice.hintRec' : 'voice.hint')}</p>
+<label class="field vbox mt12"><textarea id="vtext" class="bare" rows="4" maxlength="${MAX_TEXT}" data-input="text" placeholder="${t('voice.ph')}" aria-label="${t('voice.title')}" ${busy || recState !== 'idle' ? 'disabled' : ''}>${text}</textarea></label>
+${
+  recState === 'rec'
+    ? html`<div class="vrec row gap10 mt10" role="status"><span class="vdot" aria-hidden="true"></span><span class="b small num vtimer">${clock(elapsed)} / ${clock(MAX_REC_MS)}</span><span class="vlevel f1" role="meter" aria-label="${t('voice.level')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></span></div>`
+    : ''
+}
+<div class="row between mt6"><span class="muted xs b">${t(REC ? 'voice.privacyRec' : 'voice.privacy')}</span><span class="muted xs b num" id="vcount">${text.length}/${MAX_TEXT}</span></div>
 ${err ? html`<p class="verr small b mt8" role="alert">${err}</p>` : ''}
 <div class="row gap10 mt14">
+${
+  REC
+    ? html`<button class="btn sec ${recState === 'stt' ? 'f2' : 'f1'}${recState === 'rec' ? ' rec' : ''}" data-act="record" aria-pressed="${String(recState === 'rec')}" ${recState === 'stt' || busy ? 'disabled' : ''}>${
+        recState === 'stt'
+          ? html`<span class="spin" aria-hidden="true"></span>${t('voice.transcribing')}`
+          : html`${ic('mic', 18, 2.4)}${recState === 'rec' ? t('voice.stop') : t('voice.record')}`
+      }</button>`
+    : ''
+}
 ${SR ? html`<button class="btn sec f1${listening ? ' rec' : ''}" data-act="listen" aria-pressed="${String(listening)}">${ic('mic', 18, 2.4)}${listening ? t('voice.stop') : t('voice.dictate')}</button>` : ''}
-<button class="btn f2" data-act="parse" ${busy || !text.trim() ? 'disabled' : ''}>${busy ? html`<span class="spin" aria-hidden="true"></span>${t('voice.thinking')}` : html`${ic('check', 18, 3)}${t('voice.parse')}`}</button></div></div>`,
+<button class="btn ${recState === 'stt' ? 'f1' : 'f2'}" data-act="parse" ${busy || recState !== 'idle' || !text.trim() ? 'disabled' : ''}>${busy ? html`<span class="spin" aria-hidden="true"></span>${t('voice.thinking')}` : html`${ic('check', 18, 3)}${t('voice.parse')}`}</button></div></div>`,
     mount: (el) => {
       const ta = /** @type {HTMLTextAreaElement | null} */ (el.querySelector('#vtext'));
       ta?.focus();
@@ -65,6 +111,39 @@ ${SR ? html`<button class="btn sec f1${listening ? ' rec' : ''}" data-act="liste
       text: (el) => {
         text = /** @type {HTMLTextAreaElement} */ (el).value.slice(0, MAX_TEXT);
         sync(/** @type {HTMLElement} */ (el.closest('.voice')));
+        return false;
+      },
+      record: async () => {
+        if (recState === 'stt') return false;
+        if (recState === 'rec') {
+          if (recording) void recording.stop();
+          return false;
+        }
+        err = '';
+        elapsed = 0;
+        try {
+          recording = await startRecording({
+            onTick: (ms) => {
+              elapsed = ms;
+              const el = live()?.querySelector('.vtimer');
+              if (el) el.textContent = `${clock(ms)} / ${clock(MAX_REC_MS)}`;
+            },
+            onLevel: (v) => {
+              const m = /** @type {HTMLElement | null} */ (live()?.querySelector('.vlevel'));
+              if (!m) return;
+              m.style.setProperty('--lv', v.toFixed(2));
+              m.setAttribute('aria-valuenow', String(Math.round(v * 100)));
+            },
+          });
+        } catch (e) {
+          err = t(`voice.err.${/** @type {Error} */ (e).message}`);
+          emit('ui:refresh');
+          return false;
+        }
+        if (closed) return void recording.cancel();
+        recState = 'rec';
+        void recognise(recording.done);
+        emit('ui:refresh');
         return false;
       },
       listen: () => {
