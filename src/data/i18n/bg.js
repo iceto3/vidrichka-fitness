@@ -288,6 +288,7 @@ export default {
   'foodcat.eggs': 'Яйца',
   'foodcat.grains': 'Зърнени и хляб',
   'foodcat.drinks': 'Напитки и сладко',
+  'foodcat.other': 'Ястия и други',
   'meal.breakfast': 'Закуска',
   'meal.lunch': 'Обяд',
   'meal.snack': 'Междинно',

@@ -288,6 +288,7 @@ export default {
   'foodcat.eggs': 'Eggs',
   'foodcat.grains': 'Grains & bread',
   'foodcat.drinks': 'Drinks & sweets',
+  'foodcat.other': 'Dishes & more',
   'meal.breakfast': 'Breakfast',
   'meal.lunch': 'Lunch',
   'meal.snack': 'Snack',

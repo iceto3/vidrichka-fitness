@@ -47,8 +47,8 @@ test('meal of day by hour', () => {
   assert.equal(mealFor(new Date(2026, 0, 1, 19)), 'dinner');
 });
 
-test('food database: 8 categories, bilingual names, valid macros, quick picks exist', () => {
-  assert.equal(FOOD_CATEGORIES.length, 8);
+test('food database: 9 categories (1.4.0 adds "other"), bilingual names, valid macros, quick picks exist', () => {
+  assert.equal(FOOD_CATEGORIES.length, 9);
   const ids = new Set(FOODS.map((f) => f.id));
   assert.equal(ids.size, FOODS.length, 'unique ids');
   for (const f of FOODS) {
