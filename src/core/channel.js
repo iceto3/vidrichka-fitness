@@ -18,12 +18,16 @@ const CHANNELS = /** @type {const} */ ({
     prefix: 'vf-',
     voice: 'https://vidrichka-voice.vidrichka.workers.dev',
     push: 'https://vidrichka-push.vidrichka.workers.dev',
+    turnstile: '',
   },
   beta: {
     db: 'vidrichka-fitness-beta',
     prefix: 'vfb-',
     voice: 'https://vidrichka-voice-beta.vidrichka.workers.dev',
     push: 'https://vidrichka-push-beta.vidrichka.workers.dev',
+    // Cloudflare Turnstile site key for /feedback. Empty = OFF (no widget is loaded and the
+    // push Worker has no TURNSTILE_SECRET). Set both together to switch it on.
+    turnstile: '',
   },
 });
 
@@ -38,6 +42,9 @@ export const DB_NAME = cfg.db;
 export const PREFIX = cfg.prefix;
 /** Default server URLs of this channel. */
 export const SERVERS = { voice: cfg.voice, push: cfg.push };
+
+/** Public Turnstile site key of this channel ('' = Turnstile off). */
+export const TURNSTILE_SITEKEY = /** @type {string} */ (cfg.turnstile);
 
 /** A localStorage key namespaced to this channel. @param {string} name e.g. `theme` */
 export const lsKey = (name) => `${PREFIX}${name}`;

@@ -36,6 +36,8 @@ export const resetLimits = () => windows.clear();
  * @property {string} VAPID_SUBJECT @property {string} ALLOWED_ORIGINS comma-separated
  * @property {string} [ALLOW_LOCALHOST] "false" disables http://localhost origins
  * @property {string} [MAX_DEVICES] @property {string} [MAX_SENDS_PER_RUN]
+ * @property {string} [TURNSTILE_SECRET] 1.4.0, optional secret: when set, /feedback needs a
+ *   valid Cloudflare Turnstile token (`turnstile` in the body); when unset nothing changes.
  */
 
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
@@ -93,8 +95,9 @@ export function eventDay(tz, at, type) {
 /**
  * Route one HTTP request.
  * @param {Request} req @param {Env} env @param {import('./store.js').Store} store @param {number} [now]
+ * @param {(r: Request) => Promise<Response>} [send] outbound fetch (Turnstile check; tests stub it)
  */
-export async function handle(req, env, store, now = Date.now()) {
+export async function handle(req, env, store, now = Date.now(), send = (r) => fetch(r)) {
   const url = new URL(req.url),
     origin = req.headers.get('Origin'),
     ok = originAllowed(env, origin),
@@ -129,8 +132,14 @@ export async function handle(req, env, store, now = Date.now()) {
       return reply(204, null, h);
     }
     if (url.pathname === '/feedback') {
-      const f = c.feedback(await c.body(req, c.MAX_FEEDBACK_BODY));
+      const raw = await c.body(req, c.MAX_FEEDBACK_BODY);
+      const f = c.feedback(raw);
       if (!c.allow(windows, 'feedback', LIMITS.feedbackPerMin, 60e3, now)) return reply(429, { error: 'rate' }, h);
+      if (
+        env.TURNSTILE_SECRET &&
+        !(await c.turnstileOk(raw?.turnstile, env.TURNSTILE_SECRET, req.headers.get('CF-Connecting-IP'), send))
+      )
+        return reply(403, { error: 'turnstile' }, h);
       if ((await store.countFeedback(now - 864e5)) >= LIMITS.feedbackPerDay) return reply(429, { error: 'rate' }, h);
       const id = await store.addFeedback(f, now);
       return reply(201, { ok: true, id }, h);

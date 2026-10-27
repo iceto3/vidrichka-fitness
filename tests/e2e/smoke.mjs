@@ -450,31 +450,35 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer, dayFi
   await closePrompts();
   await go('food');
   await closePrompts();
-  await page.locator('.bluebtn').scrollIntoViewIfNeeded();
+  await page.locator('.waterplus').scrollIntoViewIfNeeded();
   await page.evaluate(() => scrollBy(0, 40));
   await settle();
-  await tag('.bluebtn');
+  await tag('.waterplus');
   await tag('.glasses');
   const y = await page.evaluate(() => scrollY);
   const n = await page.locator('.glass.on').count();
-  await page.locator('.bluebtn').click();
+  await page.locator('.waterplus').click();
   await settle();
   assert.equal(await page.locator('.glass.on').count(), n + 1, '+1 glass');
-  assert.ok((await same('.bluebtn')) && (await same('.glasses')), 'water + updates in place');
+  assert.ok((await same('.waterplus')) && (await same('.glasses')), 'water + updates in place');
   // 1.2 micro animation: rapid taps restart one animation (no queue), in its own layer.
-  await page.locator('.bluebtn').click();
+  await page.locator('.waterplus').click();
   await page.waitForTimeout(120);
-  await page.locator('.bluebtn').click();
+  await page.locator('.waterplus').click();
   await page.waitForTimeout(120);
-  await page.locator('.bluebtn').click();
+  await page.locator('.waterplus').click();
   await page.waitForTimeout(250);
   assert.equal(await page.locator('#micro .micro.water').count(), 1, 'one water animation, restarted');
   assert.equal(await page.locator('.glass.on').count(), n + 4, 'every rapid tap counted');
-  assert.ok((await same('.bluebtn')) && (await same('.glasses')), 'no re-render from the animation');
+  assert.ok((await same('.waterplus')) && (await same('.glasses')), 'no re-render from the animation');
   assert.equal(await page.locator('#page #micro').count(), 0, 'animation layer is outside the page');
   await shot('micro-water');
   await page.locator('#micro .micro.water').waitFor({ state: 'detached', timeout: 2000 });
   assert.equal(await page.evaluate(() => scrollY), y, 'scroll position kept');
+  // 1.4.0: − on the left removes one glass, never below 0
+  await page.locator('.waterminus').click();
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator('.glass.on').count(), n + 3, '− removes one glass');
   await clearCel();
   await go('checkin/morning');
   await page.locator('[data-f="mood"][data-v="4"]').click();
@@ -2043,7 +2047,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   // 3) Home: a filled meal opens the Food meal sheet, an empty one opens Add food
   await go('home');
   const filled = page.locator('.homemeals .meal[data-m="breakfast"]');
-  assert.equal(await filled.getAttribute('data-act'), 'homeMeal');
+  assert.equal(await filled.getAttribute('data-act'), 'dayMeal');
   await filled.scrollIntoViewIfNeeded();
   await filled.click();
   await layer.locator('.mealitems').waitFor();
@@ -2318,13 +2322,17 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.deepEqual(Object.keys(fb).sort(), ['images', 'lang', 'text', 'version']);
   assert.match(fb.text, /пулса/);
   assert.equal(fb.lang, 'bg');
-  assert.match(fb.version, /^1\.3\.4/);
+  assert.match(fb.version, /^1\.(3\.4|4\.\d)/);
   assert.equal(fb.images.length, 1);
   assert.equal(fb.images[0].mime, 'image/jpeg');
   const bytes = Buffer.from(fb.images[0].data, 'base64');
   assert.ok(bytes.length <= 300000, `image ≤ 300 KB (${bytes.length})`);
   assert.deepEqual([...bytes.subarray(0, 3)], [0xff, 0xd8, 0xff], 'a JPEG');
   assert.equal(feedback[0].headers.cookie, undefined);
+  // 1.4.0: a thank-you screen instead of a toast, then Done closes the sheet
+  await layer.locator('.fbthanks').waitFor({ timeout: 4000 });
+  await layer.locator('.fbthanks [data-act="close"]').click();
+  await settle();
   assert.equal(await layer.locator('.fbsheet').count(), 0, 'the sheet closes');
 
   await go('profile');

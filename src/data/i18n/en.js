@@ -1044,4 +1044,11 @@ export default {
   'shot.err.rate-limit': 'Too many screenshots in a minute. Try again shortly.',
   'shot.err.image': "This picture can't be opened.",
   'shot.err.server': "I couldn't read the screenshot. Try again or enter it by hand.",
+  // 1.4.0 feedback: thank-you screen, screenshot counter, 10 per day, Turnstile
+  'feedback.thanksTitle': 'Thank you!',
+  'feedback.thanksBody': 'We got your message. We read every one and use it to make Vidrichka better.',
+  'feedback.shotsCount': '{n}/{max} screenshots',
+  'feedback.leftToday': { one: 'You can send {n} more message today.', other: 'You can send {n} more messages today.' },
+  'feedback.err.daily': "You've already sent 10 messages today. You can write again tomorrow.",
+  'feedback.err.turnstile': "The protection check didn't pass. Try again shortly.",
 };

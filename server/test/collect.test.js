@@ -122,3 +122,33 @@ test('/feedback rejects empty text, fake or too many images and huge bodies', as
   assert.equal(last, 429);
   assert.equal(s.feedback.length, 5);
 });
+
+test('1.4.0 Turnstile: off without a secret; with one, /feedback needs a valid token (never stored)', async () => {
+  const body = { text: 'здрасти', version: '1.4.0', lang: 'bg' };
+  const req = (b) =>
+    new Request('https://push.example/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain', Origin: APP, 'CF-Connecting-IP': '203.0.113.9' },
+      body: JSON.stringify(b),
+    });
+  /** @type {{token: string|null, ip: string|null}[]} */
+  const seen = [];
+  const send = async (/** @type {Request} */ r) => {
+    const f = await r.formData();
+    seen.push({ token: /** @type {string} */ (f.get('response')), ip: /** @type {string} */ (f.get('remoteip')) });
+    return Response.json({ success: f.get('response') === 'good' });
+  };
+  resetLimits();
+  let s = memoryStore();
+  assert.equal((await handle(req(body), /** @type {any} */ (ENV), s, 1, send)).status, 201, 'off: works as before');
+  assert.equal(seen.length, 0);
+  const env = /** @type {any} */ ({ ...ENV, TURNSTILE_SECRET: 'x' });
+  resetLimits();
+  s = memoryStore();
+  assert.equal((await handle(req(body), env, s, 1, send)).status, 403, 'no token');
+  assert.equal((await handle(req({ ...body, turnstile: 'bad' }), env, s, 1, send)).status, 403);
+  assert.equal((await handle(req({ ...body, turnstile: 'good' }), env, s, 1, send)).status, 201);
+  assert.deepEqual(seen.at(-1), { token: 'good', ip: '203.0.113.9' });
+  assert.equal(s.feedback.length, 1);
+  assert.ok(!('turnstile' in s.feedback[0]));
+});

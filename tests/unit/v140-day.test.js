@@ -166,3 +166,37 @@ test('screenshot rows: dated readings kept, undated one goes to the pressed day,
   assert.deepEqual(s, [{ date: '2026-10-20', value: 7.5, q: 4, on: true }]);
   assert.deepEqual(shotRows(undefined, 'steps', '2026-10-20', '2026-10-28'), []);
 });
+
+test('data 4 → 5 backfills fiber/salt on built-in diary rows and meal items, add-only', async () => {
+  const { DATA_VERSION, migrate } = await import('../../src/core/migrations.js');
+  const { FOODS } = await import('../../src/data/foods.js');
+  const oats = FOODS.find((f) => f.id === 'oats');
+  const v4 = {
+    app: 'vidrichka-fitness',
+    version: 4,
+    stores: {
+      food: [
+        { id: 'a', foodId: 'oats', grams: 50, kcal: 1, p: 1, c: 1, f: 1 },
+        { id: 'b', foodId: 'oats', grams: 50, kcal: 1, p: 1, c: 1, f: 1, fib: 9, salt: 0 },
+        { id: 'c', foodId: 'custom_1', grams: 50, kcal: 1, p: 1, c: 1, f: 1 },
+        { id: 'w', type: 'water', date: '2026-10-01', glasses: 3 },
+        { id: 'n', name: 'voice', grams: 100, kcal: 5, p: 0, c: 0, f: 0 },
+      ],
+      meals: [{ id: 'm', items: [{ foodId: 'oats', grams: 100, kcal: 2, p: 1, c: 1, f: 1 }] }, { id: 'odd' }],
+      trash: [],
+    },
+  };
+  const m = migrate(v4);
+  assert.equal(DATA_VERSION, 5);
+  assert.equal(m.version, 5);
+  const [a, b, c, w, n] = m.stores.food;
+  assert.equal(a.fib, Math.round(oats.fib * 5) / 10);
+  assert.equal(a.salt, Math.round(oats.salt * 50) / 100);
+  assert.equal(a.kcal, 1, 'macros untouched');
+  assert.deepEqual(b, v4.stores.food[1], 'existing values kept');
+  assert.deepEqual([c, w, n], v4.stores.food.slice(2), 'custom, water and voice rows kept');
+  assert.equal(m.stores.meals[0].items[0].fib, oats.fib);
+  assert.deepEqual(m.stores.meals[1], { id: 'odd' });
+  assert.equal(v4.stores.food[0].fib, undefined, 'input not mutated');
+  assert.deepEqual(migrate(m), m, 'running again changes nothing');
+});

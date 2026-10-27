@@ -8,6 +8,19 @@
 export const MAX_FB_TEXT = 2000;
 export const MAX_IMAGES = 3;
 export const MAX_IMG_BYTES = 300_000;
+/** Feedback messages one phone may send per calendar day (counted only on the phone). */
+export const FB_PER_DAY = 10;
+
+/**
+ * Feedback messages left today (1.4.0). `rec` is the phone's own counter `{day, n}`; a new
+ * day starts from FB_PER_DAY again. Nothing about the sender is sent or kept on the server.
+ * @param {{day?: string, n?: number}|null|undefined} rec @param {string} today
+ */
+export const fbLeft = (rec, today) => Math.max(0, FB_PER_DAY - (rec?.day === today ? Number(rec.n) || 0 : 0));
+
+/** The counter after one more sent message. @param {{day?: string, n?: number}|null|undefined} rec @param {string} today */
+export const fbCounted = (rec, today) => ({ day: today, n: (rec?.day === today ? Number(rec.n) || 0 : 0) + 1 });
+
 /** Longest side of a resized screenshot (px). */
 export const IMG_SIDE = 1080;
 /** Longest food name that is shared. */
@@ -60,8 +73,10 @@ export function fitSize(w, h, side = IMG_SIDE) {
 /**
  * Feedback request body.
  * @param {string} text @param {{mime: string, b64: string}[]} images @param {string} version @param {string} lang
+ * @param {string} [turnstile] Turnstile token (only when Turnstile is on)
  */
-export const feedbackBody = (text, images, version, lang) => ({
+export const feedbackBody = (text, images, version, lang, turnstile = '') => ({
+  ...(turnstile ? { turnstile } : {}),
   text: text.trim().slice(0, MAX_FB_TEXT),
   version: String(version).slice(0, 40),
   lang: lang === 'en' ? 'en' : 'bg',

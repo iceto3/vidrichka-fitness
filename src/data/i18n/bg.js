@@ -1072,4 +1072,14 @@ export default {
   'shot.err.rate-limit': 'Твърде много снимки за минута. Опитай пак след малко.',
   'shot.err.image': 'Тази снимка не може да се отвори.',
   'shot.err.server': 'Не успях да разчета снимката. Опитай пак или въведи ръчно.',
+  // 1.4.0 feedback: thank-you screen, screenshot counter, 10 per day, Turnstile
+  'feedback.thanksTitle': 'Благодарим!',
+  'feedback.thanksBody': 'Получихме съобщението ти. Четем всяко едно и с него правим Видричка по-добра.',
+  'feedback.shotsCount': '{n}/{max} снимки',
+  'feedback.leftToday': {
+    one: 'Днес можеш да изпратиш още {n} съобщение.',
+    other: 'Днес можеш да изпратиш още {n} съобщения.',
+  },
+  'feedback.err.daily': 'Днес вече изпрати 10 съобщения. Можеш да пишеш пак утре.',
+  'feedback.err.turnstile': 'Проверката за защита не мина. Опитай пак след малко.',
 };
