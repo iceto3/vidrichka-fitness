@@ -6,6 +6,7 @@ export default [
   {
     ignores: [
       'dist/',
+      'dist-beta/',
       'node_modules/',
       'assets/vendor/',
       'screenshots/',

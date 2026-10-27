@@ -4,6 +4,8 @@
  * @module core/theme
  */
 
+import { lsKey } from './channel.js';
+
 const media = () => matchMedia('(prefers-color-scheme: dark)');
 let mode = 'auto';
 
@@ -14,7 +16,7 @@ let mode = 'auto';
 export function applyTheme(m) {
   mode = m;
   try {
-    localStorage.setItem('vf-theme', JSON.stringify(m)); // read by index.html before first paint
+    localStorage.setItem(lsKey('theme'), JSON.stringify(m)); // read by index.html before first paint
   } catch {
     /* private mode */
   }

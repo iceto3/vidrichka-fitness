@@ -16,8 +16,12 @@
  */
 const VERSION = 'dev';
 const PRECACHE = ['./', 'index.html', 'manifest.json'];
-const CACHE = `vf-${VERSION}`;
-const CONFIG = 'vf-config';
+// 1.4.0: release channel (the build sets 'beta' for the beta URL). A beta keeps its own cache
+// names and database (see src/core/channel.js), so it never touches the live app's data.
+const CHANNEL = 'live';
+const PFX = CHANNEL === 'beta' ? 'vfb-' : 'vf-';
+const CACHE = `${PFX}${VERSION}`;
+const CONFIG = `${PFX}config`;
 
 self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE))));
 
@@ -25,7 +29,7 @@ self.addEventListener('activate', (e) =>
   e.waitUntil(
     (async () => {
       for (const k of await caches.keys())
-        if (k.startsWith('vf-') && k !== CACHE && k !== CONFIG) await caches.delete(k);
+        if (k.startsWith(PFX) && k !== CACHE && k !== CONFIG) await caches.delete(k);
       await self.clients.claim();
     })(),
   ),
@@ -95,7 +99,7 @@ async function maybeRemind() {
 
 // ---- Daily rhythm ------------------------------------------------------------------
 
-const DB_NAME = 'vidrichka-fitness';
+const DB_NAME = CHANNEL === 'beta' ? 'vidrichka-fitness-beta' : 'vidrichka-fitness';
 const ICON = 'assets/icons/icon-192.png';
 const today = () => new Date().toLocaleDateString('sv'); // YYYY-MM-DD, local time
 

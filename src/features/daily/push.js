@@ -13,6 +13,7 @@
  */
 import { kv, setKv } from '../../core/store.js';
 import { on } from '../../core/bus.js';
+import { PREFIX } from '../../core/channel.js';
 import { dailySettings } from '../../core/settings.js';
 import { isIOS, isStandalone } from '../profile/install.js';
 import { slotText, syncDaily } from './notify.js';
@@ -21,7 +22,7 @@ import { EVENT_OF, b64urlBytes, enqueue, newDeviceId, serverSettings, serverText
 
 export { PUSH_URL, VAPID_KEY, pushUrl };
 
-const CONFIG = 'vf-config',
+const CONFIG = `${PREFIX}config`, // the service worker's config cache (per channel, see sw.js)
   QUEUE = 'push-queue';
 
 /** @returns {{on: boolean, id: string, endpoint: string, dirty?: boolean}} */

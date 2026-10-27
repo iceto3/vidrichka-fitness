@@ -5,6 +5,7 @@
  */
 import { kv, load, setKv } from './core/store.js';
 import { WHATS_NEW } from './core/version.js';
+import { IS_BETA } from './core/channel.js';
 import { settings, setSettings } from './core/settings.js';
 import { detectLang, getGender, getLang, setGender, setLang, t } from './core/i18n.js';
 import { applyTheme, watchTheme } from './core/theme.js';
@@ -236,7 +237,20 @@ async function startReminders() {
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check());
 }
 
+/** 1.4.0: a beta build says so on every screen (it has its own data, see core/channel.js). */
+function betaMarker() {
+  if (!IS_BETA) return;
+  document.documentElement.classList.add('beta');
+  const m = document.createElement('div');
+  m.className = 'betamark';
+  m.setAttribute('role', 'note');
+  m.setAttribute('aria-label', 'Бета версия – отделни данни');
+  m.textContent = 'БЕТА';
+  document.body.append(m);
+}
+
 async function start() {
+  betaMarker();
   const { persistent } = await load();
   await applySettings();
   watchTheme();

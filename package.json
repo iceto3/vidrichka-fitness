@@ -8,6 +8,7 @@
     "start": "node tools/serve.mjs 8080",
     "preview": "node tools/serve.mjs 8080 dist",
     "build": "node tools/build.mjs",
+    "build:beta": "node tools/build.mjs --beta",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

@@ -526,6 +526,22 @@ html[lang='bg'] .nav .t {
     opacity: 0;
   }
 }
+/* 1.4.0: beta channel marker (core/channel.js) */
+.betamark {
+  position: fixed;
+  top: calc(var(--sat) + 4px);
+  right: 8px;
+  z-index: 80;
+  pointer-events: none;
+  background: #e5484d;
+  color: #fff;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
 .update-bar {
   position: fixed;
   left: 12px;
