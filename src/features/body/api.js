@@ -3,7 +3,7 @@
  * monthly set).
  * @module features/body/api
  */
-import { all } from '../../core/store.js';
+import { all, put, uid } from '../../core/store.js';
 import { monthComplete, monthPoses, photoStreak, sessionsOf, sortPhotos } from './photo-logic.js';
 
 export { POSES, PHOTO_DAY } from './photo-logic.js';
@@ -35,3 +35,9 @@ export const photoMonth = (month) => {
   const ph = all('photos');
   return { poses: monthPoses(ph, month), done: monthComplete(ph, month), streak: photoStreak(ph, month) };
 };
+
+/**
+ * 1.3.4: save a measurement (e.g. a weight said with "Кажи").
+ * @param {{date: string, weight?: number} & Record<string, any>} v
+ */
+export const addMeasurement = (v) => put('measurements', { id: uid('m'), ts: Date.now(), ...v });

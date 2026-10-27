@@ -48,6 +48,8 @@ export const DEFAULTS = {
   outfit: 'auto',
   onboarded: false,
   lastBackup: 0,
+  stepGoal: 8000, // 1.3.4: daily steps challenge (entered by hand – a web app can't read Health/Fit)
+  shareFoods: true, // 1.3.4: send manually entered foods (name + per-100 g values only) anonymously
 };
 
 /** Current settings merged over defaults. @returns {Settings} */

@@ -85,3 +85,40 @@
     animation: none;
   }
 }
+
+/* 1.3.4 post-voice tour: the place an entry landed glows; glasses pop as they fill */
+.vtour {
+  animation: vtour 1s ease-out 1;
+  position: relative;
+  z-index: 1;
+}
+@keyframes vtour {
+  0% {
+    box-shadow: 0 0 0 0 rgba(20, 163, 168, 0.55);
+  }
+  35% {
+    box-shadow: 0 0 0 6px rgba(20, 163, 168, 0.35);
+    transform: scale(1.015);
+  }
+  100% {
+    box-shadow: 0 0 0 12px rgba(20, 163, 168, 0);
+  }
+}
+.glass.vpop {
+  animation: vpop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) 1;
+}
+@keyframes vpop {
+  0% {
+    transform: scale(0.6);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vtour,
+  .glass.vpop {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(20, 163, 168, 0.45);
+  }
+}

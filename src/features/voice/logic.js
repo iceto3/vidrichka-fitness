@@ -34,8 +34,13 @@ export const requestBody = (text, now, lang) => ({
  *   carbs: number, fat: number, fiber?: number|null, salt?: number|null, meal: string, meal_named?: boolean,
  *   date: string, time: string|null}} FoodEntry
  * @typedef {{type: 'water', amount_ml: number, glasses?: number, meal: string, meal_named?: boolean, date: string, time: string|null}} WaterEntry
- * @typedef {FoodEntry | WaterEntry} Entry
+ * @typedef {{type: 'steps'|'sleep'|'weight'|'mood'|'energy', value: number|null, quality?: number|null,
+ *   total?: boolean, meal: string, meal_named?: boolean, date: string, time: string|null}} OtherEntry
+ * @typedef {FoodEntry | WaterEntry | OtherEntry} Entry
  */
+
+/** 1.3.4: entry types besides food and water (saved on the day's record or as a measurement). */
+export const OTHER = ['steps', 'sleep', 'weight', 'mood', 'energy'];
 
 /** Glasses for an amount of water (at least one). @param {number} ml @param {number} glassMl */
 export const glassesFor = (ml, glassMl) => Math.max(1, Math.round(ml / (glassMl || 250)));

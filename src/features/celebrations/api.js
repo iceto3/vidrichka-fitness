@@ -54,3 +54,13 @@ export const celebrate = (c) => queue.push(c);
 
 /** Whether a celebration is playing or waiting (e.g. hold in-app prompts until done). */
 export const celebrating = () => queue.busy || queue.pending > 0;
+
+let held = false;
+/**
+ * 1.3.4: while "Кажи" saves and plays its own tour, the per-item micro animations and the
+ * goal toasts (water, steps) wait – the tour animates each item and ends with ONE celebration.
+ * @param {boolean} on
+ */
+export const holdCelebrations = (on) => void (held = on);
+/** Whether the voice tour holds the automatic celebrations. */
+export const celebrationsHeld = () => held;

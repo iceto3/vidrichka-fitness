@@ -66,9 +66,19 @@ async function show() {
     view.mount?.(/** @type {HTMLElement} */ (pageEl));
     emit('route:changed', path);
   } catch (err) {
+    if (leaving) return; // a reload/close cancelled the view's import: not an error
     console.error('[router] failed to open', path, err);
     emit('toast', { key: 'common.error' });
   }
+}
+
+/** True while the page is unloading (pending view imports are cancelled then). */
+let leaving = false;
+if (typeof addEventListener === 'function') {
+  // WebKit cancels pending imports as soon as a reload starts (before pagehide).
+  addEventListener('beforeunload', () => (leaving = true));
+  addEventListener('pagehide', () => (leaving = true));
+  addEventListener('pageshow', () => (leaving = false));
 }
 
 /**

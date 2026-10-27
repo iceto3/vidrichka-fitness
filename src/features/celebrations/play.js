@@ -15,7 +15,7 @@ import { rig } from '../mascot/api.js';
  * @property {string} [key] Merge key for the queue (e.g. 'water').
  * @property {string} title
  * @property {string} [sub]
- * @property {'drop'|'check'|'moon'|'egg'|'camera'|'badge'} [icon] SMALL: icon on the right.
+ * @property {'drop'|'check'|'moon'|'egg'|'camera'|'badge'|'steps'|'mic'} [icon] SMALL: icon on the right.
  * @property {'wave'|'hop'|'spin'|'flash'} [variant] SMALL: otter move (default wave: bounce, wave, wink).
  * @property {boolean} [dismiss] SMALL: stays ~3 s and can be tapped away (e.g. a badge after a photo session).
  * @property {[number, number]} [progress] SMALL: progress bar from → to (0…1).
@@ -102,6 +102,10 @@ const ICONS = {
     '<div class="drop warm"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.4-2h5l1.4 2h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" fill="#ff7a2f"/><circle cx="12" cy="12.5" r="3.4" fill="#fff"/></svg></div>',
   badge:
     '<div class="drop gold"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="9.5" r="6" fill="#f5b935"/><path d="m8.5 14 -1.5 7 5-2.5 5 2.5-1.5-7" fill="#e09a12"/><path d="m12 6.6 1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z" fill="#fff"/></svg></div>',
+  // 1.3.4: steps goal and "Кажи" (voice) saves
+  steps:
+    '<div class="drop ok"><svg width="20" height="20" viewBox="0 0 24 24"><ellipse cx="8" cy="8.5" rx="3" ry="4.6" fill="#14a3a8"/><ellipse cx="16" cy="12.5" rx="3" ry="4.6" fill="#14a3a8"/><circle cx="7.6" cy="16.4" r="1.8" fill="#14a3a8"/><circle cx="16.4" cy="20" r="1.6" fill="#14a3a8"/></svg></div>',
+  mic: '<div class="drop"><svg width="20" height="20" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="#14a3a8"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" stroke="#14a3a8" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg></div>',
 };
 
 /** Otter moves for SMALL (variety for repeated celebrations, e.g. every photo session). */

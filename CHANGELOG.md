@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.4] – 2026-10-27
+
+### Added
+
+- **Home meals:** a **Хранения днес** card on Home. A meal with food opens the same meal sheet as the Food tab (edit grams, move, delete, **+ Добави към …**, **Запази като комбинация**); an empty meal opens Add food. The breakfast quest opens the same sheet once breakfast is logged.
+- **After „Кажи“ saves, the app shows where things landed.** One thing: it goes there and animates it (water glasses fill one by one, the meal row pops, the steps bar grows), then a small celebration. Two or three: a ~1 s stop at each, then one celebration. More: „Записах 5 неща“ and one celebration. Any tap skips; the toast and **Отмени** pill stay; reduced motion gets short static highlights.
+- **Daily steps challenge:** a Home card with a progress bar, **+1000 / +2000** and **Въведи** (add or set the day's total); a goal in Profile (default 8000, 1000–30000 in 500s); a daily quest with XP and one celebration a day when the goal is met. By voice: „запиши 5000 крачки“ (adds) or „общо 9000 крачки“ (sets). Manual entry only – no step counter access.
+- **Sleep card:** last night's hours (½ h steps) and quality 1–5 on Home; by voice „спах 7 часа“. Stored in the day record, so it is in the backup.
+- **Progress › Графики** (week / month / 3 months, light SVG): steps with the goal line, goal days and best streak; mood and energy; sleep; water vs goal; kcal and protein vs goal plus fiber (25 g reference) and salt (≤5 g); workouts per week vs the weekly goal and volume. Weight, measurements and photos are unchanged.
+- **Insight cards** once there are 14+ days of data, at least 5 days in each compared group and a meaningful difference: sleep ≥7 h vs energy, workout days vs mood, step-goal days vs water. Gender-aware Bulgarian.
+- **Anonymous manual-food collection (on by default):** when you save a food you typed in by hand, only its name, per-100 g kcal, protein, carbs, fat, fiber, salt and the app language go to the push Worker's `POST /foods`. No IP, device id, grams, dates, photos or cookies. A one-time notice explains it; **Профил › Помогни да подобрим приложението** turns it off at once. Offline it fails silently.
+- **Обратна връзка (Profile only):** dictate (the **Запиши** flow, text lands in the box for review) or type what to change or add, attach up to 3 screenshots (resized to 1080 px JPEG, ≤300 KB each) and send. Thank-you toast.
+- Voice server 1.2.0: steps, sleep, weight, mood and energy entries („сода“ is still sparkling water, 0 kcal).
+- Push server 1.1.0: `POST /foods` and `POST /feedback` (D1 tables `foods_shared`, `feedback`, `feedback_images`; migration `0002_collect.sql`, additive only), with the origin allowlist, size limits and per-minute/day rate limits. `server/tools/read-feedback.mjs` downloads feedback with its images.
+- A **Какво ново в 1.3.4** note.
+
 ## [1.3.3] – 2026-10-27
 
 ### Added

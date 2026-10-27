@@ -441,6 +441,11 @@ html[lang='bg'] .nav .t {
   overflow: visible;
   max-width: 380px;
 }
+/* A long "What's new" (an update across several versions) scrolls instead of overflowing. */
+.layer-item.dialog .panel:has(.whatsnew) {
+  overflow-y: auto;
+  max-height: calc(100dvh - 48px - var(--sat) - var(--sab));
+}
 .layer-item.full .panel {
   height: 100dvh;
   max-height: none;

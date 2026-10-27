@@ -23,6 +23,13 @@ const GENDERED = [
   // 1.3 voice
   'voice.hint',
   'whatsNew.voice',
+  // 1.3.4 steps, insights, what's new
+  'cel.stepsSub',
+  'insight.sleepEnergyUp',
+  'insight.sleepEnergyDown',
+  'insight.workoutMoodUp',
+  'insight.stepsWaterUp',
+  'whatsNew.homeMeals',
 ];
 
 /** Every string variant of a dictionary value. @param {any} v @returns {string[]} */

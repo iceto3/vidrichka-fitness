@@ -140,3 +140,63 @@
     0 0 0 1.5px var(--line),
     0 4px 12px rgba(19, 35, 44, 0.12);
 }
+
+/* 1.3.4 Progress › Trends */
+.progress .seg button {
+  font-size: 12.5px;
+  min-width: 0;
+}
+.trends .trange button {
+  flex: 1;
+}
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.chart .chx,
+.chart .chgl {
+  font-size: 9.5px;
+  font-weight: 700;
+  fill: var(--muted);
+}
+.chart .chgl {
+  fill: var(--text);
+  opacity: 0.7;
+}
+.chart .chgoal {
+  stroke: var(--text);
+  stroke-opacity: 0.45;
+  stroke-width: 1.2;
+  stroke-dasharray: 4 3;
+}
+.chart .chgrid {
+  stroke: var(--line, rgba(0, 0, 0, 0.08));
+  stroke-width: 1;
+}
+.chart .chnil {
+  fill: var(--muted);
+  opacity: 0.25;
+}
+.chcard .lg::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c);
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+.insight .insico {
+  font-size: 24px;
+  line-height: 1.2;
+}
+.insight .up {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.insight:not(.soon) {
+  background: linear-gradient(135deg, rgba(20, 163, 168, 0.12), rgba(20, 163, 168, 0.02)), var(--card);
+}

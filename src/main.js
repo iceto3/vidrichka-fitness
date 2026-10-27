@@ -21,6 +21,7 @@ import { otter } from './features/mascot/api.js';
 import { stats } from './features/motivation/api.js';
 import { pushUrl } from './features/daily/push-config.js';
 import { voiceUrl } from './features/voice/config.js';
+import { dataNotice } from './features/improve/notice.js';
 import './features/profile/install.js'; // catch beforeinstallprompt early
 
 const $id = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -75,7 +76,10 @@ ${genderRow()}
         closeSheet();
       },
     },
-    onClose: () => !settings().onboarded && setSettings({ onboarded: true }),
+    onClose: () => {
+      if (!settings().onboarded) setSettings({ onboarded: true });
+      setTimeout(dataNotice, 250); // 1.3.4: anonymous food sharing is on by default – say so once
+    },
   });
 }
 
@@ -92,13 +96,14 @@ const genderRow = () =>
   )}</div>`;
 
 /** "What's new in 1.2" — shown once to people who used an earlier version. */
-function whatsNew() {
+function whatsNew(next = () => {}) {
   const seen = /** @type {string} */ (kv('seenWhatsNew', ''));
-  if (seen === WHATS_NEW) return;
-  // Coming from 1.3.2: only the 1.3.3 items; from 1.3.1 also the 1.3.2 ones; from 1.3.0 also the 1.3.1 ones; from 1.2.1 also
+  if (seen === WHATS_NEW) return next();
+  // Coming from 1.3.3: only the 1.3.4 items; from 1.3.2 also the 1.3.3 ones; from 1.3.1 also the 1.3.2 ones; from 1.3.0 also the 1.3.1 ones; from 1.2.1 also
   // the 1.3 ones; from 1.2.0 ("1.2") also the 1.2.1 ones; from older, the 1.2 items and the
   // gender choice too. Voice items only once the voice server is set. (The 1.3.1 Undo item is
   // replaced by the 1.3.2 pill.) Shown in the app language, which is loaded before this runs.
+  const had133 = /^1\.3\.[3-9]/.test(seen);
   const had132 = /^1\.3\.[2-9]/.test(seen);
   const had131 = /^1\.3\.[1-9]/.test(seen);
   const had13 = seen.startsWith('1.3');
@@ -107,8 +112,18 @@ function whatsNew() {
   const push = !had12 && !!pushUrl(); // push items only once the server is deployed
   const voice = !!voiceUrl();
   const items = /** @type {[string, string][]} */ ([
-    ...(voice ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.record']]) : []),
-    ['check', 'whatsNew.fixes133'],
+    ['food', 'whatsNew.homeMeals'],
+    ...(voice ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.voiceTour']]) : []),
+    ['steps', 'whatsNew.steps'],
+    ['moon', 'whatsNew.sleep134'],
+    ['chart', 'whatsNew.trends'],
+    ['message', 'whatsNew.feedback'],
+    ...(had133
+      ? []
+      : /** @type {[string, string][]} */ ([
+          ...(voice ? [['mic', 'whatsNew.record']] : []),
+          ['check', 'whatsNew.fixes133'],
+        ])),
     ...(had132
       ? []
       : /** @type {[string, string][]} */ ([
@@ -147,10 +162,11 @@ function whatsNew() {
           ['drop', 'whatsNew.micro'],
         ])),
   ]);
-  if (!items.length) return; // nothing visible is new yet (e.g. voice not deployed): ask again next version
+  if (!items.length) return next(); // nothing visible is new yet (e.g. voice not deployed): ask again next version
   setKv('seenWhatsNew', WHATS_NEW);
   openSheet({
     kind: 'dialog',
+    onClose: () => setTimeout(next, 250),
     render:
       () => html`<div class="center">${otter({ size: 110, pose: 'cheer' })}<h1 class="h2 mt8">${t('whatsNew.title', { v: WHATS_NEW })}</h1></div>
 <div class="col gap10 mt12 whatsnew">${items.map(([i, k]) => html`<div class="row gap10"><span class="sq acc">${ic(i, 18, 2.3)}</span><span class="f1 b small">${t(k)}</span></div>`)}</div>
@@ -183,7 +199,10 @@ function startServiceWorker() {
     .register('./sw.js')
     .then((reg) => {
       if (!reg) return;
+      let offered = false;
       const offer = (/** @type {ServiceWorker} */ w) => {
+        if (offered) return;
+        offered = true;
         const bar = document.createElement('div');
         bar.className = 'update-bar';
         bar.setAttribute('role', 'status');
@@ -193,14 +212,15 @@ function startServiceWorker() {
         bar.querySelector('button')?.addEventListener('click', () => w.postMessage({ type: 'SKIP_WAITING' }));
         document.body.append(bar);
       };
-      if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
-      reg.addEventListener('updatefound', () => {
-        const w = reg.installing;
+      /** Offer a worker once it has installed (1.3.4: also one already installing at load). */
+      const watch = (/** @type {ServiceWorker | null} */ w) =>
         w?.addEventListener(
           'statechange',
           () => w.state === 'installed' && navigator.serviceWorker.controller && offer(w),
         );
-      });
+      if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+      watch(reg.installing);
+      reg.addEventListener('updatefound', () => watch(reg.installing));
       setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
     })
     .catch((e) => console.warn('[sw] registration failed', e));
@@ -269,7 +289,7 @@ async function start() {
   if (!persistent) emit('toast', { key: 'common.noStorage' });
   if (new URLSearchParams(location.search).has('cheer')) (await import('./features/partner/api.js')).handleCheer();
   else if (!settings().onboarded) (setKv('seenWhatsNew', WHATS_NEW), onboarding());
-  else whatsNew();
+  else whatsNew(dataNotice);
   startServiceWorker();
   startDaily();
   startReminders();

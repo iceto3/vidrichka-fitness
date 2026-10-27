@@ -7,6 +7,8 @@
  *   POST /event        {id, type, at?, which?}                   awake | protein-done |
  *                      protein-skipped | water-logged | checkin-done (which: am|pm) | goodnight-done
  *   POST /unsubscribe  {id}
+ *   POST /foods        {name, kcal, protein, carbs, fat, fiber, salt, lang}   1.3.4, anonymous
+ *   POST /feedback     {text, version, lang, images?: [{mime, data(base64)}]} 1.3.4, ≤ 1.4 MB
  *   GET  /health
  * Cron (every minute): sends each device the reminders due in its own time zone.
  * The Worker entry (index.js) only wires these to the D1 store.
@@ -16,8 +18,16 @@ import { dueNow, localParts, shiftDay } from './schedule.js';
 import { message } from './messages.js';
 import { pushRequest, vapidSigner } from './webpush.js';
 import * as v from './validate.js';
+import * as c from './collect.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
+
+/** 1.3.4 collection limits: per-isolate windows (no sender key) and hard totals. */
+const LIMITS = { foodsPerMin: 30, feedbackPerMin: 5, feedbackPerDay: 200, maxFoods: 20000 };
+/** @type {Map<string, {start: number, n: number}>} */
+const windows = new Map();
+/** Forget the rate windows (tests). */
+export const resetLimits = () => windows.clear();
 
 /**
  * @typedef {object} Env
@@ -111,6 +121,20 @@ export async function handle(req, env, store, now = Date.now()) {
   if (req.method !== 'POST') return reply(405, { error: 'method' }, h);
   if (!ok) return reply(403, { error: 'origin' }, h);
   try {
+    if (url.pathname === '/foods') {
+      const f = c.food(await c.body(req, c.MAX_FOOD_BODY));
+      if (!c.allow(windows, 'foods', LIMITS.foodsPerMin, 60e3, now)) return reply(429, { error: 'rate' }, h);
+      if ((await store.countFoods()) >= LIMITS.maxFoods) return reply(503, { error: 'full' }, h);
+      await store.addFood(f);
+      return reply(204, null, h);
+    }
+    if (url.pathname === '/feedback') {
+      const f = c.feedback(await c.body(req, c.MAX_FEEDBACK_BODY));
+      if (!c.allow(windows, 'feedback', LIMITS.feedbackPerMin, 60e3, now)) return reply(429, { error: 'rate' }, h);
+      if ((await store.countFeedback(now - 864e5)) >= LIMITS.feedbackPerDay) return reply(429, { error: 'rate' }, h);
+      const id = await store.addFeedback(f, now);
+      return reply(201, { ok: true, id }, h);
+    }
     const b = await v.jsonBody(req),
       id = v.deviceId(b?.id);
     switch (url.pathname) {

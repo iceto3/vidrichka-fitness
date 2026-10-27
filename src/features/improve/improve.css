@@ -1,0 +1,46 @@
+/* 1.3.4 feedback sheet + data notice */
+.fbimgs {
+  flex-wrap: wrap;
+}
+.fbimg,
+.fbadd {
+  position: relative;
+  width: 76px;
+  height: 96px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fbimg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.fbadd {
+  flex-direction: column;
+  gap: 4px;
+  color: var(--accent-d);
+  border: 2px dashed var(--line, rgba(0, 0, 0, 0.12));
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+}
+.fbx {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.datanotice .sq {
+  margin: 0 auto;
+}

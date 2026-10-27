@@ -105,13 +105,13 @@ async function run(name, browser, P) {
   // Fixed, flowing clock (Sofia, UTC+3 until 25 Oct) so the daily reminders are deterministic.
   await page.clock.install({ time: new Date('2026-10-19T06:00:00+03:00') });
   const errors = [];
-  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('pageerror', (e) => (errors.push(e.message), console.log(`  ! page error: ${e.message}`)));
   page.on(
     'console',
     (m) =>
       m.type() === 'error' &&
       !/favicon|ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(m.text()) &&
-      errors.push(m.text()),
+      (errors.push(m.text()), console.log(`  ! console error: ${m.text()}`)),
   );
   const shot = async (/** @type {string} */ n, full = false, keepToast = false) => {
     if (!SHOTS) return;
@@ -182,6 +182,11 @@ async function run(name, browser, P) {
   assert.match(await layer.locator('.genderrow .on').innerText(), /Female/, 'onboarding asks; female preselected');
   await layer.locator('input').first().fill('Maria');
   await page.getByRole('button', { name: "Let's go" }).click();
+  await settle();
+  // 1.3.4: the one-time anonymous-data notice follows the welcome
+  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
+  assert.match(await layer.innerText(), /anonymously/i, 'data notice after onboarding');
+  await layer.locator('[data-close]').first().click();
   await settle();
   assert.match(await page.locator('h1').first().innerText(), /Maria/);
 
@@ -338,6 +343,7 @@ async function run(name, browser, P) {
   await v131(page, h);
   await v132(page, h);
   await v133(page, h, name);
+  await v134(page, h, name);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -424,7 +430,7 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer, dayFi
   await settle();
   await go('home');
   await page.locator('.pbar.done').waitFor();
-  await page.locator('.quest[data-go="food/add/breakfast"] .qbox.done').waitFor();
+  await page.locator('.quest[data-m="breakfast"] .qbox.done').waitFor();
   console.log('  ✔ Home protein bar ticks in place → "Ate it" → celebration → breakfast logger → quest done');
   // From here on, answer "Later" whenever a reminder prompt pops up in the way (on a slow CI
   // runner one can appear between steps, exactly as it would for a person).
@@ -987,6 +993,9 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   await layer.locator('input').first().fill('Maria');
   await page.getByRole('button', { name: "Let's go" }).click();
   await settle();
+  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
+  await layer.locator('[data-close]').first().click();
+  await settle();
   await clearCel();
   await go('progress/body');
   await page.locator('.weightcard').click();
@@ -1544,18 +1553,19 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.3\.3/);
+  assert.match(txt, /Какво ново в 1\.3\.4/);
   assert.match(txt, /Отмени/, 'the 1.3.2 pill item');
   assert.match(txt, /преименуваш/, 'the 1.3.2 rename item');
   assert.match(txt, /Запиши/, 'the 1.3.3 recording item');
   assert.doesNotMatch(txt, /What's new|Undo|Rename|Record/, 'no English');
-  assert.equal(await layer.locator('.whatsnew > div').count(), 5, 'the 1.3.3 and 1.3.2 items');
+  assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 11, 'the 1.3.4, 1.3.3 and 1.3.2 items');
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
   await page.locator('.lang [data-v="en"]').click();
   await settle();
-  console.log("  ✔ What's new in Bulgarian after an update from 1.3.1 (1.3.3 + 1.3.2 items)");
+  console.log("  ✔ What's new in Bulgarian after an update from 1.3.1 (1.3.4 + 1.3.3 + 1.3.2 items)");
 }
 
 /**
@@ -1677,6 +1687,10 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
   const open = async () => {
+    // 1.3.4: let the post-voice tour finish first, as a person would
+    await page.waitForFunction(() => !document.documentElement.classList.contains('vtouring'), null, {
+      timeout: 8000,
+    });
     await page.reload();
     await page.locator('#nav .t').first().waitFor();
     await layer
@@ -1849,17 +1863,474 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.3\.3/);
+  assert.match(txt, /Какво ново в 1\.3\.4/);
   assert.match(txt, /Запиши/);
   assert.match(txt, /Обичайният ти обяд/);
-  assert.equal(await layer.locator('.whatsnew > div').count(), 2, 'only the 1.3.3 items');
-  await page.waitForTimeout(700);
-  await shot('whats-new-133');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 8, 'the 1.3.4 and 1.3.3 items');
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
   await page.locator('.lang [data-v="en"]').click();
   await settle();
   void rows;
-  console.log("  ✔ 1.3.3 What's new in Bulgarian");
+  console.log("  ✔ What's new in Bulgarian after an update from 1.3.2 (1.3.4 + 1.3.3 items)");
+}
+
+/**
+ * 1.3.4 (in Bulgarian): What's new + the one-time anonymous-data notice; manual foods sent
+ * to /foods with only the allowed fields (none when switched off in Profile); Home meal rows
+ * open the meal sheet; the steps card (+1000/+2000, set total, goal → celebration) and the
+ * Profile goal; the sleep card; the post-voice tour (1 thing: water glasses fill; 2: quick
+ * stops, a tap skips; 5: "Записах 5 неща"; reduced motion); Progress › Графики with 30
+ * seeded days and the insight cards; the Profile feedback sheet (dictation, a screenshot,
+ * mocked /feedback, thank-you toast).
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ * @param {string} name profile
+ */
+async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField }, name) {
+  const idb = (/** @type {string} */ store, /** @type {any[]} */ put, /** @type {string[]} */ del = []) =>
+    page.evaluate(
+      ([store, put, del]) =>
+        new Promise((res, rej) => {
+          const r = indexedDB.open('vidrichka-fitness');
+          r.onerror = () => rej(r.error);
+          r.onsuccess = () => {
+            const tx = r.result.transaction(/** @type {string} */ (store), 'readwrite');
+            /** @type {any[]} */ (put).forEach((x) => tx.objectStore(/** @type {string} */ (store)).put(x));
+            /** @type {string[]} */ (del).forEach((k) => tx.objectStore(/** @type {string} */ (store)).delete(k));
+            tx.oncomplete = () => (r.result.close(), res(null));
+          };
+        }),
+      /** @type {const} */ ([store, put, del]),
+    );
+  const today = () =>
+    page.evaluate(() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+  const reopen = async () => {
+    await page.reload();
+    await page.locator('#nav .t').first().waitFor();
+    await settle();
+  };
+  const PUSH = 'https://push.test';
+  const cors = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
+  /** @type {any[]} */
+  const foods = [];
+  /** @type {any[]} */
+  const feedback = [];
+  await page.route(`${PUSH}/**`, async (route) => {
+    const req = route.request();
+    const u = new globalThis.URL(req.url());
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    if (u.pathname === '/foods') {
+      foods.push({ body: JSON.parse(req.postData() ?? '{}'), headers: req.headers() });
+      return route.fulfill({ status: 204, headers: cors });
+    }
+    if (u.pathname === '/feedback') {
+      feedback.push({ body: JSON.parse(req.postData() ?? '{}'), headers: req.headers() });
+      return route.fulfill({ status: 201, headers: cors, body: JSON.stringify({ ok: true, id: feedback.length }) });
+    }
+    return route.fulfill({ status: 404, headers: cors, body: '{}' });
+  });
+  const VOICE = 'https://voice.test';
+  /** @type {(b: any) => any[]} */
+  let reply = () => [];
+  await page.route(`${VOICE}/**`, async (route) => {
+    const req = route.request();
+    const u = new globalThis.URL(req.url());
+    if (u.pathname === '/health')
+      return route.fulfill({
+        headers: cors,
+        body: JSON.stringify({ ok: true, configured: true, transcribe: true, version: 'mock' }),
+      });
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    if (u.pathname === '/transcribe')
+      return route.fulfill({
+        headers: cors,
+        body: JSON.stringify({ text: 'Искам графика и за пулса.', duration: 2 }),
+      });
+    const b = JSON.parse(req.postData() ?? '{}');
+    return route.fulfill({ headers: cors, body: JSON.stringify({ entries: reply(b) }) });
+  });
+  await page.evaluate(
+    ([p, v]) => (localStorage.setItem('vf-push-url', p), localStorage.setItem('vf-voice-url', v)),
+    [PUSH, VOICE],
+  );
+  await clearCel();
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
+
+  // 1) What's new in 1.3.4 after an update from 1.3.3, then the anonymous-data notice once
+  await idb('kv', [{ id: 'seenWhatsNew', value: '1.3.3' }], ['dataNotice']);
+  await reopen();
+  await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
+  let txt = await layer.innerText();
+  assert.match(txt, /Какво ново в 1\.3\.4/);
+  assert.match(txt, /крачки/i);
+  assert.match(txt, /Обратна връзка/);
+  assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 6, 'the six 1.3.4 items');
+  await page.waitForTimeout(700);
+  await shot('whats-new-134');
+  await layer.locator('[data-close]').first().click();
+  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
+  txt = await layer.innerText();
+  assert.match(
+    txt,
+    /Изпращаме анонимно имената и стойностите на ръчно въведени храни, за да подобрим приложението\. Можеш да го изключиш в Профил\./,
+  );
+  await page.waitForTimeout(600);
+  await shot('data-notice');
+  await layer.locator('[data-close]').first().click();
+  await settle();
+  await reopen();
+  assert.equal(await layer.locator('.datanotice').count(), 0, 'the notice shows only once');
+  console.log("  ✔ 1.3.4 What's new + the one-time data notice");
+
+  // 2) Manual food → POST /foods with only the allowed fields; nothing when switched off
+  await page.route('**/*openfoodfacts.org/**', (r) =>
+    r.fulfill({ json: { count: 0, products: [] }, headers: { 'access-control-allow-origin': '*' } }),
+  );
+  const manual = async (/** @type {string} */ n, /** @type {string} */ meal) => {
+    await go(`food/add/${meal}`);
+    await page.locator('[data-act="manual"]').first().click();
+    await layer.locator('#mname').fill(n);
+    await layer.locator('#mkcal').fill('165');
+    await layer.locator('#mp').fill('10');
+    await layer.locator('#mc').fill('20');
+    await layer.locator('#mf').fill('5');
+    await layer.locator('#mfib').fill('3');
+    await layer.locator('#msalt').fill('0,8');
+    await layer.locator('[data-act="save"]').click();
+    await layer.locator('#grams').waitFor();
+    await layer.locator('[data-act="done"]').click();
+    await settle();
+    await page.waitForTimeout(400);
+  };
+  await manual('Домашна баничка', 'breakfast');
+  assert.equal(foods.length, 1, 'one /foods request');
+  assert.deepEqual(foods[0].body, {
+    name: 'Домашна баничка',
+    kcal: 165,
+    protein: 10,
+    carbs: 20,
+    fat: 5,
+    fiber: 3,
+    salt: 0.8,
+    lang: 'bg',
+  });
+  assert.match(foods[0].headers['content-type'], /^text\/plain/, 'a simple request');
+  assert.equal(foods[0].headers.cookie, undefined, 'no cookies');
+  await go('profile');
+  const sw = page.locator('#sharefoods [data-act="tg"]');
+  assert.equal(await sw.getAttribute('aria-checked'), 'true', 'on by default');
+  assert.match(await page.locator('#sharefoods').innerText(), /Помогни да подобрим приложението/);
+  await sw.click();
+  await settle();
+  assert.equal(await sw.getAttribute('aria-checked'), 'false');
+  await page.locator('#sharefoods').scrollIntoViewIfNeeded();
+  await shot('data-switch-profile');
+  await manual('Мусака на мама', 'lunch');
+  assert.equal(foods.length, 1, 'switched off → nothing sent');
+  await go('profile');
+  await page.locator('#sharefoods [data-act="tg"]').click();
+  await settle();
+  console.log('  ✔ 1.3.4 manual foods shared anonymously (only name + per-100 g values), switch stops it');
+
+  // 3) Home: a filled meal opens the Food meal sheet, an empty one opens Add food
+  await go('home');
+  const filled = page.locator('.homemeals .meal[data-m="breakfast"]');
+  assert.equal(await filled.getAttribute('data-act'), 'homeMeal');
+  await filled.scrollIntoViewIfNeeded();
+  await filled.click();
+  await layer.locator('.mealitems').waitFor();
+  assert.match(await layer.innerText(), /Домашна баничка/);
+  assert.match(await layer.innerText(), /Запази като комбинация/i);
+  await page.waitForTimeout(600);
+  await shot('home-meal-sheet');
+  await page.keyboard.press('Escape');
+  await settle();
+  const empty = page.locator('.homemeals .meal[data-go^="food/add/"]').first();
+  if (await empty.count()) {
+    await empty.click();
+    await settle();
+    assert.match(await page.evaluate(() => location.hash), /#\/food\/add\//, 'an empty meal opens Add food');
+  }
+  console.log('  ✔ 1.3.4 Home meal rows open the meal sheet');
+
+  // 4) Steps: +2000, set the total, reach the goal → celebration; Profile goal stepper
+  await go('home');
+  const card = page.locator('.stepscard');
+  await card.scrollIntoViewIfNeeded();
+  const s0 = (await dayField('steps')) ?? 0;
+  await card.locator('[data-act="stepsAdd"][data-n="2000"]').click();
+  await settle();
+  assert.equal(await dayField('steps'), s0 + 2000);
+  await card.locator('[data-act="stepsSheet"]').click();
+  await layer.locator('#stepsin').fill('6500');
+  await layer.locator('[data-act="set"]').click();
+  await settle();
+  assert.equal(await dayField('steps'), 6500, 'set the day total');
+  assert.match(await page.locator('.stepscard').innerText(), /6\s?500/);
+  await page.locator('.stepscard').scrollIntoViewIfNeeded();
+  await shot('steps-card');
+  await page.locator('.stepscard [data-act="stepsAdd"][data-n="2000"]').click();
+  await page.locator('#cel > *').first().waitFor({ timeout: 4000 });
+  assert.match(await page.locator('#cel').innerText(), /крачки/i, 'goal celebration');
+  await clearCel();
+  assert.ok(page.locator('.stepscard.done'), 'goal met');
+  await page.locator('.stepscard [data-act="stepsAdd"][data-n="1000"]').click();
+  await page.waitForTimeout(600);
+  assert.equal(await page.locator('#cel > *').count(), 0, 'the goal celebrates once a day');
+  await go('profile');
+  const goal = page.locator('#stepgoal');
+  await goal.scrollIntoViewIfNeeded();
+  assert.equal(await goal.locator('input').inputValue(), '8000', 'default goal');
+  await goal.locator('[data-d="1"]').click();
+  await settle();
+  assert.equal(await page.locator('#stepgoal input').inputValue(), '8500');
+  await page.locator('#stepgoal').scrollIntoViewIfNeeded();
+  await shot('steps-goal-profile');
+  await page.locator('#stepgoal [data-d="-1"]').click();
+  await settle();
+  console.log('  ✔ 1.3.4 steps card, goal celebration once, Profile goal');
+
+  // 5) Sleep card: hours (½ h) + quality
+  await go('home');
+  await page.locator('.sleepcard').scrollIntoViewIfNeeded();
+  await page.locator('.sleepcard').click();
+  await layer.locator('[data-act="h"][data-d="1"]').click();
+  await layer.locator('[data-act="rate"][data-v="4"]').click();
+  await settle();
+  assert.equal(await dayField('sleepH'), 7.5);
+  assert.equal(await dayField('sleepQ'), 4);
+  await layer.locator('[data-close]').last().click();
+  await settle();
+  assert.match(await page.locator('.sleepcard').innerText(), /7,5/);
+  await page.locator('.sleepcard').scrollIntoViewIfNeeded();
+  await shot('sleep-card');
+  console.log('  ✔ 1.3.4 sleep card');
+
+  // 6) Voice tour
+  await reopen();
+  const glasses = async () => {
+    const d = await today();
+    return /** @type {any[]} */ (await rows('food')).find((r) => r.id === `water_${d}`)?.glasses ?? 0;
+  };
+  const say = async (/** @type {string} */ text) => {
+    await go('home');
+    await clearCel();
+    await page.locator('#page [data-act="voice"]').first().click({ timeout: 8000 });
+    await layer.locator('#vtext').fill(text);
+    await layer.locator('[data-act="parse"]').click();
+    await layer.locator('#vtext').waitFor({ state: 'detached' });
+  };
+  const touring = () => page.evaluate(() => document.documentElement.classList.contains('vtouring'));
+  const base = (/** @type {any} */ b) => ({ meal: 'snack', date: b.today, time: b.time });
+  // one thing: water → Food, the new glasses fill one by one, then one small celebration
+  reply = (b) => [{ type: 'water', amount_ml: 500, ...base(b) }];
+  let w0 = await glasses();
+  await say('изпих две чаши вода');
+  await page.locator('.food .water.vtour').waitFor({ timeout: 4000 });
+  await page.locator('.food .water .glass.vpop').waitFor({ timeout: 3000 });
+  assert.match(await page.evaluate(() => location.hash), /#\/food/);
+  await page.waitForTimeout(150);
+  await shot('voice-anim-water', false, true);
+  await page.waitForFunction(() => !document.documentElement.classList.contains('vtouring'), null, {
+    timeout: 8000,
+  });
+  await page.locator('#cel > *').first().waitFor({ timeout: 3000 });
+  await clearCel();
+  assert.equal(await glasses(), w0 + 2);
+  // two things: quick stops; a tap skips to the end (still saved, the toast stays)
+  reply = (b) => [
+    { type: 'water', amount_ml: 250, ...base(b) },
+    { type: 'steps', value: 1500, total: false, ...base(b) },
+  ];
+  w0 = await glasses();
+  const st0 = (await dayField('steps')) ?? 0;
+  await say('чаша вода и 1500 крачки');
+  await page.waitForFunction(() => document.documentElement.classList.contains('vtouring'), null, {
+    timeout: 4000,
+  });
+  await page.evaluate(() => dispatchEvent(new PointerEvent('pointerdown')));
+  await page.waitForFunction(() => !document.documentElement.classList.contains('vtouring'), null, {
+    timeout: 1500,
+  });
+  assert.equal(await glasses(), w0 + 1);
+  assert.equal(await dayField('steps'), st0 + 1500);
+  assert.equal((await page.locator('.undopill, .toast').count()) > 0, true, 'the toast/Undo pill stays');
+  await clearCel();
+  // five things: no tour, "Записах 5 неща" + one celebration
+  reply = (b) => [
+    { type: 'water', amount_ml: 250, ...base(b) },
+    { type: 'steps', value: 5000, total: true, ...base(b) },
+    { type: 'sleep', value: 7, quality: null, ...base(b) },
+    { type: 'mood', value: 4, ...base(b) },
+    { type: 'energy', value: 5, ...base(b) },
+  ];
+  await say('чаша вода, общо 5000 крачки, спах 7 часа, настроение 4, енергия 5');
+  await page.locator('.toast').waitFor();
+  assert.match(await page.locator('.toast').innerText(), /Записах 5 неща/);
+  await page.locator('#cel > *').first().waitFor({ timeout: 4000 });
+  await page.waitForTimeout(300);
+  await shot('voice-anim-summary', false, true);
+  await clearCel();
+  assert.equal(await dayField('steps'), 5000, '"общо" sets the total');
+  assert.equal(await dayField('sleepH'), 7);
+  assert.equal(await dayField('mood'), 4);
+  assert.equal(await dayField('energy'), 5);
+  // reduced motion: no glass-by-glass fill, a short stop
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  reply = (b) => [{ type: 'water', amount_ml: 500, ...base(b) }];
+  await say('две чаши вода');
+  const t0 = Date.now();
+  await page.waitForFunction(() => !document.documentElement.classList.contains('vtouring'), null, {
+    timeout: 3000,
+  });
+  assert.ok(Date.now() - t0 < 2500, 'reduced motion: a short stop');
+  assert.equal(await page.locator('.glass.vpop').count(), 0);
+  void touring;
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await clearCel();
+  console.log('  ✔ 1.3.4 voice tour: water fill, quick stops + tap to skip, 5-thing summary, reduced motion');
+
+  // 7) Progress › Графики with 30 seeded days → charts + insight cards
+  const keys = await page.evaluate(() =>
+    Array.from({ length: 30 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i - 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }),
+  );
+  const oldDays = /** @type {any[]} */ (await rows('days'));
+  await idb(
+    'days',
+    keys.map((id, i) => {
+      const good = i % 2 === 0;
+      return {
+        ...(oldDays.find((r) => r.id === id) ?? {}),
+        id,
+        steps: good ? 9200 + i * 10 : 4100 + i * 10,
+        sleepH: good ? 8 : 6,
+        mood: good ? 4 : 3,
+        energy: good ? 4 : 2,
+      };
+    }),
+  );
+  await idb('food', [
+    ...keys.map((date, i) => ({ id: `water_${date}`, type: 'water', date, glasses: i % 2 === 0 ? 8 : 5 })),
+    ...keys.map((date, i) => ({
+      id: `seed134_${i}`,
+      date,
+      meal: 'lunch',
+      name: 'Обяд',
+      emoji: '🍲',
+      grams: 400,
+      kcal: 1500 + (i % 5) * 80,
+      p: 70 + (i % 4) * 6,
+      c: 160,
+      f: 55,
+      fib: 18 + (i % 3) * 3,
+      salt: 4 + (i % 3) * 0.6,
+      time: '12:30',
+      ts: Date.parse(`${date}T12:30:00`),
+    })),
+  ]);
+  await idb(
+    'sessions',
+    keys
+      .filter((_, i) => i % 3 === 0)
+      .map((date, i) => ({
+        id: `seed134s_${i}`,
+        name: 'Цяло тяло',
+        startedAt: Date.parse(`${date}T18:00:00`),
+        endedAt: Date.parse(`${date}T18:40:00`),
+        durationSec: 2400,
+        items: [],
+        setsDone: 12,
+        setsPlanned: 12,
+        volume: 3200 + i * 150,
+        prs: [],
+        kcal: 180,
+        xp: 60,
+      })),
+  );
+  await reopen();
+  await clearCel();
+  await go('progress/trends');
+  for (const c of ['.ch-steps', '.ch-mood', '.ch-sleep', '.ch-water', '.ch-food', '.ch-work'])
+    assert.equal((await page.locator(`${c} svg`).count()) > 0, true, `${c} chart`);
+  const ins = page.locator('.insight[data-insight]');
+  assert.ok((await ins.count()) >= 1 && (await ins.count()) <= 2, 'one or two insight cards');
+  assert.equal(await page.locator('.insight[data-insight="sleepEnergy"]').count(), 1, 'sleep ↔ energy');
+  assert.match(await page.locator('.ch-steps').innerText(), /8\s?000/, 'the goal line');
+  await page.evaluate(() => scrollTo(0, 0));
+  await shot('insights');
+  // the whole Графики tab in one picture (the fixed tab bar hidden so it is not drawn mid-page)
+  await page.addStyleTag({ content: '#nav{display:none!important}' }).then(async (h) => {
+    await shot('progress-charts', true);
+    await h.evaluate((e) => e.remove());
+  });
+  for (const r of ['month', '3m', 'week']) {
+    await page.locator(`[data-act="trange"][data-v="${r}"]`).click();
+    await settle();
+    assert.equal(await page.locator(`[data-act="trange"][data-v="${r}"]`).getAttribute('aria-selected'), 'true');
+    assert.ok((await page.locator('#page svg').count()) >= 6);
+  }
+  console.log('  ✔ 1.3.4 Progress › Графики (week / month / 3 months) + insight cards');
+
+  // 8) Feedback: only in Profile; dictation lands in the box, a screenshot, send → thanks
+  await go('home');
+  assert.equal(await page.locator('[data-act="feedback"]').count(), 0, 'no feedback entry on Home');
+  await go('profile');
+  await page.locator('#feedbackrow').scrollIntoViewIfNeeded();
+  await page.locator('#feedbackrow').click();
+  await layer.locator('.fbsheet').waitFor();
+  const rec = layer.locator('[data-act="record"]');
+  if (await rec.count()) {
+    await rec.click();
+    await layer.locator('.vrec').waitFor({ timeout: 4000 });
+    await page.waitForTimeout(1200);
+    await rec.click();
+    await page.waitForFunction(
+      () => /** @type {HTMLTextAreaElement|null} */ (document.getElementById('fbtext'))?.value.includes('пулса'),
+      null,
+      { timeout: 6000 },
+    );
+  } else await layer.locator('#fbtext').fill('Искам графика и за пулса.');
+  await layer.locator('#fbtext').fill('Искам графика и за пулса. И тъмна тема за графиките.');
+  const fs = await import('node:fs/promises');
+  await layer
+    .locator('input[type="file"]')
+    .setInputFiles({ name: 'shot.png', mimeType: 'image/png', buffer: await fs.readFile('screenshots/home-BG.png') });
+  await layer.locator('.fbimg img').first().waitFor({ timeout: 8000 });
+  await page.waitForTimeout(500);
+  await shot('feedback-sheet');
+  await layer.locator('[data-act="send"]').click();
+  await page.locator('.toast').waitFor({ timeout: 8000 });
+  assert.match(await page.locator('.toast').innerText(), /Благодар/);
+  assert.equal(feedback.length, 1);
+  const fb = feedback[0].body;
+  assert.deepEqual(Object.keys(fb).sort(), ['images', 'lang', 'text', 'version']);
+  assert.match(fb.text, /пулса/);
+  assert.equal(fb.lang, 'bg');
+  assert.match(fb.version, /^1\.3\.4/);
+  assert.equal(fb.images.length, 1);
+  assert.equal(fb.images[0].mime, 'image/jpeg');
+  const bytes = Buffer.from(fb.images[0].data, 'base64');
+  assert.ok(bytes.length <= 300000, `image ≤ 300 KB (${bytes.length})`);
+  assert.deepEqual([...bytes.subarray(0, 3)], [0xff, 0xd8, 0xff], 'a JPEG');
+  assert.equal(feedback[0].headers.cookie, undefined);
+  assert.equal(await layer.locator('.fbsheet').count(), 0, 'the sheet closes');
+
+  await go('profile');
+  await page.locator('.lang [data-v="en"]').click();
+  await settle();
+  await page.evaluate(() => (localStorage.removeItem('vf-push-url'), localStorage.removeItem('vf-voice-url')));
+  void name;
+  console.log('  ✔ 1.3.4 feedback from Profile (dictation, screenshot ≤ 300 KB JPEG, thanks)');
 }

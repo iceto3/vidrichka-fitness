@@ -30,6 +30,28 @@ All `POST` bodies are JSON. They can be sent as `text/plain` so that no CORS pre
 
 The push payload is `{v, title, body, tag, route, silent, loud, actions, day, kind, group, at}`.
 
+## Collected data (1.3.4)
+
+`POST /foods` `{name, lang, kcal, protein, carbs, fat, fiber, salt}` (per 100 g, ≤1 KB) → 204. Identical foods are counted (`n`) instead of duplicated; at most 20 000 rows.
+`POST /feedback` `{text, version, lang, images: [{mime, data (base64)}]}` (≤3 JPEG/PNG/WebP images of ≤300 KB, ≤1.4 MB in total) → 201 `{ok, id}`.
+Both: the same origin allowlist, no IP, device id or cookies stored, and per-isolate rate limits (30 foods and 5 feedbacks a minute, 200 feedbacks a day).
+
+| table             | contents                                                         |
+| ----------------- | ---------------------------------------------------------------- |
+| `foods_shared`    | name, language, per-100 g kcal/protein/carbs/fat/fiber/salt, `n` |
+| `feedback`        | text, app version, language, created time                        |
+| `feedback_images` | feedback id, index, mime, image bytes (BLOB)                     |
+
+Read them (from `server/`, with `CLOUDFLARE_API_TOKEN` set):
+
+```sh
+# shared foods, most common first
+npx wrangler d1 execute vidrichka-push-db --remote --command "SELECT name, lang, kcal, protein, carbs, fat, fiber, salt, n FROM foods_shared ORDER BY n DESC"
+# feedback with its screenshots → /workspace/feedback/NNNN/message.txt + shot-N.jpg
+node tools/read-feedback.mjs --out /workspace/feedback          # all
+node tools/read-feedback.mjs --out /workspace/feedback --after 12  # only newer than id 12
+```
+
 ## Schedule logic (`src/schedule.js`)
 
 All times are local to the device's time zone and are DST-safe. A time that falls in a spring-forward gap moves forward. An ambiguous autumn time takes the later instant. A slot is due from its time for up to 30 minutes. Only the latest due slot of each group is sent, and at most once per day per device.

@@ -20,6 +20,7 @@ import { badges, level, recordGoal, stats } from '../../motivation/api.js';
 import { canInstall, installApp, isIOS } from '../install.js';
 import { dailyOnCount } from '../../daily/api.js';
 import { APP_VERSION } from '../../../core/version.js';
+import { GOAL_MAX, GOAL_MIN, GOAL_STEP } from '../../steps/logic.js';
 
 /** The Reminders row's summary: workout days (or off) plus the daily-rhythm reminders that are on. @param {{enabled: boolean, days: number[]}} r */
 function remindersSummary(r) {
@@ -150,6 +151,7 @@ ${srow(
 )}
 <button class="srow" data-go="profile/reminders"><span class="sic orange">${ic('bell', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.reminders')}</span><span class="muted xs b">${remindersSummary(r)}</span></span>${r.enabled ? html`<span class="b num acc">${fmtHM(r.time)}</span>` : ''}${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${srow('target', 'teal', t('profile.weeklyGoal'), t('profile.weeklyGoalSub'), stepper({ act: 'goal', value: s.weeklyGoal, label: t('profile.weeklyGoal') }))}
+${srow('steps', 'orange', t('steps.goal'), t('steps.goalSub'), stepper({ act: 'sgoal', value: s.stepGoal, label: t('steps.goal') }), 'id="stepgoal"')}
 <button class="srow" data-act="nutrition"><span class="sic green">${ic('food', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.nutrition')}</span><span class="muted xs b">${s.kcalGoal} kcal · P ${s.proteinGoal} · C ${s.carbsGoal} · F ${s.fatGoal} · ${t('profile.waterN', { n: s.waterGoal })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${srow('timer', 'blue', t('profile.restAlert'), canVibrate() ? t('profile.restAlertSub') : t('profile.noVibrate'), html`<div class="row gap8"><span class="muted">${ic('volume', 17, 2.2)}</span>${toggle(s.restSound, 'tg', t('profile.sound'), { k: 'restSound' })}${canVibrate() ? html`<span class="muted">${ic('vibrate', 17, 2.2)}</span>${toggle(s.restVibrate, 'tg', t('profile.vibration'), { k: 'restVibrate' })}` : ''}</div>`)}
 ${srow('gift', 'gold', t('profile.celebrationSounds'), t('profile.celebrationSoundsSub'), toggle(s.celebrationSounds, 'tg', t('profile.celebrationSounds'), { k: 'celebrationSounds' }))}
@@ -175,7 +177,9 @@ ${srow(
     : t('profile.neverBackup'),
   html`<div class="row gap8"><button class="sbtn" data-act="export">${ic('upload', 15, 2.4)}${t('profile.export')}</button><label class="sbtn" tabindex="0">${ic('download', 15, 2.4)}${t('profile.import')}<input type="file" accept="application/json,.json" data-change="import" class="sr-only"></label></div>`,
 )}
+${srow('chart', 'blue', t('profile.shareFoods'), t('profile.shareFoodsSub'), toggle(s.shareFoods, 'tg', t('profile.shareFoods'), { k: 'shareFoods' }), 'id="sharefoods"')}
 <button class="srow" data-act="partner"><span class="sic gold">${ic('users', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.partner')}</span><span class="muted xs b">${s.partnerName ? t('profile.partnerWith', { name: s.partnerName }) : t('profile.partnerSub')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
+<button class="srow" data-act="feedback" id="feedbackrow"><span class="sic violet">${ic('message', 19, 2.2)}</span><span class="t left"><span class="st block">${t('feedback.title')}</span><span class="muted xs b">${t('feedback.rowSub')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic teal">${ic('download', 19, 2.2)}</span><span class="t left"><span class="st block">${t('install.cta')}</span><span class="muted xs b">${isIOS() ? t('install.iosShort') : t('install.cardBody')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>` : ''}
 </div>
 <button class="btn sec danger-t w100 mt16" data-act="reset">${ic('trash', 18)}${t('profile.reset')}</button>
@@ -198,9 +202,23 @@ ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic t
       if (v !== cur) (recordGoal(v), setSettings({ weeklyGoal: v }));
     },
     tg: (el) => {
-      const k = /** @type {'restSound'|'restVibrate'|'celebrationSounds'} */ (el.dataset.k);
+      const k = /** @type {'restSound'|'restVibrate'|'celebrationSounds'|'shareFoods'} */ (el.dataset.k);
       setSettings({ [k]: !settings()[k] });
     },
+    sgoal: (el, ev) => {
+      const cur = settings().stepGoal;
+      const typed = ev.type === 'change' ? Number(/** @type {HTMLInputElement} */ (el).value.replace(/\s/g, '')) : NaN;
+      const next =
+        ev.type === 'change'
+          ? typed > 0
+            ? Math.round(typed / GOAL_STEP) * GOAL_STEP
+            : cur
+          : cur + Number(el.dataset.d) * GOAL_STEP;
+      const v = Math.min(GOAL_MAX, Math.max(GOAL_MIN, next));
+      if (v !== cur) setSettings({ stepGoal: v });
+      else if (ev.type === 'change') /** @type {HTMLInputElement} */ (el).value = String(cur);
+    },
+    feedback: async () => ((await import('../../improve/api.js')).openFeedback(), false),
     wstep: (el) => void setSettings({ weightStep: Number(el.dataset.v) }),
     names: () => (namesSheet(), false),
     outfit: () => (outfitSheet(), false),

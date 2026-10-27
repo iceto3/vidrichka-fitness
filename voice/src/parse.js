@@ -61,7 +61,7 @@ export const mealAt = (hm) => {
  * Normalize the model's JSON into app entries.
  * @param {any} out Parsed model output.
  * @param {{today: string, time: string}} q
- * @returns {({type: 'food', name: string, amount: string, grams: number, kcal: number, protein: number, carbs: number, fat: number, fiber: number|null, salt: number|null, meal: string, meal_named: boolean, date: string, time: string|null} | {type: 'water', amount_ml: number, meal: string, meal_named: boolean, date: string, time: string|null})[]}
+ * @returns {({type: 'steps'|'sleep'|'weight'|'mood'|'energy', value: number|null, quality?: number|null, total?: boolean, meal: string, date: string, time: null} | {type: 'food', name: string, amount: string, grams: number, kcal: number, protein: number, carbs: number, fat: number, fiber: number|null, salt: number|null, meal: string, meal_named: boolean, date: string, time: string|null} | {type: 'water', amount_ml: number, meal: string, meal_named: boolean, date: string, time: string|null})[]}
  */
 export function normalize(out, q) {
   const list = Array.isArray(out?.entries) ? out.entries.slice(0, MAX_ENTRIES) : null;
@@ -79,6 +79,29 @@ export function normalize(out, q) {
     if (e.type === 'water') {
       const ml = num(e.amount_ml, 5000);
       if (ml >= 10) res.push({ type: 'water', amount_ml: ml, meal, meal_named: named, date, time });
+      continue;
+    }
+    if (e.type === 'steps') {
+      const n = Math.round(num(e.value, 100000));
+      if (n > 0) res.push({ type: 'steps', value: n, total: e.total === true, date, time: null, meal });
+      continue;
+    }
+    if (e.type === 'sleep') {
+      const h = e.value == null ? null : num(e.value, 16, 1);
+      const qn = e.quality == null ? null : Math.round(num(e.quality, 5));
+      const qq = qn != null && qn >= 1 ? qn : null;
+      if ((h != null && h > 0) || qq != null)
+        res.push({ type: 'sleep', value: h != null && h > 0 ? h : null, quality: qq, date, time: null, meal });
+      continue;
+    }
+    if (e.type === 'weight') {
+      const kg = num(e.value, 400, 1);
+      if (kg >= 20) res.push({ type: 'weight', value: kg, date, time: null, meal });
+      continue;
+    }
+    if (e.type === 'mood' || e.type === 'energy') {
+      const r = Math.round(num(e.value, 5));
+      if (r >= 1) res.push({ type: e.type, value: r, date, time: null, meal });
       continue;
     }
     if (e.type !== 'food') continue;

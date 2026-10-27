@@ -12,6 +12,14 @@ export const MEALS = /** @type {const} */ ([
   ['dinner', 18],
 ]);
 
+/** Emoji tile + background per meal slot. */
+export const MEAL_STYLE = {
+  breakfast: ['🥣', '#FFF2D9'],
+  lunch: ['🍗', '#E3F5EA'],
+  snack: ['🥜', '#EEE8FF'],
+  dinner: ['🍝', '#FFE9E3'],
+};
+
 /** Meal that fits a time of day. @param {Date} [d] */
 export const mealFor = (d = new Date()) => [...MEALS].reverse().find(([, h]) => d.getHours() >= h)?.[0] ?? 'snack';
 

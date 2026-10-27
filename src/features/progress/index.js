@@ -11,6 +11,7 @@ register(
   'progressTabs',
   { id: 'lifts', label: 'progress.lifts', order: 10, load: () => import('./views/lifts.js') },
   { id: 'calendar', label: 'progress.calendar', order: 30, load: () => import('./views/calendar.js') },
+  { id: 'trends', label: 'progress.trends', order: 35, load: () => import('./views/trends.js') }, // 1.3.4 charts + insights
 );
 /** @param {string} tab */
 const open = async (tab) => {

@@ -11,10 +11,10 @@
  * @module features/celebrations
  */
 import { on } from '../../core/bus.js';
-import { L, fmtDate, t } from '../../core/i18n.js';
+import { L, fmtDate, fmtNum, t } from '../../core/i18n.js';
 import { durationMin } from '../../core/dates.js';
 import { settings } from '../../core/settings.js';
-import { celebrate, preloadSounds } from './api.js';
+import { celebrate, celebrationsHeld, preloadSounds } from './api.js';
 import { exName } from '../library/api.js';
 import { stats, XP } from '../motivation/api.js';
 import { activeWorkout } from '../workouts/api.js';
@@ -57,6 +57,7 @@ export function startCelebrations() {
   // 1.2: every + glass and every food item gets a light micro animation where she tapped
   // (no overlay, no queue). Reaching the water goal still gets the SMALL celebration.
   on('water:added', async (/** @type {{glasses: number, before: number}} */ e) => {
+    if (celebrationsHeld()) return; // 1.3.4: the voice tour animates it itself
     (await import('./micro.js')).microWater();
     const s = settings(),
       goal = s.waterGoal || 8;
@@ -70,7 +71,10 @@ export function startCelebrations() {
         progress: [Math.min(1, e.before / goal), Math.min(1, e.glasses / goal)],
       });
   });
-  on('food:logged', async (/** @type {{emoji?: string}} */ e) => (await import('./micro.js')).microFood(e.emoji));
+  on(
+    'food:logged',
+    async (/** @type {{emoji?: string}} */ e) => !celebrationsHeld() && (await import('./micro.js')).microFood(e.emoji),
+  );
   on('set:done', (/** @type {{done: number, total: number}} */ e) => {
     let last = e;
     celebrate({
@@ -94,6 +98,20 @@ export function startCelebrations() {
       title: t('cel.protein'),
       sub: e.onTime ? t('cel.proteinOnTime') : t('cel.proteinLate'),
     }),
+  );
+  // 1.3.4: the daily step goal (once a day; the XP comes from the steps quest).
+  on(
+    'steps:goal',
+    (/** @type {{steps: number, goal: number}} */ e) =>
+      celebrationsHeld() ||
+      celebrate({
+        size: 'small',
+        key: 'steps',
+        icon: 'steps',
+        title: t('cel.steps'),
+        sub: t('cel.stepsSub', { n: fmtNum(e.steps) }),
+        progress: [0.85, 1],
+      }),
   );
   on('checkin:done', () =>
     celebrate({ size: 'small', key: 'checkin', icon: 'check', title: t('cel.checkin'), sub: t('cel.checkinSub') }),

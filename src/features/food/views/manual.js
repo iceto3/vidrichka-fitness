@@ -3,6 +3,7 @@
  * 100 g (1.3.1: plus optional fiber and salt – left empty they stay unknown), saved to the custom foods store for reuse.
  * @module features/food/views/manual
  */
+import { shareFood } from '../../improve/share.js';
 import { html } from '../../../ui/dom.js';
 import { t } from '../../../core/i18n.js';
 import { uid } from '../../../core/store.js';
@@ -57,6 +58,7 @@ ${warned ? html`<p class="fwarn mt10" role="alert">${t(warned, { est: validateFo
           ...(r.values.salt != null ? { salt: r.values.salt } : {}),
         };
         closeSheet();
+        shareFood(food); // 1.3.4: name + per-100 g values only, anonymous, off in Profile
         setTimeout(() => onSave(food), 0);
         return false;
       },

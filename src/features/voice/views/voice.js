@@ -11,16 +11,22 @@
  * @module features/voice/views/voice
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, getLang, t } from '../../../core/i18n.js';
+import { fmtDate, fmtNum, getLang, t } from '../../../core/i18n.js';
 import { settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { closeSheet, openSheet, toast, whenSettled } from '../../../ui/sheet.js';
-import { logRows, setWater, water } from '../../food/api.js';
+import { logRows, setWater, view as foodView, water } from '../../food/api.js';
+import { addSteps, setSteps, steps } from '../../steps/api.js';
+import { day, rateDay, setSleep } from '../../daily/api.js';
+import { addMeasurement } from '../../body/api.js';
+import { celebrate, holdCelebrations } from '../../celebrations/api.js';
+import { planTour, playTour } from '../tour.js';
+import { FACES } from '../../daily/views/checkin.js';
 import { mealFor } from '../../food/logic.js';
 import { parseText, sttReady, transcribeAudio } from '../api.js';
 import { MAX_REC_MS, canRecord, clock, isAndroidChrome, startRecording } from '../recorder.js';
-import { MAX_TEXT, MEALS, assignMeals, foodRows, localDay, prepare, waterByDay } from '../logic.js';
+import { MAX_TEXT, MEALS, OTHER, assignMeals, foodRows, localDay, prepare, waterByDay } from '../logic.js';
 
 /** Browser speech recognition, only on Android Chrome; elsewhere the in-app recorder is used. */
 const Speech = () =>
@@ -189,27 +195,80 @@ ${SR ? html`<button class="btn sec f1${listening ? ' rec' : ''}" data-act="liste
 }
 
 /**
- * Save parsed entries right away and offer Undo (removes the rows, puts the water back).
+ * Save parsed entries right away (1.3.4: also steps, sleep, weight, mood and energy), then
+ * show where they landed with the post-voice tour and ONE celebration at the end.
  * @param {any[]} parsed Entries from the server.
  * @param {string} [screenMeal] Meal of the Food › Add screen it was opened from.
  * @param {Date} [now]
- * @returns {{rows: any[], water: Record<string, number>, text: string}}
+ * @param {{tour?: boolean}} [o] `tour: false` saves without the tour (tests).
+ * @returns {{rows: any[], water: Record<string, number>, text: string, saved: import('../tour.js').Saved[]}}
  */
-export function saveEntries(parsed, screenMeal = '', now = new Date()) {
+export function saveEntries(parsed, screenMeal = '', now = new Date(), o = {}) {
   const glassMl = settings().glassMl || 250;
   const today = localDay(now);
   const list = assignMeals(prepare(parsed, glassMl), { today, screenMeal, defaultMeal: mealFor(now) });
-  const rows = foodRows(list, now);
-  const saved = rows.length ? logRows(rows) : [];
-  /** @type {Record<string, number>} */
-  const before = {};
-  for (const [date, n] of Object.entries(waterByDay(list))) {
-    before[date] = water(date);
-    setWater(date, before[date] + n);
+  const play = o.tour !== false;
+  if (play) holdCelebrations(true);
+  /** @type {import('../tour.js').Saved[]} */
+  const done = [];
+  const goalsBefore = { water: water(today), stepsCel: !!day(today).stepsCel };
+  try {
+    const rows = foodRows(list, now);
+    const saved = rows.length ? logRows(rows) : [];
+    saved.forEach((r) => done.push({ kind: 'food', date: r.date, meal: r.meal, emoji: r.emoji }));
+    /** @type {Record<string, number>} */
+    const before = {};
+    for (const [date, n] of Object.entries(waterByDay(list))) {
+      before[date] = water(date);
+      setWater(date, before[date] + n);
+      done.push({ kind: 'water', date, before: before[date], after: before[date] + n });
+    }
+    for (const e of list) {
+      if (!OTHER.includes(e.type)) continue;
+      const x = /** @type {import('../logic.js').OtherEntry} */ (e);
+      if (x.type === 'steps' && x.value) {
+        const b = steps(x.date);
+        const after = x.total ? setSteps(x.date, x.value) : addSteps(x.date, x.value);
+        done.push({ kind: 'steps', date: x.date, before: b, after });
+      } else if (x.type === 'sleep') {
+        setSleep(x.date, { hours: x.value, q: x.quality });
+        done.push({ kind: 'sleep', date: x.date });
+      } else if (x.type === 'weight' && x.value) {
+        addMeasurement({ date: x.date, weight: x.value });
+        done.push({ kind: 'weight', date: x.date });
+      } else if ((x.type === 'mood' || x.type === 'energy') && x.value) {
+        rateDay(x.date, x.type, x.value);
+        done.push({ kind: x.type, date: x.date });
+      }
+    }
+    const tour = planTour(done, today);
+    const text = tour.mode === 'summary' ? t('voice.savedMany', { n: done.length }) : summary(list, saved, today);
+    toast(text);
+    if (play) {
+      const goal = settings().waterGoal || 8;
+      const waterGoal = goalsBefore.water < goal && water(today) >= goal;
+      const stepsGoal = !goalsBefore.stepsCel && !!day(today).stepsCel;
+      void playTour(tour, {
+        prepare: (st) => {
+          const d = st.items[0]?.date;
+          if (st.route === 'food' && d) foodView.date = d;
+        },
+        onDone: () => {
+          holdCelebrations(false);
+          celebrate({
+            size: 'small',
+            icon: stepsGoal ? 'steps' : waterGoal ? 'drop' : 'mic',
+            title: stepsGoal ? t('cel.steps') : waterGoal ? t('cel.waterGoalVoice') : t('voice.celTitle'),
+            sub: done.length === 1 ? text : t('voice.savedMany', { n: done.length }),
+          });
+        },
+      });
+    }
+    return { rows: saved, water: before, text, saved: done };
+  } catch (err) {
+    holdCelebrations(false);
+    throw err;
   }
-  const text = summary(list, saved, today);
-  toast(text);
-  return { rows: saved, water: before, text };
 }
 
 /**
@@ -231,8 +290,10 @@ function summary(list, rows, today) {
     const k = `${r.date}|${r.meal}`;
     groups.set(k, [...(groups.get(k) ?? []), t('voice.item', { name: r.name, g: r.grams })]);
   }
-  const glasses = list.reduce((a, e) => a + (e.type === 'water' ? (e.glasses ?? 1) : 0), 0);
-  const waterTxt = glasses ? t('voice.waterAdded', { n: glasses }) : '';
+  const glasses = list.reduce((a, e) => a + (e.type === 'water' ? /** @type {any} */ (e.glasses ?? 1) : 0), 0);
+  const waterTxt = [glasses ? t('voice.waterAdded', { n: glasses }) : '', ...list.map(otherText)]
+    .filter(Boolean)
+    .join(', ');
   const keys = [...groups.keys()];
   if (keys.length === 1 && keys[0].startsWith(`${today}|`)) {
     const meal = t(`meal.${keys[0].split('|')[1]}`).toLowerCase();
@@ -253,4 +314,20 @@ function summary(list, rows, today) {
       return `${label}: ${/** @type {string[]} */ (groups.get(k)).join(', ')}`;
     });
   return t('voice.savedDays', { items: [...parts, waterTxt].filter(Boolean).join(' · ') });
+}
+
+/** Short text for a steps / sleep / weight / mood / energy entry ('' for others). @param {any} e */
+function otherText(e) {
+  if (e.type === 'steps') return t(e.total ? 'voice.stepsTotal' : 'voice.stepsAdded', { n: fmtNum(e.value) });
+  if (e.type === 'sleep')
+    return [
+      e.value != null ? t('voice.sleepH', { n: fmtNum(e.value, 1) }) : t('voice.sleep'),
+      e.quality ? FACES[e.quality - 1] : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+  if (e.type === 'weight') return t('voice.weight', { n: fmtNum(e.value, 1) });
+  if (e.type === 'mood') return `${t('sleep.mood')} ${FACES[e.value - 1] ?? ''}`;
+  if (e.type === 'energy') return `${t('sleep.energy')} ${e.value}/5`;
+  return '';
 }

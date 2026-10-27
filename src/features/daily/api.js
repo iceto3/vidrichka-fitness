@@ -110,6 +110,45 @@ export function checkinMorning(v) {
   return rec;
 }
 
+/** Longest night a manual sleep entry accepts (hours). */
+export const MAX_SLEEP_H = 16;
+
+/**
+ * 1.3.4: record last night's sleep by hand (or by voice): hours and/or quality 1–5, kept on
+ * the morning's record (like the morning check-in). Hours typed here win over the
+ * bedtime/wake-up estimate.
+ * @param {string} date Day key of the morning. @param {{hours?: number|null, q?: number|null}} v
+ */
+export function setSleep(date, v) {
+  /** @type {Record<string, any>} */
+  const patch = {};
+  if (v.hours != null && Number.isFinite(Number(v.hours)))
+    patch.sleepH = Math.round(Math.min(MAX_SLEEP_H, Math.max(0, Number(v.hours))) * 2) / 2;
+  if (v.q != null && Number.isFinite(Number(v.q))) patch.sleepQ = Math.min(5, Math.max(1, Math.round(Number(v.q))));
+  if (!Object.keys(patch).length) return day(date);
+  const rec = patchDay(date, patch);
+  emit('sleep:logged', { date, ...patch });
+  emit('daily:changed');
+  return rec;
+}
+
+/** Last night's sleep (the morning of `date`): hours (manual or estimated) and quality. @param {string} [date] */
+export function sleepOf(date = dayKey()) {
+  const n = nights(all('days'), 1, date)[0];
+  return { hours: n.hours, q: n.sleepQ, manual: day(date).sleepH != null };
+}
+
+/**
+ * 1.3.4: mood or energy (1–5) for a day, e.g. said with "Кажи".
+ * @param {string} date @param {'mood'|'energy'} field @param {number} v
+ */
+export function rateDay(date, field, v) {
+  const n = Math.min(5, Math.max(1, Math.round(Number(v) || 3)));
+  patchDay(date, { [field]: n });
+  emit('daily:changed');
+  return n;
+}
+
 /** Evening check-in: energy during the day (1–5). @param {number} energy */
 export function checkinEvening(energy) {
   patchDay(dayKey(), { energy });

@@ -13,15 +13,9 @@ import { bar, ring } from '../../../ui/components.js';
 import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
 import { trashList } from '../../../core/trash.js';
 import { dayRows, foodName, setWater, view, water } from '../api.js';
-import { MEALS, known, mealFor, totals } from '../logic.js';
+import { MEALS, MEAL_STYLE, known, mealFor, totals } from '../logic.js';
 
-/** Emoji tile + background per meal slot. */
-export const MEAL_STYLE = {
-  breakfast: ['🥣', '#FFF2D9'],
-  lunch: ['🍗', '#E3F5EA'],
-  snack: ['🥜', '#EEE8FF'],
-  dinner: ['🍝', '#FFE9E3'],
-};
+export { MEAL_STYLE } from '../logic.js';
 
 /** Fiber / salt of a row as a short suffix (only known values). @param {any} r */
 const extras = (r) =>
@@ -33,8 +27,13 @@ const extras = (r) =>
     .map((x) => ` · ${x}`)
     .join('');
 
-/** Meal detail sheet: tap an item to edit it, delete with Undo, save as a combination. @param {string} meal */
-function openMeal(meal) {
+/**
+ * Meal detail sheet: tap an item to edit it, delete with Undo, save as a combination.
+ * 1.3.4: also opened from Home's meal rows (for today), so both places show the same sheet.
+ * @param {string} meal @param {string} [date] Day to show (default: the diary's day).
+ */
+export function openMeal(meal, date) {
+  if (date) view.date = date;
   openSheet({
     render: () => {
       const rows = dayRows(view.date).filter((r) => r.meal === meal);

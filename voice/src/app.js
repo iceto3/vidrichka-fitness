@@ -20,7 +20,7 @@ import { chatBody } from './prompt.js';
 import { Invalid, checkRequest, normalize } from './parse.js';
 import { readAudio, transcribe } from './transcribe.js';
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 export const XAI_URL = 'https://api.x.ai/v1/chat/completions';
 const MAX_BODY = 4096;
 

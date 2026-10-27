@@ -152,7 +152,7 @@ export function nights(rows, n, today) {
       bed: eve.bed ?? null,
       bedEst: !!eve.bedEst,
       wake: r.wake ?? null,
-      hours: sleepHours(eve.bed, r.wake),
+      hours: typeof r.sleepH === 'number' ? r.sleepH : sleepHours(eve.bed, r.wake),
       sleepQ: r.sleepQ ?? null,
       mood: r.mood ?? null,
       energy: r.energy ?? null,

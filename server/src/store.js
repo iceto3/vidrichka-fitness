@@ -23,7 +23,15 @@
  * @property {(id: string, day: string, field: string, at: number) => Promise<void>} setFlag
  * @property {(rows: (SentRow & {at: number})[]) => Promise<SentRow[]>} claim Returns the rows newly claimed.
  * @property {(beforeDay: string) => Promise<void>} cleanup
+ * @property {(f: import('./collect.js').SharedFood) => Promise<void>} addFood 1.3.4: counts identical entries
+ * @property {() => Promise<number>} countFoods Distinct shared foods.
+ * @property {(f: import('./collect.js').Feedback, now: number) => Promise<number>} addFeedback Returns the new id.
+ * @property {(since: number) => Promise<number>} countFeedback Messages since a time (epoch ms).
  */
+
+const FOOD_COLS = ['name', 'lang', 'kcal', 'protein', 'carbs', 'fat', 'fiber', 'salt'];
+/** `col IS ?` matches NULL = NULL too (identical entries are counted, not repeated). */
+const SAME_FOOD = FOOD_COLS.map((c, i) => `${c} IS ?${i + 1}`).join(' AND ');
 
 /** Daily flag columns an event may set. */
 export const FLAGS = ['ack_at', 'protein_done', 'checkin_am', 'checkin_pm', 'goodnight'];
@@ -121,10 +129,49 @@ export function d1Store(db) {
         db.prepare('DELETE FROM sent WHERE day < ?').bind(beforeDay),
       ]);
     },
+    async addFood(f) {
+      const vals = FOOD_COLS.map((c) => /** @type {any} */ (f)[c]);
+      const r = await db
+        .prepare(`UPDATE foods_shared SET n = n + 1 WHERE ${SAME_FOOD}`)
+        .bind(...vals)
+        .run();
+      if (r.meta?.changes) return;
+      await db
+        .prepare(
+          `INSERT INTO foods_shared (${FOOD_COLS.join(', ')}) VALUES (${FOOD_COLS.map((_, i) => `?${i + 1}`).join(', ')})`,
+        )
+        .bind(...vals)
+        .run();
+    },
+    async countFoods() {
+      return /** @type {number} */ ((await db.prepare('SELECT COUNT(*) AS n FROM foods_shared').first('n')) ?? 0);
+    },
+    async addFeedback(f, now) {
+      const id = /** @type {number} */ (
+        await db
+          .prepare('INSERT INTO feedback (text, version, lang, created_at) VALUES (?, ?, ?, ?) RETURNING id')
+          .bind(f.text, f.version, f.lang, now)
+          .first('id')
+      );
+      if (f.images.length)
+        await db.batch(
+          f.images.map((im, i) =>
+            db
+              .prepare('INSERT INTO feedback_images (feedback_id, idx, mime, data) VALUES (?, ?, ?, ?)')
+              .bind(id, i, im.mime, im.data.buffer.slice(im.data.byteOffset, im.data.byteOffset + im.data.byteLength)),
+          ),
+        );
+      return id;
+    },
+    async countFeedback(since) {
+      return /** @type {number} */ (
+        (await db.prepare('SELECT COUNT(*) AS n FROM feedback WHERE created_at >= ?').bind(since).first('n')) ?? 0
+      );
+    },
   };
 }
 
-/** In-memory Store for tests. @returns {Store & {devices: Map<string, Device>, daily: Map<string, DailyRow>, sent: Map<string, SentRow>}} */
+/** In-memory Store for tests. @returns {Store & {devices: Map<string, Device>, daily: Map<string, DailyRow>, sent: Map<string, SentRow>, foods: any[], feedback: any[]}} */
 export function memoryStore() {
   /** @type {Map<string, Device>} */
   const devices = new Map();
@@ -133,10 +180,28 @@ export function memoryStore() {
   /** @type {Map<string, SentRow & {at: number}>} */
   const sent = new Map();
   const clone = (/** @type {any} */ x) => structuredClone(x);
+  /** @type {any[]} */
+  const foods = [];
+  /** @type {any[]} */
+  const feedback = [];
   return {
     devices,
     daily,
     sent,
+    foods,
+    feedback,
+    async addFood(f) {
+      const same = foods.find((x) => FOOD_COLS.every((c) => x[c] === /** @type {any} */ (f)[c]));
+      if (same) same.n++;
+      else foods.push({ id: foods.length + 1, ...clone(f), n: 1 });
+    },
+    countFoods: async () => foods.length,
+    async addFeedback(f, now) {
+      const id = feedback.length + 1;
+      feedback.push({ id, ...clone(f), created_at: now });
+      return id;
+    },
+    countFeedback: async (since) => feedback.filter((x) => x.created_at >= since).length,
     getDevice: async (id) => clone(devices.get(id) ?? null),
     countDevices: async () => devices.size,
     upsertDevice: async (d) =>

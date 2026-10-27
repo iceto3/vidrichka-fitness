@@ -78,9 +78,9 @@ function play(kind, at, inner) {
   }
 }
 
-/** + glass: droplet → glass with ripple, mini otter sipping. */
-export function microWater() {
-  const at = anchorPoint(['.bluebtn', '.glasses', '.water']);
+/** + glass: droplet → glass with ripple, mini otter sipping. @param {string[]} [sels] Where (1.3.4: the voice tour). */
+export function microWater(sels = ['.bluebtn', '.glasses', '.water']) {
+  const at = anchorPoint(sels);
   play(
     'water',
     at,
@@ -88,11 +88,14 @@ export function microWater() {
   );
 }
 
-/** Food added: the item pops into the meal with a bounce and sparkles. @param {string} [emoji] */
-export function microFood(emoji = '🍽️') {
+/**
+ * Food added: the item pops into the meal with a bounce and sparkles.
+ * @param {string} [emoji] @param {string[]} [sels] Where (1.3.4: the voice tour points at the meal row).
+ */
+export function microFood(emoji = '🍽️', sels = ['.add .basket .chip:last-of-type', '.add .basket', '.add .topbar']) {
   // Next frame: the basket chip / meal row the item went into has been drawn by then.
   requestAnimationFrame(() => {
-    const at = anchorPoint(['.add .basket .chip:last-of-type', '.add .basket', '.add .topbar']);
+    const at = anchorPoint(sels);
     const sp = ['#F5B935', '#14A3A8', '#FF7A2F', '#7C5CFF']
       .map((c, i) => `<i class="msp s${i}">${sparkle(c)}</i>`)
       .join('');
