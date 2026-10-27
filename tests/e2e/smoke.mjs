@@ -2109,11 +2109,12 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await layer.locator('[data-act="h"][data-d="1"]').click();
   await layer.locator('[data-act="rate"][data-v="4"]').click();
   await settle();
-  assert.equal(await dayField('sleepH'), 7.5);
+  // 1.4.0: the sheet starts at the suggested 7,5 h, so +½ h gives 8
+  assert.equal(await dayField('sleepH'), 8);
   assert.equal(await dayField('sleepQ'), 4);
   await layer.locator('[data-close]').last().click();
   await settle();
-  assert.match(await page.locator('.sleepcard').innerText(), /7,5/);
+  assert.match(await page.locator('.sleepcard').innerText(), /\b8\b/);
   await page.locator('.sleepcard').scrollIntoViewIfNeeded();
   await shot('sleep-card');
   console.log('  ✔ 1.3.4 sleep card');

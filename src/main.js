@@ -5,6 +5,7 @@
  */
 import { kv, load, setKv } from './core/store.js';
 import { WHATS_NEW } from './core/version.js';
+import { newSince } from './features/whatsnew/notes.js';
 import { IS_BETA } from './core/channel.js';
 import { settings, setSettings } from './core/settings.js';
 import { detectLang, getGender, getLang, setGender, setLang, t } from './core/i18n.js';
@@ -100,69 +101,13 @@ const genderRow = () =>
 function whatsNew(next = () => {}) {
   const seen = /** @type {string} */ (kv('seenWhatsNew', ''));
   if (seen === WHATS_NEW) return next();
-  // Coming from 1.3.3: only the 1.3.4 items; from 1.3.2 also the 1.3.3 ones; from 1.3.1 also the 1.3.2 ones; from 1.3.0 also the 1.3.1 ones; from 1.2.1 also
-  // the 1.3 ones; from 1.2.0 ("1.2") also the 1.2.1 ones; from older, the 1.2 items and the
-  // gender choice too. Voice items only once the voice server is set. (The 1.3.1 Undo item is
-  // replaced by the 1.3.2 pill.) Shown in the app language, which is loaded before this runs.
-  const had133 = /^1\.3\.[3-9]/.test(seen);
-  const had132 = /^1\.3\.[2-9]/.test(seen);
-  const had131 = /^1\.3\.[1-9]/.test(seen);
-  const had13 = seen.startsWith('1.3');
-  const had12 = had13 || seen === '1.2' || seen.startsWith('1.2.');
-  const had121 = had13 || /^1\.2\.[1-9]/.test(seen);
-  const push = !had12 && !!pushUrl(); // push items only once the server is deployed
-  const voice = !!voiceUrl();
-  const items = /** @type {[string, string][]} */ ([
-    ['food', 'whatsNew.homeMeals'],
-    ...(voice ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.voiceTour']]) : []),
-    ['steps', 'whatsNew.steps'],
-    ['moon', 'whatsNew.sleep134'],
-    ['chart', 'whatsNew.trends'],
-    ['message', 'whatsNew.feedback'],
-    ...(had133
-      ? []
-      : /** @type {[string, string][]} */ ([
-          ...(voice ? [['mic', 'whatsNew.record']] : []),
-          ['check', 'whatsNew.fixes133'],
-        ])),
-    ...(had132
-      ? []
-      : /** @type {[string, string][]} */ ([
-          ['undo', 'whatsNew.undoPill'],
-          ['star', 'whatsNew.comboRename'],
-          ['check', 'whatsNew.fixes132'],
-        ])),
-    ...(had131
-      ? []
-      : /** @type {[string, string][]} */ ([
-          ...(voice ? [['mic', 'whatsNew.voiceMeal']] : []),
-          ['food', 'whatsNew.fiberSalt'],
-          ['edit', 'whatsNew.mealEdit'],
-          ['star', 'whatsNew.combos'],
-        ])),
-    ...(voice && !had13 ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.voice']]) : []),
-    ...(had121
-      ? []
-      : /** @type {[string, string][]} */ ([
-          ['camera', 'whatsNew.photos'],
-          ['calendar', 'whatsNew.photoMonth'],
-          ['check', 'whatsNew.fixes121'],
-        ])),
-    ...(had12
-      ? []
-      : /** @type {[string, string][]} */ ([
-          ...(push
-            ? [
-                ['bell', 'whatsNew.push'],
-                ['sun', 'whatsNew.pushIos'],
-                ['check', 'whatsNew.pushStop'],
-              ]
-            : []),
-          ['clock', 'whatsNew.proteinBar'],
-          ['food', 'whatsNew.breakfast'],
-          ['drop', 'whatsNew.micro'],
-        ])),
-  ]);
+  // 1.4.0: the items of every release newer than the one last seen (features/whatsnew/notes);
+  // voice/push items only once those servers are set. Shown in the app language.
+  const {
+    items,
+    gender: askGender,
+    push,
+  } = newSince(seen, { voice: !!voiceUrl(), push: !!pushUrl() }, undefined, WHATS_NEW);
   if (!items.length) return next(); // nothing visible is new yet (e.g. voice not deployed): ask again next version
   setKv('seenWhatsNew', WHATS_NEW);
   openSheet({
@@ -171,7 +116,8 @@ function whatsNew(next = () => {}) {
     render:
       () => html`<div class="center">${otter({ size: 110, pose: 'cheer' })}<h1 class="h2 mt8">${t('whatsNew.title', { v: WHATS_NEW })}</h1></div>
 <div class="col gap10 mt12 whatsnew">${items.map(([i, k]) => html`<div class="row gap10"><span class="sq acc">${ic(i, 18, 2.3)}</span><span class="f1 b small">${t(k)}</span></div>`)}</div>
-${had12 ? '' : html`<div class="card mt12"><p class="small b">${t('whatsNew.gender')}</p>${genderRow()}</div>`}
+<p class="muted xs b mt10 center">${t('whatsNew.findLater')}</p>
+${askGender ? html`<div class="card mt12"><p class="small b">${t('whatsNew.gender')}</p>${genderRow()}</div>` : ''}
 ${
   push
     ? html`<p class="muted xs b mt12">${t('whatsNew.pushHow')}</p>

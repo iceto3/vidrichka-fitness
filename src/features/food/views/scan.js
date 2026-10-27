@@ -4,6 +4,7 @@
  * in Open Food Facts; typing the number or manual entry is always possible.
  * @module features/food/views/scan
  */
+import { emit } from '../../../core/bus.js';
 import { html } from '../../../ui/dom.js';
 import { getLang, t } from '../../../core/i18n.js';
 import { all } from '../../../core/store.js';
@@ -78,14 +79,16 @@ async function makeDecoder() {
 /**
  * Open the scanner sheet.
  * @param {(food: any) => void} onFood
- * @param {() => void} onManual
+ * @param {(barcode?: string) => void} onManual Manual entry; gets the barcode that was not
+ *   found (1.4.0) so the saved food remembers it and the next scan finds it at once.
  */
 export function openScanner(onFood, onManual) {
   /** @type {MediaStream|null} */
   let stream = null;
   let stop = false,
     status = t('scan.starting'),
-    code = '';
+    code = '',
+    missing = '';
   const setStatus = (/** @type {string} */ s) => {
     status = s;
     const el = document.getElementById('scanstatus');
@@ -97,7 +100,10 @@ export function openScanner(onFood, onManual) {
     const cached = all('foods').find((f) => f.barcode === c);
     const r = cached ?? (await product(c, getLang()));
     if (r && r !== 'notfound') return (closeSheet(), onFood(r));
-    setStatus(r === 'notfound' ? t('scan.notFound') : t('scan.offline'));
+    status = r === 'notfound' ? t('scan.notFound') : t('scan.offline');
+    // not found (or no answer within 8 s): the manual form, with this barcode, becomes the main button
+    missing = c;
+    emit('ui:refresh');
   };
   openSheet({
     kind: 'full',
@@ -107,7 +113,7 @@ export function openScanner(onFood, onManual) {
 <p class="b small mt10 center" id="scanstatus" role="status">${status}</p>
 <form class="row gap8 mt12" data-act="noop"><input class="input f1" id="bcode" inputmode="numeric" pattern="[0-9]*" placeholder="${t('scan.typeCode')}" value="${code}" aria-label="${t('scan.typeCode')}">
 <button class="btn sm" type="button" data-act="lookup">${t('scan.lookup')}</button></form>
-<button class="btn sec w100 mt12" data-act="manual">${ic('edit', 18)}${t('food.manual')}</button>`,
+<button class="btn${missing ? '' : ' sec'} w100 mt12" data-act="manual">${ic('edit', 18)}${missing ? t('scan.addManual', { code: missing }) : t('food.manual')}</button>`,
     mount: async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('no camera');
@@ -142,7 +148,7 @@ export function openScanner(onFood, onManual) {
         if (c.length >= 6) lookup(c);
         return false;
       },
-      manual: () => (closeSheet(), onManual(), false),
+      manual: () => (closeSheet(), onManual(missing || undefined), false),
     },
   });
 }

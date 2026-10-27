@@ -207,7 +207,7 @@ ${(() => {
         const { openScanner } = await import('./scan.js');
         openScanner(
           (food) => add(food),
-          () => openManual(),
+          (barcode) => openManual(barcode),
         );
         return false;
       },

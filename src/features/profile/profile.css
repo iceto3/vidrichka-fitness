@@ -180,3 +180,20 @@
   background: var(--accent-soft);
   color: var(--accent-d);
 }
+
+/* 1.4.0: the footer (version → What's new) stays clear of the bottom nav */
+.profile .pfooter {
+  display: block;
+  padding: 8px 0;
+}
+.profile .pfspace {
+  height: 32px;
+}
+.whatsnewpage .wnlatest {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-d);
+  vertical-align: middle;
+}

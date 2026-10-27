@@ -182,3 +182,41 @@ export function insights(rows, o) {
     .sort((x, y) => y.score - x.score)
     .slice(0, 2);
 }
+
+/**
+ * 1.4.0 weight trend: the day's weight (latest entry of the day) for the `n` days ending
+ * `today`, or weekly means for long ranges. Days without a weigh-in are null (the line
+ * skips them).
+ * @param {any[]} measurements @param {number} n @param {string} today @param {boolean} weekly
+ */
+export function weightSeries(measurements, n, today, weekly) {
+  /** @type {Map<string, {w: number, ts: number}>} */
+  const by = new Map();
+  for (const m of measurements) {
+    if (typeof m.weight !== 'number' || !(m.weight > 0) || typeof m.date !== 'string') continue;
+    const ts = Number(m.ts ?? m.createdAt ?? 0),
+      cur = by.get(m.date);
+    if (!cur || ts >= cur.ts) by.set(m.date, { w: m.weight, ts });
+  }
+  const rows = lastDays(n, today).map((day) => ({ day, weight: by.get(day)?.w ?? null }));
+  return series(/** @type {any} */ (rows), /** @type {any} */ ('weight'), weekly);
+}
+
+/**
+ * A readable y-range for a weight line: whole kg around the data with grid every 1/2/5 kg.
+ * @param {{y: number|null}[]} pts @returns {{min: number, max: number, step: number}|null}
+ */
+export function weightRange(pts) {
+  const ys = /** @type {number[]} */ (pts.map((p) => p.y).filter((y) => y != null));
+  if (!ys.length) return null;
+  const lo = Math.min(...ys),
+    hi = Math.max(...ys),
+    span = hi - lo;
+  const step = span > 12 ? 5 : span > 5 ? 2 : 1;
+  const min = Math.floor((lo - step / 2) / step) * step,
+    max = Math.max(min + 2 * step, Math.ceil((hi + step / 2) / step) * step);
+  return { min, max, step };
+}
+
+/** Does a series have no value at all? @param {{y: number|null}[]} pts */
+export const isEmpty = (pts) => pts.every((p) => p.y == null || p.y === 0);

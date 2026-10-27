@@ -50,7 +50,11 @@ ${keys.map((k, i) => {
 <div class="grid3 mt12"><div class="stat"><div class="l">${ic('dumbbell', 15, 2.3)}${t('calendar.workouts')}</div><div class="v num">${full.length}${partial ? html` <small class="partn">${t('calendar.partialN', { n: partial })}</small>` : ''}</div></div>
 <div class="stat"><div class="l">${ic('clock', 15, 2.3)}${t('calendar.time')}</div><div class="v num">${totalMin(list)} <small>${t('unit.min')}</small></div></div>
 <div class="stat"><div class="l">${ic('bolt', 15, 2.3)}${t('summary.volume')}</div><div class="v num">${fmtVolume(vol).value} <small>${fmtVolume(vol).unit}</small></div></div></div>
-${list.length && !isNow ? html`<button class="btn sec w100 mt12" data-act="recap">${ic('gift', 18, 2.2)}${t('calendar.recap', { month: fmtDate(first, { month: 'long' }) })}</button>` : ''}
+${
+  list.length || filled.size
+    ? html`<button class="btn sec w100 mt12" data-act="recap">${ic('gift', 18, 2.2)}${t(isNow ? 'calendar.recapSoFar' : 'calendar.recap', { month: fmtDate(first, { month: 'long' }) })}</button>`
+    : ''
+}
 <div class="section-title"><h2 class="h3">${t('calendar.history')}</h2></div>
 ${
   list.length

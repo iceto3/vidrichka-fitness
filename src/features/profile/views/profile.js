@@ -20,6 +20,7 @@ import { badges, level, recordGoal, stats } from '../../motivation/api.js';
 import { canInstall, installApp, isIOS } from '../install.js';
 import { dailyOnCount } from '../../daily/api.js';
 import { APP_VERSION } from '../../../core/version.js';
+import { IS_BETA } from '../../../core/channel.js';
 import { GOAL_MAX, GOAL_MIN, GOAL_STEP } from '../../steps/logic.js';
 
 /** The Reminders row's summary: workout days (or off) plus the daily-rhythm reminders that are on. @param {{enabled: boolean, days: number[]}} r */
@@ -180,10 +181,12 @@ ${srow(
 ${srow('chart', 'blue', t('profile.shareFoods'), t('profile.shareFoodsSub'), toggle(s.shareFoods, 'tg', t('profile.shareFoods'), { k: 'shareFoods' }), 'id="sharefoods"')}
 <button class="srow" data-act="partner"><span class="sic gold">${ic('users', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.partner')}</span><span class="muted xs b">${s.partnerName ? t('profile.partnerWith', { name: s.partnerName }) : t('profile.partnerSub')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 <button class="srow" data-act="feedback" id="feedbackrow"><span class="sic violet">${ic('message', 19, 2.2)}</span><span class="t left"><span class="st block">${t('feedback.title')}</span><span class="muted xs b">${t('feedback.rowSub')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
+<button class="srow" data-go="whatsnew" id="whatsnewrow"><span class="sic teal">${ic('star', 19, 2.2)}</span><span class="t left"><span class="st block">${t('whatsNew.page')}</span><span class="muted xs b">${t('whatsNew.rowSub', { v: APP_VERSION })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic teal">${ic('download', 19, 2.2)}</span><span class="t left"><span class="st block">${t('install.cta')}</span><span class="muted xs b">${isIOS() ? t('install.iosShort') : t('install.cardBody')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>` : ''}
 </div>
 <button class="btn sec danger-t w100 mt16" data-act="reset">${ic('trash', 18)}${t('profile.reset')}</button>
-<p class="muted xs b center mt12">Vidrichka Fitness v${APP_VERSION} · ${t('profile.local')}</p>
+<button class="linkbtn xs center w100 mt12 pfooter" data-go="whatsnew">Vidrichka Fitness v${APP_VERSION}${IS_BETA ? ' · БЕТА' : ''} · ${t('profile.local')}</button>
+<div class="pfspace" aria-hidden="true"></div>
 </div>`;
   },
   actions: {
