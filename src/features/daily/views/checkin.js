@@ -13,12 +13,19 @@ import { checkinEvening, checkinMorning, day, lastNight, setLastBedtime } from '
 
 export const FACES = ['😫', '😕', '😐', '🙂', '🤩'];
 
-/** A 1–5 row of big emoji buttons. @param {string} field @param {number|undefined} v @param {string} label */
+/** Caption key prefix per rated field (1.4.0: every face has a word under it). */
+const CAPTIONS = /** @type {Record<string, string>} */ ({
+  mood: 'scale.mood',
+  energy: 'scale.energy',
+  sleepQ: 'scale.sleep',
+});
+
+/** A 1–5 row of big emoji buttons, each with a short caption. @param {string} field @param {number|undefined} v @param {string} label */
 export const scale = (field, v, label) =>
-  html`<div class="scale" role="radiogroup" aria-label="${label}">${FACES.map(
-    (f, i) =>
-      html`<button class="${v === i + 1 ? 'on' : ''}" role="radio" aria-checked="${String(v === i + 1)}" data-act="rate" data-f="${field}" data-v="${i + 1}" aria-label="${i + 1}/5">${f}</button>`,
-  )}</div>`;
+  html`<div class="scale" role="radiogroup" aria-label="${label}">${FACES.map((f, i) => {
+    const cap = t(`${CAPTIONS[field] ?? 'scale.mood'}${i + 1}`);
+    return html`<button class="${v === i + 1 ? 'on' : ''}" role="radio" aria-checked="${String(v === i + 1)}" data-act="rate" data-f="${field}" data-v="${i + 1}" aria-label="${cap} (${i + 1}/5)"><span aria-hidden="true">${f}</span><small class="cap" aria-hidden="true">${cap}</small></button>`;
+  })}</div>`;
 
 const hm = (/** @type {number} */ ts) => fmtDate(ts, { hour: '2-digit', minute: '2-digit' });
 

@@ -94,7 +94,10 @@ index = index
 if (BETA)
   index = index
     .replace("localStorage.getItem('vf-theme'", "localStorage.getItem('vfb-theme'")
-    .replace('<title>Vidrichka Fitness</title>', '<title>Vidrichka Fitness БЕТА</title>\n<meta name="robots" content="noindex">');
+    .replace(
+      '<title>Vidrichka Fitness</title>',
+      '<title>Vidrichka Fitness БЕТА</title>\n<meta name="robots" content="noindex">',
+    );
 await writeFile(join(out, 'index.html'), index);
 await writeFile(join(out, '.nojekyll'), '');
 

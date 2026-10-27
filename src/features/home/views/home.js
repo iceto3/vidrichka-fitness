@@ -28,9 +28,8 @@ import {
 } from '../../daily/api.js';
 import { closeNotifications } from '../../daily/notify.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
-import { addSteps } from '../../steps/api.js';
 import { dayRows } from '../../food/api.js';
-import { mealsCard, openHomeMeal, openSleepSheet, openStepsSheet, sleepCard, stepsCard } from './today.js';
+import { cardActions, mealsCard, sleepCard, stepsCard } from '../../day/views/cards.js';
 
 /**
  * The protein-breakfast bar (1.2): a live mm:ss countdown with "Ate it" / "Skipped".
@@ -171,15 +170,15 @@ ${a ? html`<button class="card resume row gap12" data-go="workout"><span class="
   <div class="chip ${left ? 'accent' : 'ok'} mt6 chip-sm">${left ? t('home.toGo', { n: left }) : t('home.goalMet')}</div></div></div>
 </div>
 ${workoutCard()}
-${stepsCard()}
-${sleepCard()}
-${mealsCard()}
+${stepsCard(dayKey())}
+${sleepCard(dayKey())}
+${mealsCard(dayKey())}
 <section class="card mt12 quests" aria-label="${t('home.quests')}"><div class="row between qhead"><h2 class="h3 xb">${t('home.quests')}</h2>
 <div class="row gap6"><div class="lvl sm" aria-label="${t('home.level', { n: lv.level })}">${lv.level}</div><div class="bar w96">${raw(`<i style="width:${lv.pct * 100}%;background:var(--gold)"></i>`)}</div><span class="xs b muted num">${lv.into}/${lv.need} XP</span></div></div>
 ${quests().map(
   (
     q,
-  ) => html`<button class="quest" ${raw(q.id === 'breakfast' && dayRows(dayKey()).some((r) => r.meal === 'breakfast') ? 'data-act="homeMeal" data-m="breakfast"' : `data-go="${esc(q.go ?? 'home')}"`)}><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
+  ) => html`<button class="quest" ${raw(q.id === 'breakfast' && dayRows(dayKey()).some((r) => r.meal === 'breakfast') ? 'data-act="dayMeal" data-m="breakfast"' : `data-go="${esc(q.go ?? 'home')}"`)}><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
 <span class="f1 b${q.isDone ? ' struck' : ''}">${t(q.label, q.vars)}${/** @type {any} */ (q.vars).goal != null ? html` <span class="muted small">(${t('home.progressOf', q.vars)})</span>` : ''}</span><span class="xp">+${q.xp} XP</span></button>`,
 )}</section>
 <button class="card mt12 challenge" data-go="progress/lifts"><div class="row between"><span class="row gap8"><span class="sq gold">${ic('target', 18, 2.4)}</span><span class="b">${t('home.challenge', { month: fmtDate(now, { month: 'long' }) })}</span></span><span class="xs b muted num">${s.monthWorkouts}/${s.monthTarget}</span></div>
@@ -196,10 +195,7 @@ ${
     },
     actions: {
       voice: () => (openVoice(), false),
-      stepsAdd: (el) => void addSteps(dayKey(), Number(el.dataset.n)),
-      stepsSheet: () => (openStepsSheet(), false),
-      sleepSheet: () => (openSleepSheet(), false),
-      homeMeal: (el) => (openHomeMeal(el.dataset.m ?? 'snack'), false),
+      ...cardActions(() => dayKey()), // 1.4.0: the shared day cards (steps, sleep, meals) for today
       start: (el) => {
         startWorkout(el.dataset.id ?? '');
         emit('nav', { path: 'workout' });

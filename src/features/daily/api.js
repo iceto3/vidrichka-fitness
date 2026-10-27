@@ -132,6 +132,17 @@ export function setSleep(date, v) {
   return rec;
 }
 
+/**
+ * 1.4.0: delete a day's manual sleep entry (hours and quality). A bedtime/wake-up estimate,
+ * if any, shows again. @param {string} date
+ */
+export function clearSleep(date) {
+  const rec = patchDay(date, { sleepH: null, sleepQ: null });
+  emit('sleep:logged', { date, cleared: true });
+  emit('daily:changed');
+  return rec;
+}
+
 /** Last night's sleep (the morning of `date`): hours (manual or estimated) and quality. @param {string} [date] */
 export function sleepOf(date = dayKey()) {
   const n = nights(all('days'), 1, date)[0];
@@ -139,10 +150,11 @@ export function sleepOf(date = dayKey()) {
 }
 
 /**
- * 1.3.4: mood or energy (1–5) for a day, e.g. said with "Кажи".
- * @param {string} date @param {'mood'|'energy'} field @param {number} v
+ * 1.3.4: mood or energy (1–5) for a day, e.g. said with "Кажи". 1.4.0: null clears it.
+ * @param {string} date @param {'mood'|'energy'} field @param {number|null} v
  */
 export function rateDay(date, field, v) {
+  if (v == null) return (patchDay(date, { [field]: null }), emit('daily:changed'), null); // 1.4.0: clear
   const n = Math.min(5, Math.max(1, Math.round(Number(v) || 3)));
   patchDay(date, { [field]: n });
   emit('daily:changed');

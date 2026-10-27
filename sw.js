@@ -28,8 +28,7 @@ self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE).then((c) 
 self.addEventListener('activate', (e) =>
   e.waitUntil(
     (async () => {
-      for (const k of await caches.keys())
-        if (k.startsWith(PFX) && k !== CACHE && k !== CONFIG) await caches.delete(k);
+      for (const k of await caches.keys()) if (k.startsWith(PFX) && k !== CACHE && k !== CONFIG) await caches.delete(k);
       await self.clients.claim();
     })(),
   ),

@@ -164,7 +164,7 @@ test('methods and routes: GET /parse 405, unknown 404, /health tells whether a k
   assert.equal((await call(null, { method: 'PUT', path: '/parse' })).status, 405);
   assert.equal((await call(Q, { path: '/other' })).status, 404);
   const h = await call(null, { method: 'GET', path: '/health' });
-  assert.deepEqual(await h.json(), { ok: true, version: '1.2.0', configured: true, transcribe: false });
+  assert.deepEqual(await h.json(), { ok: true, version: '1.4.0', configured: true, transcribe: false, vision: true });
   const h2 = await call(null, { method: 'GET', path: '/health', env: { ...ENV, XAI_API_KEY: '' } });
   assert.equal((await h2.json()).configured, false);
   assert.equal((await call(Q, { env: { ...ENV, XAI_API_KEY: '' } })).status, 503);

@@ -220,11 +220,28 @@
   margin-top: 12px;
 }
 .scale button {
-  height: 56px;
+  min-height: 64px;
+  padding: 6px 2px 5px;
   border-radius: 16px;
   font-size: 28px;
+  line-height: 1.1;
   background: var(--soft);
   transition: transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+/* 1.4.0: a word under each face */
+.scale .cap {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1.1;
+}
+.scale button.on .cap {
+  color: var(--accent-d);
 }
 .scale button.on {
   background: var(--accent-soft);

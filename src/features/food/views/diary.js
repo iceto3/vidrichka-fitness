@@ -10,9 +10,10 @@ import { settings } from '../../../core/settings.js';
 import { addDays, dayKey, parseDay } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { bar, ring } from '../../../ui/components.js';
-import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
+import { closeSheet, openSheet } from '../../../ui/sheet.js';
 import { trashList } from '../../../core/trash.js';
-import { dayRows, foodName, setWater, view, water } from '../api.js';
+import { dayRows, foodName, view } from '../api.js';
+import { cardActions, waterCard } from '../../day/views/cards.js';
 import { MEALS, MEAL_STYLE, known, mealFor, totals } from '../logic.js';
 
 export { MEAL_STYLE } from '../logic.js';
@@ -91,8 +92,7 @@ export default () => ({
     const s = settings(),
       rows = dayRows(view.date),
       tot = totals(rows),
-      today = dayKey(),
-      w = water(view.date);
+      today = dayKey();
     const isToday = view.date === today,
       d = parseDay(view.date);
     const macros = [
@@ -114,10 +114,7 @@ export default () => ({
 <div class="f1"><div class="chip ${leftK < 0 ? 'warm' : 'accent'}">${leftK < 0 ? t('food.over', { n: fmtNum(-leftK) }) : t('food.left', { n: fmtNum(leftK) })}</div>
 ${macros.map(([k, v, g, c], i) => html`<div class="macro ${i ? 'mt8' : 'mt10'}"><div class="row between small b"><span>${t(`food.${k}`)}</span><span class="muted num">${Math.round(Number(v))} / ${g} ${t('unit.g')}</span></div>${bar(Number(v) / Number(g), String(c))}</div>`)}
 <div class="row gap12 mt10 small b fibsalt"><span>${t('food.fiber')} <span class="num muted">${tot.fibN ? `${fmtNum(tot.fib, 1)} ${t('unit.g')}` : '—'}</span></span><span>${t('food.salt')} <span class="num muted">${tot.saltN ? `${fmtNum(tot.salt, 1)} ${t('unit.g')}` : '—'}</span></span></div></div></div>
-<div class="card mt12 row gap10 water"><div class="mic blue sm">${ic('drop', 20, 2.2)}</div>
-<div class="f1"><div class="b">${t('food.water')}</div><div class="muted xs b">${t('food.glasses', { n: w, goal: s.waterGoal, l: fmtNum((w * s.glassMl) / 1000, 2) })}</div></div>
-<div class="row gap4 glasses" role="group" aria-label="${t('food.water')}">${Array.from({ length: Math.max(s.waterGoal, w) }, (_, k) => html`<button class="glass${k < w ? ' on' : ''}" data-act="water" data-n="${k < w && k === w - 1 ? k : k + 1}" aria-label="${t('food.setGlasses', { n: k + 1 })}"></button>`)}</div>
-<button class="iconbtn sm bluebtn" data-act="water" data-n="${w + 1}" aria-label="${t('food.addGlass')}">${ic('plus', 18, 2.6)}</button></div>
+${waterCard(view.date)}
 <div class="section-title"><h2 class="h3">${t('food.meals')}</h2><button class="link" data-go="food/meals">${t('food.regularMeals')}</button></div>
 <div class="card meals">${MEALS.map(([m]) => {
       const items = rows.filter((r) => r.meal === m),
@@ -135,13 +132,7 @@ ${macros.map(([k, v, g, c], i) => html`<div class="macro ${i ? 'mt8' : 'mt10'}">
     day: (el) => void (view.date = dayKey(addDays(parseDay(view.date), Number(el.dataset.d)))),
     pick: (el) =>
       void (/** @type {HTMLInputElement} */ (el).value && (view.date = /** @type {HTMLInputElement} */ (el).value)),
-    water: (el) => {
-      const date = view.date,
-        before = water(date),
-        n = Number(el.dataset.n);
-      setWater(date, n);
-      if (n < before) toast(t('food.waterRemoved', { n: Math.max(0, n) }));
-    },
+    water: cardActions(() => view.date).water, // 1.4.0: shared water card (− / glasses / +)
     meal: (el) => (openMeal(el.dataset.m ?? 'snack'), false),
   },
 });

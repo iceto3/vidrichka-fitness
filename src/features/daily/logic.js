@@ -143,32 +143,42 @@ export function proteinBar(rec, now) {
  */
 export function nights(rows, n, today) {
   const by = new Map(rows.map((r) => [r.id, r]));
-  return Array.from({ length: n }, (_, i) => {
-    const day = dayKey(addDays(parseDay(today), -i)),
-      eve = by.get(dayKey(addDays(parseDay(day), -1))) ?? {},
-      r = by.get(day) ?? {};
-    return {
-      day,
-      bed: eve.bed ?? null,
-      bedEst: !!eve.bedEst,
-      wake: r.wake ?? null,
-      hours: typeof r.sleepH === 'number' ? r.sleepH : sleepHours(eve.bed, r.wake),
-      sleepQ: r.sleepQ ?? null,
-      mood: r.mood ?? null,
-      energy: r.energy ?? null,
-    };
-  });
+  return Array.from({ length: n }, (_, i) => nightOf(by, dayKey(addDays(parseDay(today), -i))));
 }
 
 /**
- * Sleep streak: evenings in a row she tucked Vidrichka in (estimated bedtimes don't count).
- * Tonight counts once done; until then the streak runs up to last night.
+ * One night (keyed by the morning `day`) from an id → record map. Shared by `nights` and
+ * the day view / trends (features/day/logic), so sleep is computed in one place.
+ * @param {Map<string, any>} by @param {string} day
+ */
+export function nightOf(by, day) {
+  const eve = by.get(dayKey(addDays(parseDay(day), -1))) ?? {},
+    r = by.get(day) ?? {};
+  return {
+    day,
+    bed: eve.bed ?? null,
+    bedEst: !!eve.bedEst,
+    wake: r.wake ?? null,
+    hours: typeof r.sleepH === 'number' ? r.sleepH : sleepHours(eve.bed, r.wake),
+    sleepQ: r.sleepQ ?? null,
+    mood: r.mood ?? null,
+    energy: r.energy ?? null,
+  };
+}
+
+/**
+ * Sleep streak: nights in a row with sleep recorded. A night counts when she tucked
+ * Vidrichka in that evening (estimated bedtimes don't count) or, since 1.4.0, when the
+ * next morning has sleep hours entered by hand/voice/screenshot (1.3.4 showed 0 after a
+ * manual entry). Tonight counts once done; until then the streak runs up to last night.
  * @param {any[]} rows @param {number} now
  */
 export function sleepStreak(rows, now) {
   const by = new Map(rows.map((r) => [r.id, r]));
-  const ok = (/** @type {string} */ k) => !!by.get(k)?.bed && !by.get(k)?.bedEst;
   const prev = (/** @type {string} */ k) => dayKey(addDays(parseDay(k), -1));
+  const next = (/** @type {string} */ k) => dayKey(addDays(parseDay(k), 1));
+  const ok = (/** @type {string} */ k) =>
+    (!!by.get(k)?.bed && !by.get(k)?.bedEst) || (by.get(next(k))?.sleepH ?? 0) > 0;
   let k = eveningKey(now),
     n = 0;
   if (!ok(k)) k = prev(k);

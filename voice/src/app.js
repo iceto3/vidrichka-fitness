@@ -9,7 +9,10 @@
  *   POST /transcribe?lang=bg|en  body: the recorded audio (Content-Type audio/*, ≤ 1 MB, ≤ 35 s)
  *                → 200 {text, duration} | 413/415/400 bad input | 403 origin | 429 limit | 502/503
  *                (Workers AI Whisper, 6 per minute per IP)
- *   GET  /health → {ok, version, configured, transcribe}
+ *   POST /vision?kind=steps|sleep&today=YYYY-MM-DD&lang=bg|en  body: a screenshot (image/jpeg|png|webp,
+ *                ≤ 600 kB) → 200 {days: [{date, steps} | {date, hours, quality}], via}
+ *                (1.4.0: Workers AI vision first, xAI fallback; 4 per minute per IP; never stored)
+ *   GET  /health → {ok, version, configured, transcribe, vision}
  * Privacy: the text is forwarded to xAI and never logged or stored here; audio is only
  * transcribed in memory by Workers AI and never stored or logged.
  * Cost guards: Origin check, text length cap, max_tokens cap, per-IP rate limit
@@ -19,8 +22,9 @@
 import { chatBody } from './prompt.js';
 import { Invalid, checkRequest, normalize } from './parse.js';
 import { readAudio, transcribe } from './transcribe.js';
+import { readScreenshot, readVision } from './vision.js';
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.4.0';
 export const XAI_URL = 'https://api.x.ai/v1/chat/completions';
 const MAX_BODY = 4096;
 
@@ -32,7 +36,9 @@ const MAX_BODY = 4096;
  * @property {string} [MAX_TEXT] @property {string} [MAX_TOKENS]
  * @property {{limit: (o: {key: string}) => Promise<{success: boolean}>}} [LIMITER] rate limiting binding
  * @property {{limit: (o: {key: string}) => Promise<{success: boolean}>}} [STT_LIMITER] for /transcribe
- * @property {{run: (model: string, input: any) => Promise<any>}} [AI] Workers AI binding (Whisper)
+ * @property {{limit: (o: {key: string}) => Promise<{success: boolean}>}} [VISION_LIMITER] for /vision
+ * @property {string} [XAI_VISION_MODEL] xAI model for /vision (default: XAI_MODEL)
+ * @property {{run: (model: string, input: any) => Promise<any>}} [AI] Workers AI binding (Whisper, vision)
  */
 
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
@@ -86,6 +92,36 @@ export function isolateLimiter(perIp = 8, global = 60) {
 }
 const fallback = isolateLimiter();
 const sttFallback = isolateLimiter(6, 60);
+const visionFallback = isolateLimiter(4, 30);
+
+/**
+ * POST /vision (origin already checked). The image is read, sent to the model(s) and
+ * dropped; only the re-checked numbers are returned.
+ * @param {Request} req @param {Env} env @param {Record<string, string>} h
+ * @param {{fetch?: typeof fetch, visionLimit?: (key: string) => boolean}} deps
+ */
+async function handleVision(req, env, h, deps) {
+  if (!env.AI && !env.XAI_API_KEY) return reply(503, { error: 'not-configured' }, h);
+  const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+  const lim = deps.visionLimit ?? visionFallback;
+  const allowed = env.VISION_LIMITER
+    ? (await env.VISION_LIMITER.limit({ key: ip }).catch(() => ({ success: true }))).success && lim(ip)
+    : lim(ip);
+  if (!allowed) return reply(429, { error: 'rate-limit' }, { ...h, 'Retry-After': '60' });
+  let q;
+  try {
+    q = await readVision(req);
+  } catch (e) {
+    if (e instanceof Invalid) return reply(e.status, { error: e.message }, h);
+    throw e;
+  }
+  try {
+    return reply(200, await readScreenshot(q, env, deps.fetch ?? fetch), h);
+  } catch (e) {
+    const busy = /** @type {Error} */ (e).message === 'upstream-busy';
+    return reply(busy ? 429 : 502, { error: busy ? 'upstream-busy' : 'upstream' }, h);
+  }
+}
 
 /**
  * POST /transcribe (origin already checked).
@@ -122,7 +158,7 @@ async function handleTranscribe(req, env, h, deps) {
  * Handle one request.
  * @param {Request} req
  * @param {Env} env
- * @param {{fetch?: typeof fetch, limit?: (key: string) => boolean, sttLimit?: (key: string) => boolean}} [deps] For tests.
+ * @param {{fetch?: typeof fetch, limit?: (key: string) => boolean, sttLimit?: (key: string) => boolean, visionLimit?: (key: string) => boolean}} [deps] For tests.
  */
 export async function handle(req, env, deps = {}) {
   const url = new URL(req.url),
@@ -131,11 +167,22 @@ export async function handle(req, env, deps = {}) {
     h = cors(ok ? origin : null);
   if (req.method === 'OPTIONS') return reply(ok ? 204 : 403, null, h);
   if (url.pathname === '/health' && req.method === 'GET')
-    return reply(200, { ok: true, version: VERSION, configured: !!env.XAI_API_KEY, transcribe: !!env.AI }, h);
-  if (url.pathname !== '/parse' && url.pathname !== '/transcribe') return reply(404, { error: 'not-found' }, h);
+    return reply(
+      200,
+      {
+        ok: true,
+        version: VERSION,
+        configured: !!env.XAI_API_KEY,
+        transcribe: !!env.AI,
+        vision: !!(env.AI || env.XAI_API_KEY),
+      },
+      h,
+    );
+  if (!['/parse', '/transcribe', '/vision'].includes(url.pathname)) return reply(404, { error: 'not-found' }, h);
   if (req.method !== 'POST') return reply(405, { error: 'method' }, { ...h, Allow: 'POST' });
   if (!ok) return reply(403, { error: 'origin' }, h);
   if (url.pathname === '/transcribe') return handleTranscribe(req, env, h, deps);
+  if (url.pathname === '/vision') return handleVision(req, env, h, deps);
   if (!env.XAI_API_KEY) return reply(503, { error: 'not-configured' }, h);
 
   const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
