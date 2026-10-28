@@ -345,7 +345,7 @@ async function run(name, browser, P) {
   await v140(page, h);
   await v141(page, h, name, ctx);
   await v141tester(page, h, name, ctx);
-  await v142(page, h, ctx);
+  await v142(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -2954,9 +2954,8 @@ async function v141tester(page, { go, settle, shot }, name, ctx) {
  * per-100 g values, marked, nothing saved until "Запази"); the offline error.
  * @param {import('playwright-core').Page} page
  * @param {any} h helpers from run()
- * @param {import('playwright-core').BrowserContext} ctx
  */
-async function v142(page, { go, settle, shot, layer, dayField }, ctx) {
+async function v142(page, { go, settle, shot, layer, dayField }) {
   await go('profile');
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
@@ -2994,6 +2993,7 @@ async function v142(page, { go, settle, shot, layer, dayField }, ctx) {
         },
       });
     calls.push(route.request().url());
+    if (calls.length === 1) return route.abort('internetdisconnected'); // the first try: no connection
     return route.fulfill({
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3014,15 +3014,17 @@ async function v142(page, { go, settle, shot, layer, dayField }, ctx) {
   assert.match(await layer.locator('.labelbox').innerText(), /Снимай етикета/);
   const fsp = await import('node:fs/promises');
   const file = { name: 'l.png', mimeType: 'image/png', buffer: await fsp.readFile('assets/icons/icon-192.png') };
-  await ctx.setOffline(true);
   await layer.locator('input[data-change="labelFile"]').setInputFiles(file);
   await layer.locator('.labelerr').waitFor({ timeout: 8000 });
-  assert.match(await layer.locator('.labelerr').innerText(), /Няма връзка/);
-  await ctx.setOffline(false);
+  assert.match(
+    await layer.locator('.labelerr').innerText(),
+    /Няма връзка/,
+    `a network error → offline (${calls.length})`,
+  );
   await layer.locator('input[data-change="labelFile"]').setInputFiles(file);
   await layer.locator('.labelok').waitFor({ timeout: 8000 });
-  assert.equal(calls.length, 1, 'one call (none while offline)');
-  assert.match(calls[0], /kind=label/);
+  assert.equal(calls.length, 2, 'one failed try, one read');
+  assert.match(calls[1], /kind=label/);
   assert.equal(await layer.locator('#mname').inputValue(), 'Овесени ядки');
   assert.equal(await layer.locator('#mkcal').inputValue(), '372');
   assert.equal(await layer.locator('#mp').inputValue(), '13,5');
@@ -3033,5 +3035,5 @@ async function v142(page, { go, settle, shot, layer, dayField }, ctx) {
   await closeAllSheets(page, layer, settle);
   await page.unroute(/^https:\/\/voice\.test\/vision/);
   await page.evaluate(() => localStorage.removeItem('vf-voice-url'));
-  console.log('  ✔ 1.4.2 creatine card + supplement 3 г, label photo pre-fills the form (offline error first)');
+  console.log('  ✔ 1.4.2 creatine card + supplement 3 г, label photo pre-fills the form (no-connection error first)');
 }
