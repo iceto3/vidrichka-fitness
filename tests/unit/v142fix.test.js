@@ -79,6 +79,9 @@ test('finding 4: the ±1 day controls are real buttons with a 44×44 px target',
   );
   assert.match(rule, /min-height: 44px/);
   assert.match(rule, /min-width: 44px/);
+  // Готово looks disabled while the times cannot be saved
+  assert.match(js, /class="btn f1 sleepdone" data-act="done"/);
+  assert.match(css, /\.sleepdone:disabled \{[^}]*background: var\(--line\)/);
 });
 
 test('finding 5: a failed or blocked reading clears values of the previous scan, keeps typed ones', () => {

@@ -165,7 +165,7 @@ ${n.moved ? html`<p class="small b mt8 sleepnote" role="status">${ic('info', 14,
 ${msg ? html`<p class="warnc xs b mt4 sleeperr" role="alert">${msg}</p>` : ''}
 ${s.hours == null && !msg ? html`<p class="muted xs b mt4">${t('sleep.timesHint')}</p>` : ''}
 <h3 class="b mt16">${t('sleep.quality')}</h3>${scale('sleepQ', s.q ?? undefined, t('sleep.quality'))}
-<div class="row gap10 mt16">${s.manual ? html`<button class="btn sec f1" data-act="clear">${ic('trash', 16, 2.2)}${t('sleep.delete')}</button>` : ''}<button class="btn f1" data-act="done" ${msg ? raw('disabled aria-disabled="true"') : ''}>${t('common.done')}</button></div>`;
+<div class="row gap10 mt16">${s.manual ? html`<button class="btn sec f1" data-act="clear">${ic('trash', 16, 2.2)}${t('sleep.delete')}</button>` : ''}<button class="btn f1 sleepdone" data-act="done" ${msg ? raw('disabled aria-disabled="true"') : ''}>${t('common.done')}</button></div>`;
     },
     actions: {
       sbed: (el) => {

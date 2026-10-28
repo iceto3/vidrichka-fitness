@@ -2157,6 +2157,10 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
     const bb = await layer.locator(`button.sshiftb[data-act="sshift"][data-d="${d}"]`).boundingBox();
     assert.ok(bb && bb.width >= 44 && bb.height >= 44, `day button ${d}: ${bb?.width}×${bb?.height}`);
   }
+  const [yb, yf] = await layer
+    .locator('button.sshiftb')
+    .evaluateAll((e) => e.map((x) => x.getBoundingClientRect().top));
+  assert.equal(yb, yf, 'the two day buttons sit side by side');
   // after midnight: 01:10 → same day, 5 ч 50 мин
   await layer.locator('input[data-change="sbed"]').fill('01:10');
   await settle();
@@ -2192,6 +2196,11 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
     /Часът на ставане още не е дошъл|wake-up time has not come/,
   );
   assert.ok(await layer.locator('[data-act="done"]').isDisabled(), 'Готово disabled for a future wake-up');
+  assert.equal(
+    await layer.locator('[data-act="done"]').evaluate((e) => getComputedStyle(e).boxShadow),
+    'none',
+    'and it looks disabled',
+  );
   assert.equal(await layer.locator('.sleepnote').count(), 1, 'the moved dates are shown');
   assert.equal(await dayField('sleepH'), 8, 'the refused value is not saved');
   assert.equal(new Date(await dayField('sleepBed')).getDate(), new Date(sb).getDate(), 'bed still the evening before');

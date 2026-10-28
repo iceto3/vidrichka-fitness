@@ -98,7 +98,7 @@
 .sleeptimes .sshiftb {
   min-height: 44px;
   min-width: 44px;
-  padding: 0 10px;
+  padding: 0 7px;
   border: 1.5px solid var(--line);
   border-radius: 12px;
   background: var(--card);
@@ -118,6 +118,11 @@
 .sleeptimes .sshiftb:disabled {
   opacity: 0.35;
   cursor: default;
+}
+.sleepdone:disabled {
+  background: var(--line);
+  color: var(--muted);
+  box-shadow: none;
 }
 .sleepnote {
   display: flex;
