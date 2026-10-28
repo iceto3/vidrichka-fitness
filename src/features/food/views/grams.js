@@ -4,13 +4,15 @@
  * @module features/food/views/grams
  */
 import { FOOD_NOTES } from '../../../data/foods.js';
+import { emit } from '../../../core/bus.js';
 import { html } from '../../../ui/dom.js';
 import { fmtNum, t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
 import { stepper } from '../../../ui/components.js';
-import { closeSheet, openSheet } from '../../../ui/sheet.js';
-import { FOOD_CATEGORIES, foodName } from '../api.js';
-import { known, portion } from '../logic.js';
+import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
+import { FOOD_CATEGORIES, foodName, saveFoodFix } from '../api.js';
+import { known, missingValues, portion } from '../logic.js';
+import { missingNotice } from './notice.js';
 
 export const GRAM_STEP = 10;
 
@@ -36,9 +38,24 @@ export const extraLine = (n) => {
 };
 
 /**
+ * 1.4.0: open the fill-in form over the current sheet; the corrected food is saved with the
+ * food (and its diary rows, see api.saveFoodFix) and handed to `then`.
+ * @param {any} food @param {(fixed: any) => void} then @param {string} [rowId]
+ */
+export async function fixFood(food, then, rowId) {
+  const { openFixForm } = await import('./manual.js');
+  openFixForm(food, (fixed) => {
+    saveFoodFix(fixed, rowId);
+    toast(t('food.valuesFixed', { name: foodName(fixed) }));
+    then(fixed);
+  });
+}
+
+/**
  * Open the grams sheet.
  * @param {any} food Per-100 g food.
- * @param {(grams: number) => void} onDone
+ * @param {(grams: number, food: any) => void} onDone Gets the food as finally used (1.4.0:
+ *   with the values the user filled in).
  * @param {number} [initial]
  */
 export function openGrams(food, onDone, initial) {
@@ -54,6 +71,7 @@ ${food.portion && food.portion !== g ? html`<div class="row center-j mt8"><butto
 <div class="row between mt14 px4"><div class="num kcalbig">${fmtNum(n.kcal)} <small>${t('unit.kcal')}</small></div>${macroLine(n, food)}</div>
 ${extraLine(n)}
 ${FOOD_NOTES[food.id] ? html`<p class="muted xs b px4 mt6 fnote">${t(FOOD_NOTES[food.id])}</p>` : ''}
+${missingNotice(missingValues(food))}
 <button class="btn w100 mt14" data-act="done">${ic('check', 20, 3)}${t('workout.done')}</button>`;
     },
     actions: {
@@ -68,10 +86,17 @@ ${FOOD_NOTES[food.id] ? html`<p class="muted xs b px4 mt6 fnote">${t(FOOD_NOTES[
           ),
         )),
       portion: () => void (g = food.portion),
+      fix: () => {
+        void fixFood(food, (fixed) => {
+          food = fixed;
+          emit('ui:refresh');
+        });
+        return false;
+      },
       done: () => {
         if (g <= 0) return false;
         closeSheet();
-        onDone(g);
+        onDone(g, food);
         return false;
       },
     },

@@ -128,6 +128,12 @@ Features never import another feature's views, only its `api.js`. Removing a fea
   - `logic.js` is pure. It builds the request body, converts water to glasses, picks the meal (`assignMeals`: a meal named in the sentence wins; else a said time or a past day keeps the server's meal; else the screen's meal or the current one) and builds the rows (with `fib`/`salt` when sent) and the per-day water.
   - `views/voice.js` has the dictation sheet. Since 1.3.1 there is no confirm sheet: `saveEntries()` calls `food/api.js › logRows()` (rows with `source: 'voice'`, one `food:logged`) and `setWater()` at once, then shows an Undo snackbar that lists what was added.
 
+## Food values from Open Food Facts (1.4.0)
+
+- `food/logic.js` is the single, pure, unit-tested place for product values: `fromOff()` reads per-100 g values (an unlisted kcal/П/В/М counts as 0 and is named in `missing`; fibre/salt stay unknown), `implausible()` is the ONE plausibility check (negative, kcal > 900, a value or П+В+М > 100 g, kcal vs 4·П + 4·В + 9·М (+ 7·alcohol) off by > 30 % and > 30 kcal), `missingValues()` says what to ask the user for, `applyFix()` turns the fill-in form into the corrected food.
+- `food/off.js › reliable()` applies the check to every barcode lookup (`product()` answers `{unreliable, name}` → treated as not found) and every search result (dropped). Cached OFF copies in the `foods` store pass the same check in the scanner; user-corrected (`fixed`) and custom foods are trusted.
+- UI: `views/notice.js › missingNotice()` is the one notice component (grams sheet, diary item, fill-in form); `views/grams.js › fixFood()` opens `manual.js › openFixForm()` over the current sheet and saves through `api.saveFoodFix()` (the food plus its diary rows that still had missing values). No data migration: `missing` / `fixed` are optional fields.
+
 ## Undo and "Recently deleted" (1.3.1)
 
 - `ui/sheet.js › snack(text, onUndo)` shows an **Отмени** snackbar for 8 s (one at a time).

@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
-## [1.4.0] – unreleased (beta)
+## [1.4.0] – 2026-10-28
 
 ### Added
 
@@ -42,6 +42,11 @@ All notable changes to this project are documented here. The format follows
   - Food added to a past day gets the meal's usual time (08:00 / 13:00 / 16:00 / 19:00). Manual food: a live hint when kcal differs from 4·П + 4·В + 9·М by more than 20 % and 30 kcal; saving is never blocked. Fibre and salt in the food list rows.
   - Foods: separate извара (Bulgarian whey curd) and котидж values; raw chicken/turkey/pork/lean beef, beef mince 80/20 and grilled salmon; the plain cooked rows are labelled „(на скара)“, raw ones „(сурово/сурова)“, mince as „Кайма смес 60/40 (свинско/телешко, сурова)“ with a note that fat varies. `node tools/export-foods.mjs --since main` writes `docs/foods.csv` and `docs/foods-changes.csv` for the shared sheet.
   - П/В/М and Bulgarian number formats („2 145“, „2,5“) everywhere; sleep chart dates; bigger fibre/salt charts; „Без тренировка този ден.“; the 1.3.3 note names the current „Кажи какво хапна“ screen.
+- **Final fixes (go-live):**
+  - Barcode / online products that do not list a value (kcal, protein, carbs, fat, fibre or salt) still count it as 0, but the grams sheet and the diary item now say so – „Липсва стойност за въглехидрати – брои се като 0. Попълни я.“ – with a **Попълни** button that opens the food form with the known values filled in, the missing fields marked and the first one focused. The corrected values are saved with that food (the next scan of the barcode uses them) and with its diary rows (`api.saveFoodFix`, `logic.applyFix`, `logic.missingValues`, `views/notice.js`).
+  - Open Food Facts products with impossible values (e.g. „Nutella 5 kcal / 100 g“) are filtered out, not shown: one reusable check, `logic.implausible()` – a negative value, kcal over 900, a value or П+В+М over 100 g, or kcal more than 30 % AND 30 kcal away from 4·П + 4·В + 9·М (+ 7 kcal/g alcohol; a missing macro may only explain extra kcal). When nothing reliable remains, search shows „Няма надежден резултат за тази храна. Въведи я сам.“ with a button to an empty food form (the searched name prefilled); a scanned implausible product is treated as not found the same way (its name prefilled).
+  - Confirmed: built-in извара salt 0,1 г / 100 г; every „(на скара)“ meat is a cooked-meat entry (category Месо и риба, cooked-weight values) – both unit-tested.
+  - Voice Worker live config: the `OFF_LIMITER` rate limit (20 / min per IP) for `/off-search`, as on beta.
 - Data version 5: fiber and salt back-filled on diary rows of built-in foods (add-only, tested).
 
 ## [1.3.4] – 2026-10-27

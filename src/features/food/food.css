@@ -337,3 +337,16 @@
   color: var(--warm);
   font-size: 12px;
 }
+
+/* 1.4.0: a product's missing values (counted as 0) – notice + marked fields */
+.missnote {
+  border: 1.5px solid var(--warm);
+  padding: 10px 12px;
+}
+.input.missing {
+  border-color: var(--warm);
+  border-style: dashed;
+}
+.noreliable {
+  padding: 12px;
+}

@@ -4,7 +4,7 @@
  * handle `null` (offline, Worker or OFF down) gracefully.
  * @module features/food/off
  */
-import { fromOff } from './logic.js';
+import { fromOff, implausible } from './logic.js';
 
 const FIELDS = 'code,product_name,product_name_bg,product_name_en,brands,nutriments,serving_quantity';
 const TIMEOUT = 8000;
@@ -62,17 +62,28 @@ export function toFood(p, lang) {
 }
 
 /**
+ * A product the app can use: it has nutrition data and passes {@link implausible} (1.4.0:
+ * impossible values such as "Nutella 5 kcal / 100 g" are never shown or used).
+ * @param {ReturnType<typeof toFood>} f
+ */
+export const reliable = (f) => !!f && !implausible(f);
+
+/**
  * Look up a product by barcode.
  * @param {string} code
  * @param {string} lang
- * @returns {Promise<ReturnType<typeof toFood>|'notfound'|null>} null = network error.
+ * @returns {Promise<NonNullable<ReturnType<typeof toFood>>|{unreliable: true, name: string}|'notfound'|null>}
+ *   null = network error; `{unreliable}` (1.4.0) = found, but its values are impossible
+ *   (treated as not found; the name prefills the form).
  */
 export async function product(code, lang) {
   const j = await getJson(
     `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${FIELDS}`,
   );
   if (!j) return null;
-  return (j.status === 1 && toFood(j.product, lang)) || 'notfound';
+  const f = j.status === 1 ? toFood(j.product, lang) : null;
+  if (!f) return 'notfound';
+  return reliable(f) ? f : { unreliable: true, name: f.name };
 }
 
 /** Session memo of finished searches (lang + normalised text → foods). */
@@ -106,7 +117,10 @@ export async function search(q, lang, o = {}) {
     );
   const list = j && typeof j === 'object' && Array.isArray(j.products) ? j.products : null;
   if (!list) return null;
-  const foods = list.map((/** @type {any} */ p) => toFood(p, lang)).filter(Boolean);
+  // 1.4.0: products with impossible values are dropped (never shown with a warning)
+  const foods = /** @type {NonNullable<ReturnType<typeof toFood>>[]} */ (
+    list.map((/** @type {any} */ p) => toFood(p, lang)).filter(reliable)
+  );
   found.set(key, foods);
   if (found.size > 100) found.delete(found.keys().next().value);
   return foods;
@@ -138,7 +152,8 @@ async function getJsonStatus(url, ms) {
 
 /**
  * What the "online results" block shows for the typed text (1.4.0: it can never stay on
- * "Searching…" — every search ends as a list, "nothing found" or "not available").
+ * "Searching…" — every search ends as a list, "nothing found" or "not available"). 'none'
+ * also covers "every result had impossible values": the user is asked to enter the food.
  * @param {{q: string, state: 'idle'|'busy'|'done'|'fail', list: any[]}} off @param {string} q
  * @returns {''|'busy'|'fail'|'none'|'list'}
  */

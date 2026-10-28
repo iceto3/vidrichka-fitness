@@ -2356,6 +2356,14 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
  * @param {import('playwright-core').Page} page
  * @param {any} h helpers from run()
  */
+/** Close every open sheet (Escape, a few times). @param {any} page @param {any} layer @param {() => Promise<void>} settle */
+async function closeAllSheets(page, layer, settle) {
+  for (let i = 0; i < 5 && (await layer.locator('.panel').count()); i++) {
+    await page.keyboard.press('Escape');
+    await settle();
+  }
+}
+
 async function v140(page, { go, settle, shot, layer, rows }) {
   const key = await page.evaluate(() => {
     const d = new Date();
@@ -2492,9 +2500,130 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   const g = await layer.locator('.panel').last().innerText();
   assert.match(g, /В –/, 'unknown carbs show "–"');
   assert.match(g, /Фибри –/, 'unknown fibre shows "–"');
+  // final fix (b): the missing values are named, counted as 0, and the user is taken to them
+  assert.match(
+    await layer.locator('.panel .missnote').last().innerText(),
+    /Липсват стойности за въглехидрати, фибри, сол – броят се като 0\. Попълни ги\./,
+  );
+  await layer.locator('.panel .missnote [data-act="fix"]').last().click();
+  await settle();
+  assert.match(await layer.locator('.panel').last().innerText(), /Попълни стойностите/);
+  assert.equal(await page.evaluate(() => document.activeElement?.id), 'mc', 'focus on the first missing value');
+  assert.equal(await layer.locator('#mc.missing').count(), 1, 'the missing field is marked');
+  assert.equal(await layer.locator('#mkcal').inputValue(), '539', 'known values are prefilled');
+  await layer.locator('#mc').fill('57,5');
+  await layer.locator('[data-act="save"]').last().click();
+  await settle();
+  const g2 = await layer.locator('.panel').last().innerText();
+  assert.match(g2, /В \d+ г/, 'carbs now counted');
+  assert.equal(await layer.locator('.panel .missnote').count(), 0, 'notice gone after filling in');
+  await layer.locator('.panel [data-act="done"]').last().click();
+  await settle();
+  await page.waitForTimeout(300);
+  const fixedFood = /** @type {any[]} */ (await rows('foods')).find((f) => f.id === 'off_3017620422003');
+  assert.equal(fixedFood?.c, 57.5, 'the corrected value is saved with that food');
+  const logged = /** @type {any[]} */ (await rows('food')).filter((r) => r.foodId === 'off_3017620422003');
+  assert.ok(logged.length && logged.every((r) => !r.missing && r.c > 0), 'diary row uses the filled-in carbs');
+  // final fix (c): impossible values are filtered out; nothing reliable → "enter it yourself"
+  await page.unroute(/^https:\/\/voice\.test\/off-search/);
+  await page.route(/^https:\/\/voice\.test\/off-search/, (r) =>
+    r.fulfill({
+      headers: { 'access-control-allow-origin': '*' },
+      json: {
+        count: 1,
+        products: [
+          {
+            code: '111',
+            product_name: 'Нутела крем',
+            nutriments: { 'energy-kcal_100g': 5, proteins_100g: 6.3, carbohydrates_100g: 57.5, fat_100g: 30.9 },
+          },
+        ],
+      },
+    }),
+  );
+  await page.locator('#fq').fill('');
+  await page.locator('#fq').pressSequentially('нутела крем', { delay: 30 });
+  await page.locator('#results .noreliable').waitFor({ timeout: 12000 });
+  assert.match(
+    await page.locator('#results .noreliable').innerText(),
+    /Няма надежден резултат за тази храна\. Въведи я сам\./,
+  );
+  assert.equal(await page.locator('#offres .lrow').count(), 0, 'the 5 kcal product is not shown');
+  assert.equal(await page.locator('#results [data-act="manual"]').count(), 1, 'one "enter it yourself" button');
+  await page.locator('#results .noreliable [data-act="manual"]').click();
+  await settle();
+  assert.equal(await layer.locator('#mname').inputValue(), 'нутела крем', 'the searched name is prefilled');
+  assert.equal(await layer.locator('#mkcal').inputValue(), '', 'an empty form');
   await page.keyboard.press('Escape');
   await settle();
-  assert.ok(!offCalls.some((u) => u.includes('openfoodfacts.org')), 'never straight to OFF');
+  // barcode: an implausible product = not found + the same message; a product with a missing
+  // macro opens with the notice (typed code: no camera in the test browser)
+  await page.route(/world\.openfoodfacts\.org\/api\/v2\/product\/(\d+)/, (r) => {
+    const code = /product\/(\d+)/.exec(r.request().url())?.[1];
+    const nutr =
+      code === '5000000000001'
+        ? { 'energy-kcal_100g': 5, proteins_100g: 6.3, carbohydrates_100g: 57.5, fat_100g: 30.9 }
+        : { 'energy-kcal_100g': 120, proteins_100g: 20, fat_100g: 4, salt_100g: 0.2, fiber_100g: 0 };
+    return r.fulfill({
+      headers: { 'access-control-allow-origin': '*' },
+      json: {
+        status: 1,
+        product: {
+          code,
+          product_name: code === '5000000000001' ? 'Крем лешник' : 'Протеинов пудинг',
+          nutriments: nutr,
+        },
+      },
+    });
+  });
+  await page.locator('#fq').fill('');
+  await settle();
+  await page.locator('[data-act="scan"]').first().click();
+  await settle();
+  await layer.locator('#bcode').fill('5000000000001');
+  await layer.locator('[data-act="lookup"]').click();
+  await page.locator('#scanstatus', { hasText: 'Няма надежден резултат' }).waitFor({ timeout: 12000 });
+  assert.match(await layer.locator('.panel [data-act="manual"]').last().innerText(), /Въведи храната сам/);
+  await layer.locator('.panel [data-act="manual"]').last().click();
+  await settle();
+  assert.equal(await layer.locator('#mname').inputValue(), 'Крем лешник', 'the product name is prefilled');
+  await page.keyboard.press('Escape');
+  await settle();
+  await page.locator('[data-act="scan"]').first().click();
+  await settle();
+  await layer.locator('#bcode').fill('5000000000002');
+  await layer.locator('[data-act="lookup"]').click();
+  await layer.locator('.panel .missnote').waitFor({ timeout: 12000 });
+  assert.match(
+    await layer.locator('.panel .missnote').innerText(),
+    /Липсва стойност за въглехидрати – брои се като 0\. Попълни я\./,
+  );
+  await layer.locator('.panel [data-act="done"]').last().click();
+  await settle();
+  await page.waitForTimeout(300);
+  const pud = /** @type {any[]} */ (await rows('food')).find((r) => r.foodId === 'off_5000000000002');
+  assert.ok(pud && pud.c === 0 && pud.missing?.includes('c'), 'saved without the fix: counted as 0, still marked');
+  // …and can be filled in afterwards from the diary item
+  await go('food');
+  await page.locator('.meal[data-m="lunch"]').click();
+  await layer.locator('.itembtn', { hasText: 'Протеинов пудинг' }).click();
+  await layer.locator('.itemedit .missnote').waitFor();
+  await layer.locator('.itemedit .missnote [data-act="fix"]').click();
+  await settle();
+  assert.equal(await page.evaluate(() => document.activeElement?.id), 'mc');
+  await layer.locator('#mc').fill('3');
+  await layer.locator('[data-act="save"]').last().click();
+  await settle();
+  assert.equal(await layer.locator('.itemedit .missnote').count(), 0, 'notice gone in the item sheet');
+  await page.waitForTimeout(300);
+  const pud2 = /** @type {any[]} */ (await rows('food')).find((r) => r.id === pud.id);
+  assert.ok(pud2 && !pud2.missing && pud2.c > 0, `the diary row now counts the carbs (${pud2?.c})`);
+  await closeAllSheets(page, layer, settle);
+  await page.unroute(/world\.openfoodfacts\.org\/api\/v2\/product\/(\d+)/);
+  assert.ok(
+    !offCalls.some((u) => u.includes('openfoodfacts.org') && !u.includes('/api/v2/product/')),
+    'search never straight to OFF (barcode lookups use its product API)',
+  );
   page.off('request', countOff);
   await page.unroute('**/*openfoodfacts.org/**');
   await page.unroute(/^https:\/\/voice\.test\/off-search/);
@@ -2502,6 +2631,6 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await page.locator('.lang [data-v="en"]').click();
   await settle();
   console.log(
-    '  ✔ 1.4.0 online search via the Worker (1 request), ends ("not available" + retry), brand once, unknown "–", step „2,5“',
+    '  ✔ 1.4.0 online search via the Worker (1 request), ends ("not available" + retry), brand once, unknown "–", step „2,5“; missing values named + filled in (grams sheet and diary item), impossible OFF values filtered (search + barcode → „Въведи я сам“)',
   );
 }

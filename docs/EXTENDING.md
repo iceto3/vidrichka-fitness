@@ -10,7 +10,11 @@ Every addition is a small, local change. After editing, run `npm run check`.
 
 ## Add a food or food category
 
-Add rows to `ROWS` in `src/data/foods.js` (per 100 g: `kcal, p, c, f`, plus `name: {en,bg}`). Categories live in `FOOD_CATEGORIES`.
+Add rows to `ROWS` in `src/data/foods.js` (per 100 g: `kcal, p, c, f`, plus `name: {en,bg}`). Categories live in `FOOD_CATEGORIES`. Cooked variants say how in the name („(на скара)“, „(варено)“, „(сурово)“) and use cooked-weight values. Every built-in food must pass `implausible()` (unit test in `tests/unit/v140-final.test.js`).
+
+## Change what counts as an impossible product (Open Food Facts)
+
+Change only `implausible()` in `src/features/food/logic.js` (and its tests in `tests/unit/v140-final.test.js`); search, barcode lookup and the cached-product check all use it through `off.js › reliable()`. A new nutrient a product can lack goes into `NUTRIENTS` plus a `nutrient.<key>` translation; the missing-value notice and the fill-in form pick it up.
 
 ## Add a translation key or language
 

@@ -68,10 +68,10 @@ export default ({ meal }) => {
     FOODS.find((f) => f.id === id) ?? online.get(id) ?? all('foods').find((f) => f.id === id);
 
   const add = (/** @type {any} */ food) =>
-    openGrams(food, (g) => {
-      const row = logFood(food, g, meal);
+    openGrams(food, (g, used) => {
+      const row = logFood(used, g, meal);
       basket.push(row);
-      toast(t('food.added', { name: foodName(food), g }));
+      toast(t('food.added', { name: foodName(used), g }));
       emit('ui:refresh');
     });
 
@@ -79,7 +79,7 @@ export default ({ meal }) => {
     const loc = searchLocal(q);
     return html`${loc.length ? html`<div class="card list mt10">${loc.map(foodRow)}</div>` : ''}
 <div id="offres" aria-live="polite">${offBlock()}</div>
-${!loc.length && q ? html`<button class="btn sec w100 mt10" data-act="manual">${ic('edit', 18)}${t('food.manual')}</button>` : ''}`;
+${!loc.length && q && offView(off, q) !== 'none' ? html`<button class="btn sec w100 mt10" data-act="manual">${ic('edit', 18)}${t('food.manual')}</button>` : ''}`;
   };
 
   /** The online part under the local results: searching / list / nothing found / not available + retry. */
@@ -89,7 +89,9 @@ ${!loc.length && q ? html`<button class="btn sec w100 mt10" data-act="manual">${
       return html`<div class="muted small b mt10 center offbusy"><span class="spin sm" aria-hidden="true"></span> ${t('food.searchingOnline')}</div>`;
     if (v === 'fail')
       return html`<div class="muted small b mt10 center offfail">${t('food.offlineSearch')} <button class="link" data-act="retryOff">${t('food.retryOnline')}</button></div>`;
-    if (v === 'none') return html`<div class="muted small b mt10 center">${t('food.noOnline')}</div>`;
+    // 1.4.0: nothing found, or only products with impossible values (filtered out) → enter it yourself
+    if (v === 'none')
+      return html`<div class="card mt10 center noreliable"><p class="b small">${t('food.noReliable')}</p><button class="btn sec w100 mt8" data-act="manual">${ic('edit', 18)}${t('food.enterSelf')}</button></div>`;
     if (v === 'list')
       return html`<div class="xs xb muted caps mt12">${t('food.onlineResults')}</div><div class="card list mt6">${off.list.map(foodRow)}</div>`;
     return '';
@@ -111,7 +113,7 @@ ${!loc.length && q ? html`<button class="btn sec w100 mt10" data-act="manual">${
     if (my !== seq) return;
     list?.forEach((f) => f && online.set(f.id, f));
     Object.assign(off, { state: list == null ? 'fail' : 'done', list: list ?? [] });
-    patch('#offres', offBlock());
+    patch('#results', results()); // the whole block: "enter it yourself" replaces the plain manual button
   };
 
   /** Finish the meal: offer saving a repeated/multi-item meal. */
@@ -240,7 +242,7 @@ ${(() => {
         const { openScanner } = await import('./scan.js');
         openScanner(
           (food) => add(food),
-          (barcode) => openManual(barcode),
+          (barcode, name) => openManual(barcode, name),
         );
         return false;
       },
@@ -248,9 +250,9 @@ ${(() => {
     },
   };
 
-  /** Manual entry form. @param {string} [barcode] */
-  async function openManual(barcode = '') {
+  /** Manual entry form. @param {string} [barcode] @param {string} [name] Prefill (1.4.0: a scanned product's name). */
+  async function openManual(barcode = '', name = '') {
     const { openManualForm } = await import('./manual.js');
-    openManualForm({ name: q, barcode }, (food) => add(food));
+    openManualForm({ name: name || q, barcode }, (food) => add(food));
   }
 };

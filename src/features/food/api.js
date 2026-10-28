@@ -73,6 +73,33 @@ export function logFood(food, grams, meal, date = view.date) {
 }
 
 /**
+ * A diary row recomputed from its food's (corrected) per-100 g values at the row's grams
+ * (1.4.0). Values the food still lacks stay in `missing`; unknown fiber/salt are dropped.
+ * Pure. @param {any} row @param {any} food
+ */
+export function rowFromFood(row, food) {
+  const out = { ...row, name: food.name, ...portion(food, row.grams) };
+  if (!known(food.fib)) delete out.fib;
+  if (!known(food.salt)) delete out.salt;
+  if (food.missing?.length) out.missing = food.missing;
+  else delete out.missing;
+  return out;
+}
+
+/**
+ * 1.4.0: save the user's corrected values with the food (so the next scan of the barcode
+ * uses them) and update the diary rows of that food that still had missing values, plus
+ * `rowId` (the row being edited). Returns the updated rows.
+ * @param {any} food Corrected food (logic.applyFix). @param {string} [rowId]
+ */
+export function saveFoodFix(food, rowId) {
+  put('foods', food);
+  return all('food')
+    .filter((r) => r.foodId === food.id && (r.id === rowId || r.missing?.length))
+    .map((r) => put('food', rowFromFood(r, food)));
+}
+
+/**
  * Log ready-made diary rows (e.g. voice entries with their own nutrition, day, meal and
  * time). One micro animation for the batch.
  * @param {{date: string, meal: string, ts: number, time: string, name: string, emoji?: string,
