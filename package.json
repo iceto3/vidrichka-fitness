@@ -9,6 +9,7 @@
     "preview": "node tools/serve.mjs 8080 dist",
     "build": "node tools/build.mjs",
     "build:beta": "node tools/build.mjs --beta",
+    "deploy:beta": "node tools/build.mjs --beta && wrangler pages deploy dist-beta --project-name vidrichka-beta --branch main",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

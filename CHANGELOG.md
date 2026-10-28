@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] – unreleased (beta)
+
+### Added
+
+- **Day history:** dates in **Прогрес › Календар** open that day (steps, sleep, mood/energy, water, food and the workouts with exercises, sets and volume; zeros when empty). Past days are editable; future days are not. One date-keyed data layer (`src/features/day/`) serves Home and the day view, and streaks, charts, insights and the recap are derived from the stored rows.
+- **Steps and sleep from a screenshot** (voice Worker `POST /vision`: Workers AI vision first, xAI as the fallback). Multi-day views give one row per day; nothing is saved before you confirm; the image is never stored.
+- **Barcode scanning** straight from the phone with the Open Food Facts API (BarcodeDetector on Android, the bundled ZXing fallback on iPhone), manual barcode entry and manual food when nothing is found.
+- **Weight trend chart**, a **monthly recap** reachable from the calendar (also for the month so far), and a **Какво ново** page in Profile with every release and the build hash.
+- **Foods:** fiber and salt for every built-in food, 13 multi-source corrections, boiled/grilled, breaded and fried meat and fish, cottage cheese, mixed mince 50/50, 60/40 and 75/25, and a **Ястия и други** tile.
+- **Water:** a **−** button on the left of the glasses (never below 0); the glass size is unchanged.
+- **Feedback:** a thank-you screen, a „3/3 снимки“ counter, 10 messages a day per phone; optional invisible Turnstile (off until a widget exists).
+- **Push:** a **Изпрати пробно известие** button (push server 1.2.0 `POST /test`) and a switch for the loud wake-up alarm (`loudOn`).
+- **Beta channel:** `npm run build:beta` builds a separate app (own IndexedDB, storage keys, caches, `-beta` Workers and a БЕТА marker).
+
+### Changed / fixed
+
+- The anonymous-food notice appears once, on the first food entered by hand and before anything is sent, with the Profile wording and a **Не изпращай** button (no dialog at start-up).
+- Sleep: night streak counts manual entries, 7,5 h default, labelled quality faces, delete an entry. Steps: **Задай общо** vs **Добави** explained.
+- Charts: empty-state text, Bulgarian weekday labels, the workouts title shows the number, the correlations banner says what will appear; heatmap weekday labels and legend; locked badges say how to earn them.
+- Home: tapping the otter answers, the streak card explains how weeks count, no backup card on day 1, no check-in right after onboarding, no wake-up prompt over a workout summary, „Готово за днес ✓“.
+- Food: online search gives up after 6 s (both endpoints in parallel), a protein over-goal cue, concrete portions instead of „малко“, „паста с пиле“ split into parts, „Храна“ everywhere, „ккал“ in Bulgarian.
+- Technique opens as a sheet inside the workout; the Profile footer clears the nav; accessible names on the nav and icon buttons; a longer post-voice tour.
+- Data version 5: fiber and salt back-filled on diary rows of built-in foods (add-only, tested).
+
 ## [1.3.4] – 2026-10-27
 
 ### Added

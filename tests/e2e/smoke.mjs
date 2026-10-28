@@ -995,7 +995,6 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   await layer.locator('input').first().fill('Maria');
   await page.getByRole('button', { name: "Let's go" }).click();
   await settle();
-  await page.locator('#page [data-act="noticeOk"]').click({ timeout: 4000 });
   await settle();
   await clearCel();
   await go('progress/body');
@@ -2321,8 +2320,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await page.waitForTimeout(500);
   await shot('feedback-sheet');
   await layer.locator('[data-act="send"]').click();
-  await page.locator('.toast').waitFor({ timeout: 8000 });
-  assert.match(await page.locator('.toast').innerText(), /Благодар/);
+  await layer.locator('.fbthanks').waitFor({ timeout: 8000 });
+  assert.match(await layer.locator('.fbthanks').innerText(), /Благодар/);
   assert.equal(feedback.length, 1);
   const fb = feedback[0].body;
   assert.deepEqual(Object.keys(fb).sort(), ['images', 'lang', 'text', 'version']);
@@ -2378,14 +2377,14 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await settle();
   assert.equal((await dayRow()).steps, before + 1000, 'steps added to the past day');
   // water: − (left) … glasses … + (right); − is disabled at 0
-  const w0 = (await dayRow()).water ?? 0;
+  const w0 = await page.locator('.dayview .glasses .glass.on').count();
   if (w0 === 0) assert.ok(await page.locator('.dayview .waterminus').isDisabled(), '− disabled at 0');
   await page.locator('.dayview .waterplus').click();
   await settle();
   await page.locator('.dayview .waterminus').click();
   await settle();
-  const w1 = /** @type {any[]} */ (await rows('food')).find((r) => r.type === 'water' && r.date === key);
-  assert.ok(!w1 || w1.glasses >= 0, 'never below 0');
+  assert.equal(await page.locator('.dayview .glasses .glass.on').count(), w0, '+ then − returns to the start');
+  if (w0 === 0) assert.ok(await page.locator('.dayview .waterminus').isDisabled(), 'never below 0');
   const order = await page
     .locator('.dayview .water > button, .dayview .water > .glasses')
     .evaluateAll((els) => els.map((e) => e.className.split(' ').find((c) => /water(minus|plus)|glasses/.test(c))));

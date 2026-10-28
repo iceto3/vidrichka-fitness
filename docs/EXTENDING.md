@@ -63,5 +63,5 @@ Add an entry at the top of `NOTES` in `src/features/whatsnew/notes.js` and its k
 
 1. Bump `version` in `package.json` and add a CHANGELOG entry.
 2. Run `npm run check` and `npm run test:e2e:dist`.
-3. Big versions: build on a branch, `npm run build:beta` and deploy `dist-beta/` to the Cloudflare Pages project `vidrichka-beta` (`npx wrangler pages deploy dist-beta --project-name vidrichka-beta --branch main`), with the `-beta` Workers (`wrangler.beta.toml` in `server/` and `voice/`). Test the beta first.
+3. Big versions: build on a branch and run `npm run deploy:beta` (builds `dist-beta/` and deploys it to the Cloudflare Pages project `vidrichka-beta`, https://vidrichka-beta.pages.dev), with the `-beta` Workers (`wrangler.beta.toml` in `server/` and `voice/`). Test the beta first.
 4. Merge to `main`; the workflow deploys to GitHub Pages. The service worker version changes automatically, and users see "Update ready".
