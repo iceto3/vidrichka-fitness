@@ -60,6 +60,28 @@ test('sources show only a title and a link', () => {
   }
 });
 
+test('every source is listed once per exercise (same title or same link = duplicate)', () => {
+  const normUrl = (/** @type {string} */ u) =>
+    u
+      .toLowerCase()
+      .replace(/^https?:\/\/(www\.)?/, '')
+      .replace(/\/+$/, '');
+  for (const id of ids) {
+    const titles = TECHNIQUE[id].sources.map((s) => s.text.toLowerCase().replace(/\s+/g, ' ').trim());
+    const urls = TECHNIQUE[id].sources.filter((s) => s.url).map((s) => normUrl(/** @type {string} */ (s.url)));
+    assert.equal(new Set(titles).size, titles.length, `${id}: duplicate source title`);
+    assert.equal(new Set(urls).size, urls.length, `${id}: duplicate source link`);
+  }
+  // tester finding (1.4.1): Хоризонтален скрипец listed „ACE Exercise Library – Seated Row“ twice
+  const ace = TECHNIQUE.seated_cable_row.sources.filter((s) => s.text === 'ACE Exercise Library – Seated Row');
+  assert.deepEqual(ace, [
+    {
+      text: 'ACE Exercise Library – Seated Row',
+      url: 'https://www.acefitness.org/resources/everyone/exercise-library/48/seated-row/',
+    },
+  ]);
+});
+
 test('back squat cites the real ACE Back Squat page', () => {
   const ace = TECHNIQUE.back_squat.sources.find((s) => /^ACE/.test(s.text));
   assert.deepEqual(ace, {

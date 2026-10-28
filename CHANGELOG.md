@@ -21,6 +21,7 @@ All notable changes to this project are documented here. The format follows
 - **Bulgarian only:** no English/Latin words left in the technique texts (bracing, butt wink, V-дръжка, cm …), source titles and brands aside; the rest time on the exercise page reads „45 сек“.
 - **One muscle glossary** (`src/data/muscle-glossary.js`): every muscle is written in one form in all 20 exercises; the section is now the collapsible **Подробно за мускулите** (collapsed by default; a tapped-open section stays open on re-render).
 - **Drawings:** Клек с щанга bottom position redrawn (bar over mid-foot, torso 37° forward, shins 27°, thighs just below parallel, heels down; plus a 3rd marker for the bar); Мъртва буболечка frame 2 shows the opposite arm extended back over the head toward the floor. Smoother wording in several texts and legends.
+- **Sources listed once:** Хоризонтален скрипец showed „ACE Exercise Library – Seated Row“ twice (two ACE pages with the same title); the duplicate (machine row, ACE 168) is removed from the source card, and `tools/make-technique.mjs` now drops any repeated source (same title or same link) for every exercise. New unit test: no exercise has duplicate sources.
 - **Build id** (e.g. `1.4.1-beta-<hash>`) in the Profile footer, at the top of Какво ново and in the What's new popup.
 
 ## [1.4.0] – 2026-10-28

@@ -36,6 +36,27 @@ const gender = (s) => {
   return { f: s.replace(re, '$1'), m: s.replace(re, '$2') };
 };
 
+/**
+ * 1.4.1: a source is listed once – later entries with the same URL or the same title
+ * (case/space-insensitive) are dropped, so two pages with one title never show twice.
+ * @param {{text: string, url?: string}[]} list
+ */
+function dedupeSources(list) {
+  const norm = (/** @type {string} */ s) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+  const normUrl = (/** @type {string} */ u) =>
+    u
+      .toLowerCase()
+      .replace(/^https?:\/\/(www\.)?/, '')
+      .replace(/\/+$/, '');
+  const seen = new Set();
+  return list.filter((s) => {
+    const keys = [`t:${norm(s.text)}`, ...(s.url ? [`u:${normUrl(s.url)}`] : [])];
+    if (keys.some((k) => seen.has(k))) return false;
+    keys.forEach((k) => seen.add(k));
+    return true;
+  });
+}
+
 /** @param {string} md */
 function parseMd(md) {
   const id = /`id: ([a-z_]+)`/.exec(md)?.[1];
@@ -72,10 +93,12 @@ function parseMd(md) {
     if (!m) throw new Error(`${id}: bad muscle line ${l}`);
     return { role: m[1], text: m[2] };
   });
-  const sources = need('Източници').map((l) => {
-    const m = /^(.*?)[:\s]*(https?:\/\/\S+)\s*$/.exec(l);
-    return m ? { text: m[1].trim(), url: m[2] } : { text: l };
-  });
+  const sources = dedupeSources(
+    need('Източници').map((l) => {
+      const m = /^(.*?)[:\s]*(https?:\/\/\S+)\s*$/.exec(l);
+      return m ? { text: m[1].trim(), url: m[2] } : { text: l };
+    }),
+  );
   return {
     id,
     setup: need('Изходна позиция').map(gender),

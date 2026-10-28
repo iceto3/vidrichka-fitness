@@ -765,10 +765,6 @@ export const TECHNIQUE = {
         text: 'ACE Exercise Library – Seated Row',
         url: 'https://www.acefitness.org/resources/everyone/exercise-library/48/seated-row/',
       },
-      {
-        text: 'ACE Exercise Library – Seated Row',
-        url: 'https://www.acefitness.org/resources/everyone/exercise-library/168/seated-row/',
-      },
     ],
     frames: [
       {
