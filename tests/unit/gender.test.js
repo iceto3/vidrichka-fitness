@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import en from '../../src/data/i18n/en.js';
 import bg from '../../src/data/i18n/bg.js';
-import { EXERCISES } from '../../src/data/exercises.js';
+import { TECHNIQUE } from '../../src/data/technique.js';
 import { DEFAULTS } from '../../src/core/settings.js';
 import { t, L, setLang, setGender, getGender, isGendered, byGender } from '../../src/core/i18n.js';
 
@@ -98,17 +98,25 @@ test('a gender variant can wrap plurals, and missing male forms fall back to fem
   assert.equal(byGender('plain', 'm'), 'plain');
 });
 
-test('L() resolves gendered data texts (exercise steps)', async () => {
-  const steps = EXERCISES.flatMap((e) => [...e.steps, ...(e.tips ?? [])]).filter((x) => isGendered(x.bg));
-  assert.ok(steps.length >= 2);
-  for (const s of steps) assert.ok(s.bg.f && s.bg.m && s.bg.f !== s.bg.m, s.en);
+test('L() resolves gendered data texts (1.4.2 technique: "изправена/изправен")', async () => {
+  const texts = Object.values(TECHNIQUE)
+    .flatMap((x) => [
+      ...x.setup,
+      ...x.steps,
+      ...x.breathing,
+      ...x.keyPoints,
+      ...x.mistakes.flatMap((m) => [m.mistake, m.fix]),
+    ])
+    .filter(isGendered);
+  assert.ok(texts.length >= 2);
+  for (const s of texts) assert.ok(s.f && s.m && s.f !== s.m && !/\//.test(s.f + s.m), JSON.stringify(s));
+  const stand = /** @type {any} */ (TECHNIQUE.bodyweight_squat.setup.find(isGendered));
   await setLang('bg');
-  const rdl = EXERCISES.flatMap((e) => e.steps).find((x) => x.en === 'Stand tall, soft knees');
   setGender('f');
-  assert.equal(L(rdl), 'Изправена, меки колене');
+  assert.match(L(stand), /изправена/);
   setGender('m');
-  assert.equal(L(rdl), 'Изправен, меки колене');
-  await setLang('en');
-  assert.equal(L(rdl), 'Stand tall, soft knees');
+  assert.match(L(stand), /изправен(?![а-я])/);
+  assert.doesNotMatch(L(stand), /изправена/);
   setGender('f');
+  await setLang('en');
 });

@@ -4,8 +4,7 @@
  */
 import { EXERCISES, MUSCLE_GROUPS } from '../../data/exercises.js';
 import { L, t } from '../../core/i18n.js';
-import { html, raw } from '../../ui/dom.js';
-import { stepFigure } from './figures.js';
+import { html } from '../../ui/dom.js';
 
 const byId = new Map(EXERCISES.map((e) => [e.id, e]));
 
@@ -34,6 +33,3 @@ export const repsLabel = (id) => t(`unit.${byId.get(id)?.unit ?? 'reps'}`);
 /** YouTube search link (never goes dead). @param {string} id */
 export const youtubeUrl = (id) =>
   `https://www.youtube.com/results?search_query=${encodeURIComponent(`${byId.get(id)?.name.en ?? id} technique`)}`;
-
-/** Small step-figure thumbnail for an exercise (Safe HTML). @param {string} id */
-export const exThumb = (id) => raw(stepFigure(byId.get(id)?.fig ?? 'squat', 1));

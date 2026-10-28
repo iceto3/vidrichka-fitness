@@ -4,9 +4,9 @@ Every addition is a small, local change. After editing, run `npm run check`.
 
 ## Add an exercise
 
-1. Add an entry to `src/data/exercises.js`. It needs `id`, `name: {en, bg}`, `equipment`, `place: ['gym'|'home']`, `weighted`, `primary`/`secondary` muscles, `rest` (seconds), `met`, `fig`, `steps: [{en,bg}×3]` and `tips: [{en,bg}]`. Optionally add `unit: 'perLeg'|'sec'`.
-2. Pick an existing `fig` from `src/features/library/figures.js`, or add a new 3-frame figure there.
-3. Unit tests check that names are bilingual and that plans only use known exercises.
+1. Add an entry to `src/data/exercises.js`. It needs `id`, `name: {en, bg}`, `equipment`, `place: ['gym'|'home']`, `weighted`, `primary`/`secondary` muscles, `rest` (seconds) and `met`. Optionally add `unit: 'perLeg'|'sec'`.
+2. Technique (1.4.2): add the verified `<id>.svg` (720×360 card with two frames) and `<id>.md` (sections Изходна позиция, Изпълнение, Дишане, Ключови точки, Чести грешки table, Работещи мускули, Източници) to the source set (default `/workspace/exercise-styles/final`), then run `node tools/make-technique.mjs [dir]`. It regenerates `src/data/technique.js`, `src/data/figures/<id>.js`, `src/data/figure-thumbs.js` and `src/features/library/figure.css`, and fails if the exercise ids and the source set differ. Do not edit the generated files by hand.
+3. Unit tests check that names are bilingual, that plans only use known exercises and (`v142-technique.test.js`) that every exercise has complete technique content, two frames whose markers match the legend, and a thumbnail.
 
 ## Add a food or food category
 

@@ -4,6 +4,7 @@
 @import url('./features/home/home.css');
 @import url('./features/workouts/workouts.css');
 @import url('./features/library/library.css');
+@import url('./features/library/figure.css');
 @import url('./features/food/food.css');
 @import url('./features/progress/progress.css');
 @import url('./features/body/body.css');

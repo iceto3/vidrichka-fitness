@@ -38,7 +38,7 @@ test("What's new: items of every release newer than the one seen; flags hide voi
   assert.deepEqual(parseV('1.4.0-beta-abc'), [1, 4, 0]);
   assert.ok(older('1.3.4', '1.4.0') && !older('1.4.0', '1.4.0') && older('', '1.2.0'));
   const on = { voice: true, push: true };
-  const from = (seen, f = on) => newSince(seen, f).items.map(([, k]) => k);
+  const from = (seen, f = on) => newSince(seen, f, NOTES, '1.4.0').items.map(([, k]) => k); // as shipped in 1.4.0
   assert.deepEqual(from('1.4.0'), []);
   assert.ok(from('1.3.4').includes('whatsNew.dayView') && !from('1.3.4').includes('whatsNew.homeMeals'));
   assert.equal(from('1.3.3').length, 8 + 6);

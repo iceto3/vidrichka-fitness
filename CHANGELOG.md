@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.2] – 2026-10-28
+
+### Changed
+
+- **Verified exercise technique** for all 20 exercises (ids unchanged). The old placeholder stick figures (`features/library/figures.js`) and the unverified `steps`/`tips` texts are removed. Each exercise now has a two-frame illustration (start/end position) with numbered markers and a legend, and Bulgarian sections: **Изходна позиция**, **Изпълнение**, **Дишане**, **Ключови точки**, **Чести грешки → как да ги избегнеш** (each mistake with its fix), **Работещи мускули** and small **Източници** links (NSCA, ACE, ExRx). Shown on the exercise page and in the technique sheet during a workout; the library list and the workout rows use thumbnails of the new drawings.
+- The content is generated from the verified set in `exercise-styles/final` by `tools/make-technique.mjs`: `src/data/technique.js` (texts), `src/data/figures/<id>.js` (two svgo-optimised inline SVG frames per exercise, ids prefixed per exercise, one lazy chunk each and precached by the service worker, so they work offline), `src/data/figure-thumbs.js` and `src/features/library/figure.css` (light and `.dark` palette, app font).
+- Technique texts are Bulgarian only; in English the sections show a short note.
+- What's new entry for 1.4.2.
+
 ## [1.4.0] – 2026-10-28
 
 ### Added

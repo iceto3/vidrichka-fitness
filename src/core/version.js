@@ -2,7 +2,7 @@
  * App version (injected by the build from package.json; the fallback is for dev/tests).
  * @module core/version
  */
-export const APP_VERSION = /** @type {string} */ (/** @type {any} */ (globalThis).__APP_VERSION__ ?? '1.4.0');
+export const APP_VERSION = /** @type {string} */ (/** @type {any} */ (globalThis).__APP_VERSION__ ?? '1.4.2');
 
 /**
  * Release whose "What's new" note is shown once. Since 1.2.1 the full version, so a patch

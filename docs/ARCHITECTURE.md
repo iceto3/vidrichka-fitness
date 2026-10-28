@@ -143,6 +143,12 @@ Features never import another feature's views, only its `api.js`. Removing a fea
 - `core/trash.js`: the `trash` store holds `{id, kind, ts, label, sub?, emoji?, rows:[{store,row}], extra?}`. `restore()` puts the rows back and runs the kind's `onRestore` hook (workouts recompute PRs/XP and restore the XP ledger; photos move to a free slot or a new session). Entries older than 7 days are purged at start-up (`features/trash › startTrash`). The bin is not exported in backups.
 - Fiber/salt are optional food fields `fib` and `salt` (grams per 100 g on foods, per portion on diary rows); missing means unknown, so no migration rewrites old rows.
 
+## Exercise technique (1.4.2)
+
+- Generated data (by `tools/make-technique.mjs` from the verified source set): `data/technique.js` (`TECHNIQUE[id]` = `setup`, `steps`, `breathing`, `keyPoints`, `mistakes: [{mistake, fix}]`, `muscles: [{role, text}]`, `sources: [{text, url?}]`, `frames: [{label, legend}]`; Bulgarian, `**bold**`/`*italic*`, gendered `{f, m}` where needed), `data/figures/<id>.js` (two inline SVG frames) and `data/figure-thumbs.js`.
+- `features/library/figure.js` renders the frames (`figureBlock`, filled by `hydrateFigure` after `loadFigure(id)` – a dynamic import, one lazy chunk per exercise, precached by the service worker like every file in `dist/js`) and the sections (`techniqueSections`). Used by the exercise page (`views/detail.js`) and the in-workout sheet (`technique.js`). Thumbnails (`thumb.js`) are only imported by the library list and the active workout, so neither the drawings nor the texts are in the initial bundle.
+- SVGs are inline (not `<img>`) so they use the app font and the `.dark` theme (`figure.css`, scoped to `.vf`); captions and legends are HTML for readability on a phone.
+
 ## Day history, channels and screenshots (1.4.0)
 
 - **One date-keyed day layer** – `src/features/day/`. `logic.js` is pure (`dayError`, `indexData`, `buildDay`, `foodTotals`, `hasData`, `shotRows`); `api.js` is the only place that writes a day's steps, water, sleep, mood and energy for _any_ date (`setDaySteps(date, n)`, `setDayWater`, `setDaySleep`, `clearDaySleep`, `rateDayField`). Every writer calls `assertEditable(date)` (no future days, nothing before `MIN_DAY`) and then emits `ui:refresh`, so streaks, Progress charts, insights and the monthly recap – all derived from the same stores – update after an edit. The Home cards and the Progress › calendar day view (`views/day.js`) render the same date-parameterized cards (`views/cards.js`); an empty day shows zeros.
