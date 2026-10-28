@@ -30,7 +30,6 @@ import { closeNotifications } from '../../daily/notify.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 import { dayRows } from '../../food/api.js';
 import { cardActions, mealsCard, sleepCard, stepsCard } from '../../day/views/cards.js';
-import { noticeActions, noticeCard } from '../../improve/notice.js';
 import { openSheet } from '../../../ui/sheet.js';
 import { otterLine } from '../otter.js';
 
@@ -166,7 +165,6 @@ export default () => {
 <div class="row gap8">${voiceReady() ? html`<button class="btn sm sec voicebtn" data-act="voice">${ic('mic', 18, 2.4)}${t('voice.say')}</button>` : ''}<button class="iconbtn" data-go="profile/reminders" aria-label="${t('profile.reminders')}">${ic('bell', 21)}${set.reminders.enabled ? '' : raw('<i class="nub" aria-hidden="true"></i>')}</button></div></div>
 <div class="row gap8 mt8 otterrow"><button class="otter-wrap otterbtn" data-act="otter" aria-label="${t('home.otterTap')}">${otter({ size: 112, pose: s.workedOutToday ? 'cheer' : 'wave', mood })}</button>
 <div class="bubble" role="status">${saying ? saying : hl(t(msg.key, msg.vars))}</div></div>
-${noticeCard()}
 ${dailyCards()}
 ${a ? html`<button class="card resume row gap12" data-go="workout"><span class="live"><i></i></span><span class="f1 b">${t('home.resume', { plan: planName(a) })}</span>${ic('right', 18, 2.4)}</button>` : ''}
 <div class="row gap12 stretch mt4">
@@ -202,7 +200,6 @@ ${
     },
     actions: {
       voice: () => (openVoice(), false),
-      ...noticeActions((path) => emit('nav', { path })),
       otter: (el) => {
         saying = otterLine(taps++);
         el.classList.remove('hop');

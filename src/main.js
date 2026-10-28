@@ -23,7 +23,6 @@ import { otter } from './features/mascot/api.js';
 import { stats } from './features/motivation/api.js';
 import { pushUrl } from './features/daily/push-config.js';
 import { voiceUrl } from './features/voice/config.js';
-import { dataNotice } from './features/improve/notice.js';
 import './features/profile/install.js'; // catch beforeinstallprompt early
 
 const $id = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -80,7 +79,6 @@ ${genderRow()}
     },
     onClose: () => {
       if (!settings().onboarded) setSettings({ onboarded: true });
-      setTimeout(dataNotice, 250); // 1.3.4: anonymous food sharing is on by default – say so once
     },
   });
 }
@@ -249,7 +247,7 @@ async function start() {
   if (!persistent) emit('toast', { key: 'common.noStorage' });
   if (new URLSearchParams(location.search).has('cheer')) (await import('./features/partner/api.js')).handleCheer();
   else if (!settings().onboarded) (setKv('seenWhatsNew', WHATS_NEW), onboarding());
-  else whatsNew(dataNotice);
+  else whatsNew();
   startServiceWorker();
   startDaily();
   startReminders();

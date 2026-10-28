@@ -4,6 +4,7 @@
  * @module features/food/views/manual
  */
 import { shareFood } from '../../improve/share.js';
+import { confirmDataNotice } from '../../improve/notice.js';
 import { html } from '../../../ui/dom.js';
 import { t } from '../../../core/i18n.js';
 import { uid } from '../../../core/store.js';
@@ -58,8 +59,15 @@ ${warned ? html`<p class="fwarn mt10" role="alert">${t(warned, { est: validateFo
           ...(r.values.salt != null ? { salt: r.values.salt } : {}),
         };
         closeSheet();
-        shareFood(food); // 1.3.4: name + per-100 g values only, anonymous, off in Profile
-        setTimeout(() => onSave(food), 0);
+        // 1.4.0: the first manual food says what is shared (once) before anything is sent.
+        setTimeout(
+          () =>
+            void confirmDataNotice().then(() => {
+              shareFood(food); // name + per-100 g values only, anonymous, off in Profile
+              onSave(food);
+            }),
+          0,
+        );
         return false;
       },
     },

@@ -1106,7 +1106,7 @@ export default {
     other:
       'The streak grows by 1 for every week (Monday–Sunday) with at least {goal} workouts – your weekly goal. This week is added as soon as you reach the goal.',
   },
-  'improve.noticeSettings': 'Settings',
+  'improve.noticeOff': "Don't send",
   'progress.badgesHow': 'Locked badges show how to earn them.',
   'progress.heatLess': 'Less',
   'progress.heatMore': 'More sets',

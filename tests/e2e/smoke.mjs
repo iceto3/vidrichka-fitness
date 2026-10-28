@@ -183,12 +183,8 @@ async function run(name, browser, P) {
   await layer.locator('input').first().fill('Maria');
   await page.getByRole('button', { name: "Let's go" }).click();
   await settle();
-  // 1.3.4: the one-time anonymous-data notice follows the welcome (1.4.0: a Home card, no dialog)
-  await page.locator('#page .datanotice').waitFor({ timeout: 4000 });
-  assert.equal(await layer.locator('.datanotice').count(), 0, 'the notice never blocks');
-  assert.match(await page.locator('#page .datanotice').innerText(), /anonymously/i, 'data notice after onboarding');
-  await page.locator('#page [data-act="noticeOk"]').click();
-  await settle();
+  // 1.4.0: no anonymous-data notice after onboarding (it comes with the first manual food)
+  assert.equal(await page.locator('.datanotice').count(), 0, 'no data notice after onboarding');
   assert.match(await page.locator('h1').first().innerText(), /Maria/);
 
   // Workout → summary
@@ -345,6 +341,7 @@ async function run(name, browser, P) {
   await v132(page, h);
   await v133(page, h, name);
   await v134(page, h, name);
+  await v140(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -1281,6 +1278,11 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   await page.waitForTimeout(300);
   await shot('manual-fiber-salt');
   await layer.locator('[data-act="save"]').click();
+  // 1.4.0: the first manual food explains the anonymous sharing once (Profile wording)
+  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
+  assert.match(await layer.innerText(), /Помогни да подобрим приложението/);
+  assert.match(await layer.innerText(), /Не изпращай/);
+  await layer.locator('[data-close]').last().click();
   await layer.locator('#grams').waitFor();
   assert.match(await layer.locator('.extra').innerText(), /Фибри/i, 'grams sheet shows fiber/salt');
   await layer.locator('[data-act="done"]').click();
@@ -1971,7 +1973,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await idb('kv', [{ id: 'seenWhatsNew', value: '1.3.3' }], ['dataNotice']);
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
-  let txt = await layer.innerText();
+  const txt = await layer.innerText();
   assert.match(txt, /Какво ново в 1\.4\.0/);
   assert.match(txt, /крачки/i);
   assert.match(txt, /Обратна връзка/);
@@ -1980,26 +1982,16 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await page.waitForTimeout(700);
   await shot('whats-new-134');
   await layer.locator('[data-close]').first().click();
-  // 1.4.0: the notice is a card on Home – it never blocks the app
+  // 1.4.0: no notice after the update – it waits for the first manual food (below)
   await settle();
-  assert.equal(await layer.locator('.datanotice').count(), 0, 'no blocking dialog');
-  await page.locator('#page .datanotice').waitFor({ timeout: 4000 });
-  txt = await page.locator('#page .datanotice').innerText();
-  assert.match(txt, /Името и стойностите на 100 г на храните, които въвеждаш ръчно, се изпращат анонимно/);
-  await page.locator('#page .datanotice').scrollIntoViewIfNeeded();
-  await page.waitForTimeout(400);
-  await shot('data-notice');
-  await page.locator('#page [data-act="noticeOk"]').click();
-  await settle();
-  assert.equal(await page.locator('#page .datanotice').count(), 0, 'OK hides it');
-  await reopen();
-  assert.equal(await page.locator('#page .datanotice').count(), 0, 'the notice shows only once');
-  console.log("  ✔ 1.3.4 What's new + the one-time data notice");
+  assert.equal(await page.locator('.datanotice').count(), 0, 'no notice at start-up');
+  console.log("  ✔ 1.3.4 What's new, no data notice at start-up");
 
   // 2) Manual food → POST /foods with only the allowed fields; nothing when switched off
   await page.route('**/*openfoodfacts.org/**', (r) =>
     r.fulfill({ json: { count: 0, products: [] }, headers: { 'access-control-allow-origin': '*' } }),
   );
+  let first = true;
   const manual = async (/** @type {string} */ n, /** @type {string} */ meal) => {
     await go(`food/add/${meal}`);
     await page.locator('[data-act="manual"]').first().click();
@@ -2011,6 +2003,16 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
     await layer.locator('#mfib').fill('3');
     await layer.locator('#msalt').fill('0,8');
     await layer.locator('[data-act="save"]').click();
+    if (first) {
+      // the one-time notice, shown before anything is sent
+      await layer.locator('.datanotice').waitFor({ timeout: 4000 });
+      assert.match(await layer.innerText(), /се изпращат анонимно/);
+      assert.equal(foods.length, 0, 'nothing sent before the notice is closed');
+      await page.waitForTimeout(400);
+      await shot('data-notice');
+      await layer.locator('[data-close]').last().click();
+      first = false;
+    }
     await layer.locator('#grams').waitFor();
     await layer.locator('[data-act="done"]').click();
     await settle();
@@ -2345,4 +2347,53 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await page.evaluate(() => (localStorage.removeItem('vf-push-url'), localStorage.removeItem('vf-voice-url')));
   void name;
   console.log('  ✔ 1.3.4 feedback from Profile (dictation, screenshot ≤ 300 KB JPEG, thanks)');
+}
+
+/**
+ * 1.4.0 day history: a past calendar day opens the shared day cards, edits land on THAT date
+ * (not today), water − never goes below 0, and future days are not tappable or editable.
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function v140(page, { go, settle, shot, layer, rows }) {
+  const key = await page.evaluate(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 2);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+  const dayRow = async () => {
+    await page.waitForTimeout(150);
+    return /** @type {any[]} */ (await rows('days')).find((x) => x.id === key) ?? {};
+  };
+  const before = (await dayRow()).steps ?? 0;
+  await go('progress/calendar');
+  await page.locator('.cal').waitFor();
+  for (const el of await page.locator('.cal .future').all())
+    assert.equal(await el.evaluate((e) => e.tagName), 'SPAN', 'future days are not buttons');
+  await page.locator(`.cal [data-go="day/${key}"]`).click();
+  await page.locator('.dayview').waitFor();
+  for (const sel of ['.stepscard', '.sleepcard', '.homemeals', '.dayworkouts'])
+    assert.equal(await page.locator(`.dayview ${sel}`).count(), 1, `${sel} on the day view`);
+  await page.locator('.dayview [data-act="stepsAdd"][data-n="1000"]').click();
+  await settle();
+  assert.equal((await dayRow()).steps, before + 1000, 'steps added to the past day');
+  // water: − (left) … glasses … + (right); − is disabled at 0
+  const w0 = (await dayRow()).water ?? 0;
+  if (w0 === 0) assert.ok(await page.locator('.dayview .waterminus').isDisabled(), '− disabled at 0');
+  await page.locator('.dayview .waterplus').click();
+  await settle();
+  await page.locator('.dayview .waterminus').click();
+  await settle();
+  const w1 = /** @type {any[]} */ (await rows('food')).find((r) => r.type === 'water' && r.date === key);
+  assert.ok(!w1 || w1.glasses >= 0, 'never below 0');
+  const order = await page
+    .locator('.dayview .water > button, .dayview .water > .glasses')
+    .evaluateAll((els) => els.map((e) => e.className.split(' ').find((c) => /water(minus|plus)|glasses/.test(c))));
+  assert.deepEqual(order.filter(Boolean), ['waterminus', 'glasses', 'waterplus'], 'minus, glasses, plus');
+  await page.evaluate(() => scrollTo(0, 0));
+  await shot('day-view');
+  await go('day/2099-01-01');
+  assert.equal(await page.locator('.dayview .stepscard').count(), 0, 'no cards for a future day');
+  assert.equal(await layer.locator('.panel').count(), 0);
+  console.log('  ✔ 1.4.0 day history: past day opens, edits land on that date, water −/+, no future days');
 }
