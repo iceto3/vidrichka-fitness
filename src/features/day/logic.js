@@ -7,6 +7,7 @@
  */
 import { addDays, dayKey, parseDay } from '../../core/dates.js';
 import { nightOf } from '../daily/logic.js';
+import { dayCreatine } from '../food/creatine.js';
 
 /** Oldest day that can be edited (older keys are refused as typos). */
 export const MIN_DAY = '2020-01-01';
@@ -34,11 +35,13 @@ export function dayError(date, today) {
  * @typedef {object} DayData
  * @property {string} date
  * @property {number|null} steps            null = nothing entered
- * @property {{hours: number|null, q: number|null, manual: boolean}} sleep  the night before `date`
+ * @property {{hours: number|null, q: number|null, manual: boolean, bed: number|null, wake: number|null}} sleep
+ *   the night before `date`; bed/wake = times saved in the 1.4.2 sleep editor (else null)
  * @property {number|null} mood @property {number|null} energy
  * @property {number|null} water           glasses; null = never touched that day
  * @property {any[]} food                  diary rows (water excluded), by time
  * @property {DayTotals|null} totals       null when no food was logged
+ * @property {{foodG: number, suppG: number, totalG: number, rows: number}} creatine  1.4.2, grams
  * @property {DayWorkout[]} workouts       oldest first (partial ones included, flagged)
  */
 
@@ -110,12 +113,19 @@ export function dayFromIndex(ix, date) {
   return {
     date,
     steps: typeof r.steps === 'number' && r.steps > 0 ? r.steps : null,
-    sleep: { hours: night.hours ?? null, q: night.sleepQ ?? null, manual: typeof r.sleepH === 'number' },
+    sleep: {
+      hours: night.hours ?? null,
+      q: night.sleepQ ?? null,
+      manual: typeof r.sleepH === 'number',
+      bed: night.sleepBed,
+      wake: night.sleepWake,
+    },
     mood: r.mood ?? null,
     energy: r.energy ?? null,
     water: ix.water.has(date) ? /** @type {number} */ (ix.water.get(date)) : null,
     food,
     totals: foodTotals(food),
+    creatine: dayCreatine(food, r.creatineG),
     workouts: (ix.sessions.get(date) ?? []).map(workoutOf),
   };
 }
@@ -135,6 +145,7 @@ export const hasData = (d) =>
   d.energy != null ||
   (d.water ?? 0) > 0 ||
   d.food.length > 0 ||
+  d.creatine.suppG > 0 ||
   d.workouts.length > 0;
 
 /**

@@ -1,6 +1,7 @@
 /**
  * POST /vision?kind=steps|sleep&today=YYYY-MM-DD&lang=bg|en — read step counts (or sleep)
  * from a health-app screenshot (Apple Health, Google Fit, Samsung Health, a watch app).
+ * 1.4.2: kind=label reads a food nutrition label instead (see ./label.js; `today` optional).
  * Body: the image (image/jpeg|png|webp, ≤ 600 kB; the app sends ≤ 1080 px JPEG).
  *
  * A free Workers AI vision model is tried first; if it fails or reads nothing, xAI (vision)
@@ -11,6 +12,7 @@
  */
 import { Invalid } from './parse.js';
 import { toBase64 } from './transcribe.js';
+import { labelPrompt, normalizeLabel } from './label.js';
 
 export const VISION_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 export const MAX_IMAGE = 600 * 1024;
@@ -24,14 +26,14 @@ const dayDiff = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(
 /**
  * Validate the request: kind, today, image type and size.
  * @param {Request} req
- * @returns {Promise<{kind: 'steps'|'sleep', today: string, lang: 'bg'|'en', mime: string, bytes: Uint8Array}>}
+ * @returns {Promise<{kind: 'steps'|'sleep'|'label', today: string, lang: 'bg'|'en', mime: string, bytes: Uint8Array}>}
  */
 export async function readVision(req) {
   const q = new URL(req.url).searchParams;
   const kind = q.get('kind');
-  if (kind !== 'steps' && kind !== 'sleep') throw new Invalid('bad-kind');
+  if (kind !== 'steps' && kind !== 'sleep' && kind !== 'label') throw new Invalid('bad-kind');
   const today = q.get('today') ?? '';
-  if (!DAY.test(today) || Number.isNaN(Date.parse(today))) throw new Invalid('bad-today');
+  if (kind !== 'label' && (!DAY.test(today) || Number.isNaN(Date.parse(today)))) throw new Invalid('bad-today');
   const mime = (req.headers.get('Content-Type') || '').toLowerCase().split(';')[0].trim();
   if (!TYPES.includes(mime)) throw new Invalid('not-image', 415);
   if (Number(req.headers.get('Content-Length') || 0) > MAX_IMAGE) throw new Invalid('too-big', 413);
@@ -109,14 +111,22 @@ export function normalizeVision(out, kind, today) {
 
 /**
  * Ask Workers AI, then xAI. Returns the first non-empty, valid reading.
- * @param {{kind: 'steps'|'sleep', today: string, mime: string, bytes: Uint8Array}} q
+ * For kind=label the answer is `{label, days: [], via}` (label null = unreadable).
+ * @param {{kind: 'steps'|'sleep'|'label', today: string, mime: string, bytes: Uint8Array}} q
  * @param {{AI?: {run: Function}, XAI_API_KEY?: string, XAI_VISION_MODEL?: string, XAI_MODEL?: string}} env
  * @param {typeof fetch} doFetch
- * @returns {Promise<{days: any[], via: string}>}
+ * @returns {Promise<{days: any[], via: string, label?: ReturnType<typeof normalizeLabel>}>}
  */
 export async function readScreenshot(q, env, doFetch) {
   const url = `data:${q.mime};base64,${toBase64(q.bytes)}`,
-    prompt = visionPrompt(q.kind, q.today);
+    isLabel = q.kind === 'label',
+    prompt = isLabel ? labelPrompt() : visionPrompt(/** @type {'steps'|'sleep'} */ (q.kind), q.today);
+  /** @param {any} answer @param {string} via */
+  const result = (answer, via) => {
+    if (isLabel) return { label: normalizeLabel(parseAnswer(answer)), days: [], via };
+    return { days: normalizeVision(parseAnswer(answer), /** @type {'steps'|'sleep'} */ (q.kind), q.today), via };
+  };
+  const found = (/** @type {{days: any[], label?: any}} */ r) => (isLabel ? !!r.label : r.days.length > 0);
   const messages = [
     {
       role: 'user',
@@ -130,8 +140,8 @@ export async function readScreenshot(q, env, doFetch) {
   if (env.AI) {
     try {
       const r = await env.AI.run(VISION_MODEL, { messages, max_tokens: 600, temperature: 0 });
-      const days = normalizeVision(parseAnswer(r?.response ?? r), q.kind, q.today);
-      if (days.length) return { days, via: 'workers-ai' };
+      const got = result(r?.response ?? r, 'workers-ai');
+      if (found(got)) return got;
     } catch {
       failed = true;
       console.log('vision', 'workers-ai-failed'); // never the image
@@ -139,7 +149,7 @@ export async function readScreenshot(q, env, doFetch) {
   }
   if (!env.XAI_API_KEY) {
     if (failed) throw new Error('upstream');
-    return { days: [], via: 'workers-ai' };
+    return isLabel ? { label: null, days: [], via: 'workers-ai' } : { days: [], via: 'workers-ai' };
   }
   const res = await doFetch('https://api.x.ai/v1/chat/completions', {
     method: 'POST',
@@ -167,5 +177,5 @@ export async function readScreenshot(q, env, doFetch) {
   }
   const data = await res.json();
   const content = data?.choices?.[0]?.message?.content;
-  return { days: normalizeVision(parseAnswer(content), q.kind, q.today), via: 'xai' };
+  return result(content, 'xai');
 }

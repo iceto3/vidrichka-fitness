@@ -14,7 +14,7 @@ const NB = /[\s\u00a0\u202f]/;
 test('durations read as hours and minutes and parse back', async () => {
   await setLang('bg');
   assert.equal(fmtDuration(7 + 20 / 60), '7 ч 20 мин');
-  assert.equal(fmtDuration(8), '8 ч');
+  assert.equal(fmtDuration(8), '8 ч 00 мин'); // 1.4.2: always X ч MM мин
   assert.equal(fmtDuration(0.75), '45 мин');
   assert.equal(fmtDuration(6 + 5 / 60), '6 ч 05 мин');
   for (const s of ['7 ч 20 мин', '7h20', '7:20', '7 20']) assert.ok(Math.abs(parseDuration(s) - (7 + 1 / 3)) < 1e-9, s);

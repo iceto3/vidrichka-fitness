@@ -90,7 +90,7 @@ ${
           st.phase = st.rows.length ? 'confirm' : 'none';
         } catch (e) {
           st.phase = 'error';
-          st.err = ['offline', 'rate-limit', 'image'].includes(/** @type {Error} */ (e).message)
+          st.err = ['offline', 'rate-limit', 'image', 'limit'].includes(/** @type {Error} */ (e).message)
             ? /** @type {Error} */ (e).message
             : 'server';
         }

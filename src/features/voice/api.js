@@ -9,14 +9,20 @@ import { emit } from '../../core/bus.js';
 import { getLang } from '../../core/i18n.js';
 import { voiceUrl } from './config.js';
 import { requestBody } from './logic.js';
+import { kv, setKv } from '../../core/store.js';
+import { dayKey } from '../../core/dates.js';
+import { visionCounted, visionLeft } from './limit.js';
 
-const state = { ok: false, busy: false, stt: false };
+const state = { ok: false, busy: false, stt: false, label: false };
 
 /** True once the server answered /health with a configured key (else the buttons stay hidden). */
 export const voiceReady = () => state.ok;
 
 /** True when the server can transcribe recordings (/health says `transcribe`). */
 export const sttReady = () => state.ok && state.stt;
+
+/** 1.4.2: the server reads food labels (/health says `label`). */
+export const labelReady = () => state.label;
 
 /** Ask the server whether it is up and configured; re-renders when that changes. */
 export async function checkVoice() {
@@ -29,6 +35,7 @@ export async function checkVoice() {
       const j = r.ok ? await r.json() : null;
       ok = !!(j?.ok && j.configured);
       state.stt = !!j?.transcribe;
+      state.label = !!j?.label;
     } catch {
       ok = false;
     } finally {
@@ -96,17 +103,18 @@ export async function transcribeAudio(audio) {
 }
 
 /**
- * 1.4.0: read steps or sleep from a health-app screenshot (the voice server tries a free
- * Workers AI vision model, then xAI). The image is sent once and never stored.
- * @param {'steps'|'sleep'} kind @param {Blob} image JPEG ≤ 600 kB (see improve/images)
- * @param {string} today Day key the phone considers today.
- * @returns {Promise<{date: string|null, steps?: number, hours?: number, quality?: number|null}[]>}
- * @throws {Error} message = 'offline' | 'rate-limit' | 'server'
+ * POST a picture to /vision once (1.4.2: shared by screenshots and labels). Counts toward
+ * the per-phone daily limit (features/voice/limit) – checked before anything is sent.
+ * @param {string} query @param {Blob} image
+ * @throws {Error} 'offline' | 'limit' | 'rate-limit' | 'server'
  */
-export async function readScreenshot(kind, image, today) {
+async function postVision(query, image) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new Error('offline');
+  const today = dayKey();
+  if (!visionLeft(kv('visionDaily', null), today)) throw new Error('limit');
   let r;
   try {
-    r = await fetch(`${voiceUrl()}/vision?kind=${kind}&today=${today}&lang=${getLang() === 'en' ? 'en' : 'bg'}`, {
+    r = await fetch(`${voiceUrl()}/vision?${query}&lang=${getLang() === 'en' ? 'en' : 'bg'}`, {
       method: 'POST',
       headers: { 'Content-Type': image.type || 'image/jpeg' },
       body: image,
@@ -115,10 +123,38 @@ export async function readScreenshot(kind, image, today) {
   } catch {
     throw new Error('offline');
   }
+  setKv('visionDaily', visionCounted(kv('visionDaily', null), today));
   const j = await r.json().catch(() => ({}));
   if (r.status === 429) throw new Error('rate-limit');
-  if (!r.ok || !Array.isArray(j.days)) throw new Error('server');
+  if (!r.ok) throw new Error('server');
+  return j;
+}
+
+/**
+ * 1.4.0: read steps or sleep from a health-app screenshot (the voice server tries a free
+ * Workers AI vision model, then xAI). The image is sent once and never stored.
+ * @param {'steps'|'sleep'} kind @param {Blob} image JPEG ≤ 600 kB (see improve/images)
+ * @param {string} today Day key the phone considers today.
+ * @returns {Promise<{date: string|null, steps?: number, hours?: number, quality?: number|null}[]>}
+ * @throws {Error} message = 'offline' | 'limit' | 'rate-limit' | 'server'
+ */
+export async function readScreenshot(kind, image, today) {
+  const j = await postVision(`kind=${kind}&today=${today}`, image);
+  if (!Array.isArray(j.days)) throw new Error('server');
   return j.days;
+}
+
+/**
+ * 1.4.2: read a food's nutrition label (per 100 g; see voice/src/label.js). The photo is
+ * sent once and never stored – not on the phone, not on the server.
+ * @param {Blob} image JPEG ≤ 600 kB
+ * @returns {Promise<any>} The label ({name, kcal, p, f, c, fib, salt}) or null when unreadable.
+ * @throws {Error} message = 'offline' | 'limit' | 'rate-limit' | 'server'
+ */
+export async function readLabel(image) {
+  const j = await postVision('kind=label', image);
+  if (!('label' in j)) throw new Error('server');
+  return j.label ?? null;
 }
 
 /**

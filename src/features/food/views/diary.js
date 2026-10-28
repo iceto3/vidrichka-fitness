@@ -13,7 +13,7 @@ import { bar, ring } from '../../../ui/components.js';
 import { closeSheet, openSheet } from '../../../ui/sheet.js';
 import { trashList } from '../../../core/trash.js';
 import { dayRows, foodName, view } from '../api.js';
-import { cardActions, waterCard } from '../../day/views/cards.js';
+import { cardActions, creatineCard, waterCard } from '../../day/views/cards.js';
 import { MEALS, MEAL_STYLE, known, mealFor, totals } from '../logic.js';
 
 export { MEAL_STYLE } from '../logic.js';
@@ -124,6 +124,7 @@ ${macros.map(([k, v, g, c], i) => {
 })}
 <div class="row gap12 mt10 small b fibsalt"><span>${t('food.fiber')} <span class="num muted">${tot.fibN ? `${fmtNum(tot.fib, 1)} ${t('unit.g')}` : '—'}</span></span><span>${t('food.salt')} <span class="num muted">${tot.saltN ? `${fmtNum(tot.salt, 1)} ${t('unit.g')}` : '—'}</span></span></div></div></div>
 ${waterCard(view.date)}
+${creatineCard(view.date)}
 <div class="section-title"><h2 class="h3">${t('food.meals')}</h2><button class="link" data-go="food/meals">${t('food.regularMeals')}</button></div>
 <div class="card meals">${MEALS.map(([m]) => {
       const items = rows.filter((r) => r.meal === m),
@@ -142,6 +143,7 @@ ${waterCard(view.date)}
     pick: (el) =>
       void (/** @type {HTMLInputElement} */ (el).value && (view.date = /** @type {HTMLInputElement} */ (el).value)),
     water: cardActions(() => view.date).water, // 1.4.0: shared water card (− / glasses / +)
+    creaSheet: cardActions(() => view.date).creaSheet, // 1.4.2: creatine supplement
     meal: (el) => (openMeal(el.dataset.m ?? 'snack'), false),
   },
 });

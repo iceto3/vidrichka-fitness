@@ -4,7 +4,8 @@
  *   node tools/export-foods.mjs                → docs/foods.csv (every food)
  *   node tools/export-foods.mjs --since <ref>  → also docs/foods-changes.csv (new / changed rows vs
  *                                                that git ref, e.g. main = the live 1.3.4 list)
- * Columns: id, category, name_bg, name_en, kcal, protein, carbs, fat, fiber, salt, portion_g.
+ * Columns: id, category, name_bg, name_en, kcal, protein, carbs, fat, fiber, salt, portion_g,
+ * creatine_mg (1.4.2: mg per 100 g from src/data/creatine.js, empty = no data).
  */
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
@@ -12,12 +13,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const COLS = ['id', 'cat', 'bg', 'en', 'kcal', 'p', 'c', 'f', 'fib', 'salt', 'portion'];
-const HEAD = 'id,category,name_bg,name_en,kcal,protein,carbs,fat,fiber,salt,portion_g';
+const COLS = ['id', 'cat', 'bg', 'en', 'kcal', 'p', 'c', 'f', 'fib', 'salt', 'portion', 'cr'];
+const HEAD = 'id,category,name_bg,name_en,kcal,protein,carbs,fat,fiber,salt,portion_g,creatine_mg';
 /** @param {unknown} v */
 const cell = (v) => (/[",\n]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? ''));
+const { CREATINE_MG } = await import(pathToFileURL(join(process.cwd(), 'src/data/creatine.js')).href);
 /** @param {any} f */
-const flat = (f) => ({ ...f, bg: f.name.bg, en: f.name.en });
+const flat = (f) => ({ ...f, bg: f.name.bg, en: f.name.en, cr: CREATINE_MG[f.id] ?? '' });
 /** @param {any} f */
 const line = (f) => COLS.map((k) => cell(f[k])).join(',');
 

@@ -2,7 +2,7 @@
  * App version (injected by the build from package.json; the fallback is for dev/tests).
  * @module core/version
  */
-export const APP_VERSION = /** @type {string} */ (/** @type {any} */ (globalThis).__APP_VERSION__ ?? '1.4.1');
+export const APP_VERSION = /** @type {string} */ (/** @type {any} */ (globalThis).__APP_VERSION__ ?? '1.4.2');
 
 /**
  * 1.4.1: the full build id the build writes into index.html (`<meta name="vf-build">`, e.g.

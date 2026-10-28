@@ -160,6 +160,8 @@ export function nightOf(by, day) {
     bedEst: !!eve.bedEst,
     wake: r.wake ?? null,
     hours: typeof r.sleepH === 'number' ? r.sleepH : sleepHours(eve.bed, r.wake),
+    sleepBed: typeof r.sleepBed === 'number' ? r.sleepBed : null, // 1.4.2: from the sleep editor
+    sleepWake: typeof r.sleepWake === 'number' ? r.sleepWake : null,
     sleepQ: r.sleepQ ?? null,
     mood: r.mood ?? null,
     energy: r.energy ?? null,

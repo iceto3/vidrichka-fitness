@@ -1166,4 +1166,41 @@ export default {
   'nutrient.f': 'fat',
   'nutrient.fib': 'fiber',
   'nutrient.salt': 'salt',
+  // 1.4.2
+  'whatsNew.creatine142':
+    'Creatine: a daily total from meat and fish (values from published research) plus a quick “Creatine supplement” log (3 g by default) in Food.',
+  'whatsNew.label142':
+    'New food: “Snap the label” fills in calories and nutrition per 100 g from a photo of the label – just check them. The photo is never kept.',
+  'whatsNew.sleep142':
+    'Sleep is entered as bedtime and wake-up time – the hours are worked out for you, also past midnight.',
+  'sleep.bedtime': 'Bedtime',
+  'sleep.wakeTime': 'Woke up',
+  'sleep.dayBack': 'day back',
+  'sleep.dayForward': 'day forward',
+  'sleep.timesHint': 'These times are suggested – change them or tap “Done” to save them.',
+  'day.err.sleepLong': 'Sleep must be at most {max} h – check bedtime and wake-up time.',
+  'day.err.sleepFuture': 'That wake-up time has not come yet.',
+  'creatine.title': 'Creatine',
+  'creatine.fromFood': 'from food',
+  'creatine.supp': 'supplement',
+  'creatine.none': 'From meat and fish in the food list and from a supplement',
+  'creatine.add': 'Creatine supplement',
+  'creatine.hint':
+    'How many grams of creatine you took as a supplement this day. It counts in the daily creatine with meat and fish.',
+  'creatine.dose': 'Amount',
+  'creatine.saved': 'Saved {g} g of creatine.',
+  'label.pick': 'Snap the label',
+  'label.reading': 'Reading the label…',
+  'label.filled': 'Filled in from the label – check the values and tap “Save”.',
+  'label.privacy': 'The photo is sent once just to read it and is never kept.',
+  'label.err.offline': "No connection. Try again when you're online, or enter the values by hand.",
+  'label.err.limit': "Today's limit for reading pictures is reached. Try again tomorrow or enter the values by hand.",
+  'label.err.rate-limit': 'Too many pictures in a minute. Try again shortly.',
+  'label.err.unreadable':
+    "I couldn't read the label. Take a close, well-lit photo of the nutrition table, or enter it by hand.",
+  'label.err.implausible':
+    "The label values look wrong, so I didn't fill them in. Check the label and enter them by hand.",
+  'label.err.image': "This picture can't be opened.",
+  'label.err.server': "I couldn't read the label. Try again or enter it by hand.",
+  'shot.err.limit': "Today's limit for reading pictures is reached. Try again tomorrow or enter it by hand.",
 };

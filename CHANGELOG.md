@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.2] – 2026-10-28
+
+### Added
+
+- **Creatine** in **Храна** (the day): a card with the day's total in grams in BG format („1,2 г“), split into food and supplement. Values (mg per 100 g) exist only for the built-in meat and fish (49 foods, `src/data/creatine.js`). They come from a species reference (Harris 1997, Balsom 1994, Balestrino & Adriano 2019, Wuertz & Reiser, the NHANES 3.88 g/kg method) scaled by the row's protein, with cooking/canning retention of 0.75/0.70 (Larsen 2007, Purchas 2004, Hughes 1960). Every other food counts as 0 (unknown), nothing is invented. Sources and the full table are in `docs/CREATINE.md`. New built-in food: **Херинга (сурова)** (USDA SR 15039).
+- **Добавка креатин**: a quick log on the card (default 3 g, the last dose is remembered, max 50 g), stored per day (`days.creatineG`) and counted in the total.
+- **Снимай етикета** in the new-food form (camera or gallery, when the voice server is set). The photo goes to the voice Worker `/vision?kind=label` (Workers AI first, xAI fallback) and is never stored. The reply fills name, kcal, protein, fat, carbs, fiber and salt per 100 g for the user to check (filled fields are marked). kJ is converted to kcal, sodium to salt and per-serving values to per 100 g. Implausible results are rejected. Bulgarian errors for offline, daily limit, unreadable label and server problems.
+- A **per-phone daily AI limit** (20 photo reads a day, shared by screenshots and labels, `features/voice/limit.js`).
+- Voice Worker 1.4.2: `/vision` accepts `kind=label` (`src/label.js`, `today` optional for labels); `/health` reports `label`. Backward-compatible with 1.4.1 clients.
+
+### Changed
+
+- **Sleep editing**: the ± hours stepper is replaced by **Лягане** and **Ставане** time pickers. The hours are computed across midnight. Bedtime 12:00–23:59 means the evening before the day, 00:00–11:59 means after midnight (the day itself). Wake is the next time after bedtime. Each time shows its date in small text, with a tiny **ден назад / ден напред** override. The record keeps `sleepH` (streaks and charts unchanged) plus `sleepBed`/`sleepWake`. Old hours-only entries open with the wake time (or 07:00) and bedtime = wake − hours. Nothing is rewritten until saved.
+- Durations are shown as „X ч MM мин“ everywhere (e.g. „8 ч 00 мин“).
+- What's new entry for 1.4.2.
+
 ## [1.4.1] – 2026-10-28
 
 ### Changed

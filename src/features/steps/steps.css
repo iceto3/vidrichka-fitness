@@ -74,3 +74,29 @@
 .step.wide {
   min-width: 190px;
 }
+
+/* 1.4.2 sleep editor: bedtime / wake-up pickers with the date shown small */
+.sleeptimes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.sleeptimes .stime {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.sleeptimes .tbox {
+  width: 100%;
+}
+.sleeptimes .sshift .link {
+  font-size: 12px;
+  padding: 0;
+}
+.sleeptimes .sshift .link:disabled {
+  opacity: 0.35;
+}
+.sleeperr {
+  color: var(--red);
+}

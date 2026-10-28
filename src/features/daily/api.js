@@ -122,10 +122,33 @@ export const MAX_SLEEP_H = 16;
 export function setSleep(date, v) {
   /** @type {Record<string, any>} */
   const patch = {};
-  if (v.hours != null && Number.isFinite(Number(v.hours)))
+  if (v.hours != null && Number.isFinite(Number(v.hours))) {
     patch.sleepH = Math.round(Math.min(MAX_SLEEP_H, Math.max(0, Number(v.hours))) * 60) / 60; // 1.4.0: to the minute
+    // 1.4.2: hours alone (voice, screenshot) replace any bedtime/wake-up pair saved earlier.
+    patch.sleepBed = null;
+    patch.sleepWake = null;
+  }
   if (v.q != null && Number.isFinite(Number(v.q))) patch.sleepQ = Math.min(5, Math.max(1, Math.round(Number(v.q))));
   if (!Object.keys(patch).length) return day(date);
+  const rec = patchDay(date, patch);
+  emit('sleep:logged', { date, ...patch });
+  emit('daily:changed');
+  return rec;
+}
+
+/**
+ * 1.4.2: record last night's sleep as bedtime + wake-up (timestamps from the sleep editor,
+ * see ./sleeptimes.js). Hours are computed (to the minute) and stored as before, so streaks,
+ * charts and the morning screen keep reading `sleepH`. The goodnight `bed` / morning `wake`
+ * (which drive reminders and the protein countdown) are left alone.
+ * @param {string} date Morning's day key. @param {{bed: number, wake: number}} v
+ */
+export function setSleepTimes(date, v) {
+  const bed = Number(v.bed),
+    wake = Number(v.wake),
+    hours = Math.round((wake - bed) / 60_000) / 60;
+  if (!Number.isFinite(hours) || hours <= 0 || hours > MAX_SLEEP_H) throw new RangeError('sleep times');
+  const patch = { sleepBed: bed, sleepWake: wake, sleepH: hours };
   const rec = patchDay(date, patch);
   emit('sleep:logged', { date, ...patch });
   emit('daily:changed');
@@ -137,7 +160,7 @@ export function setSleep(date, v) {
  * if any, shows again. @param {string} date
  */
 export function clearSleep(date) {
-  const rec = patchDay(date, { sleepH: null, sleepQ: null });
+  const rec = patchDay(date, { sleepH: null, sleepQ: null, sleepBed: null, sleepWake: null });
   emit('sleep:logged', { date, cleared: true });
   emit('daily:changed');
   return rec;

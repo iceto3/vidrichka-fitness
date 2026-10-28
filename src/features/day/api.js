@@ -10,15 +10,17 @@
  * module instead of reaching into steps/daily/food directly.
  * @module features/day/api
  */
-import { all } from '../../core/store.js';
-import { dayKey } from '../../core/dates.js';
+import { all, get } from '../../core/store.js';
+import { addDays, dayKey, parseDay } from '../../core/dates.js';
 import { addSteps, clampSteps, setSteps, stepGoal, stepRun } from '../steps/api.js';
-import { MAX_SLEEP_H, clearSleep, rateDay, setSleep, sleepRun } from '../daily/api.js';
+import { MAX_SLEEP_H, clearSleep, patchDay, rateDay, setSleep, setSleepTimes, sleepRun } from '../daily/api.js';
+import { editorTimes, nightFrom } from '../daily/sleeptimes.js';
 import { setWater } from '../food/api.js';
 import { MAX_GLASSES, dayError, dayFromIndex, indexData } from './logic.js';
 
 export { MAX_GLASSES, MIN_DAY, dayError, hasData } from './logic.js';
 export { MAX_SLEEP_H, stepGoal, stepRun, sleepRun };
+export { DEFAULT_CREATINE_DOSE } from '../food/creatine.js';
 
 /** Thrown for a date or value the day layer refuses. */
 export class DayEditError extends Error {
@@ -76,6 +78,24 @@ export function setDaySleep(date, v) {
   return setSleep(assertEditable(date), v);
 }
 
+/**
+ * 1.4.2: sleep of the night before `date` from the editor's clock times (see
+ * daily/sleeptimes: bedtime date rule + ±1 day override, wake-up = next occurrence).
+ * @param {string} date @param {{bed: string, wake: string, shift?: number}} v
+ */
+export function setDaySleepTimes(date, v) {
+  const n = nightFrom(assertEditable(date), v);
+  if (!(n.hours > 0 && n.hours <= MAX_SLEEP_H)) throw new DayEditError('sleepLong');
+  if (n.wake > Date.now() + 5 * 60_000) throw new DayEditError('sleepFuture');
+  setSleepTimes(date, n);
+  return n;
+}
+
+/** What the sleep editor opens with for the night before `date` (see daily/sleeptimes). @param {string} date */
+export function sleepEditorTimes(date) {
+  return editorTimes(date, get('days', date), get('days', dayKey(addDays(parseDay(date), -1))));
+}
+
 /** Delete the day's manual sleep entry. @param {string} date */
 export const clearDaySleep = (date) => clearSleep(assertEditable(date));
 
@@ -84,4 +104,18 @@ export function rateDayField(date, field, v) {
   if (field !== 'mood' && field !== 'energy') throw new DayEditError('field');
   if (v != null && !(Number(v) >= 1 && Number(v) <= 5)) throw new DayEditError('range');
   return rateDay(assertEditable(date), field, v);
+}
+
+/** Largest creatine supplement accepted for one day (g). */
+export const MAX_CREATINE_G = 50;
+
+/**
+ * 1.4.2: grams of creatine taken as a supplement on the day (0 / null clears), kept on the
+ * day's record (`creatineG`, to 0.1 g). @param {string} date @param {number|null} g
+ */
+export function setDayCreatine(date, g) {
+  const v = g == null ? 0 : Math.round(Number(g) * 10) / 10;
+  if (!Number.isFinite(v) || v < 0 || v > MAX_CREATINE_G) throw new DayEditError('range');
+  patchDay(assertEditable(date), { creatineG: v > 0 ? v : null });
+  return v;
 }

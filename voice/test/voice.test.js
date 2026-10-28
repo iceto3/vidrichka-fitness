@@ -166,10 +166,11 @@ test('methods and routes: GET /parse 405, unknown 404, /health tells whether a k
   const h = await call(null, { method: 'GET', path: '/health' });
   assert.deepEqual(await h.json(), {
     ok: true,
-    version: '1.4.0',
+    version: '1.4.2',
     configured: true,
     transcribe: false,
     vision: true,
+    label: true,
     offSearch: true,
   });
   const h2 = await call(null, { method: 'GET', path: '/health', env: { ...ENV, XAI_API_KEY: '' } });
