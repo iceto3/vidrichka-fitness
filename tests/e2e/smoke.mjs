@@ -2145,7 +2145,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   const sb = await dayField('sleepBed'),
     swk = await dayField('sleepWake');
   assert.equal(swk - sb, 8 * 3600e3, 'bed and wake saved (timestamps), 8 h apart');
-  assert.equal(new Date(sb).getHours(), 23);
+  // read in the page's time zone (the CI runner itself is UTC)
+  assert.equal(await page.evaluate((ts) => new Date(ts).getHours(), sb), 23);
   assert.equal(await dayField('sleepQ'), 4);
   assert.match(await layer.locator('.sleepdur').innerText(), /^8 (ч|h) 00 (мин|min)$/);
   const [bd, wd] = await layer.locator('.sdate').evaluateAll((e) => e.map((x) => x.getAttribute('data-day')));
@@ -2203,7 +2204,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   );
   assert.equal(await layer.locator('.sleepnote').count(), 1, 'the moved dates are shown');
   assert.equal(await dayField('sleepH'), 8, 'the refused value is not saved');
-  assert.equal(new Date(await dayField('sleepBed')).getDate(), new Date(sb).getDate(), 'bed still the evening before');
+  assert.equal(await dayField('sleepBed'), sb, 'bed still the evening before');
   await layer.locator('[data-act="sshift"][data-d="-1"]').click();
   await settle();
   assert.equal(await layer.locator('.sleeperr').count(), 0);
