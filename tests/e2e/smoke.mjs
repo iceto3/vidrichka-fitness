@@ -2396,9 +2396,17 @@ async function v140(page, { go, settle, shot, layer, rows }) {
 
   // Sleep from a screenshot (tester bug): 7 h 20 min is saved as read (not the 7.5 h default),
   // shown as "7 ч 20 мин", the date field is wide enough, and a quality can be picked.
-  await page.route('https://voice.test/vision**', (route) =>
+  await page.evaluate(() => localStorage.setItem('vf-voice-url', 'https://voice.test'));
+  await page.route(/^https:\/\/voice\.test\/vision/, (route) =>
     route.request().method() === 'OPTIONS'
-      ? route.fulfill({ status: 204, headers: { 'Access-Control-Allow-Origin': '*' } })
+      ? route.fulfill({
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        })
       : route.fulfill({
           headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
           body: JSON.stringify({ days: [{ date: key, hours: 7 + 20 / 60, quality: null }], via: 'mock' }),
@@ -2409,7 +2417,8 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await layer
     .locator('input[type="file"]')
     .setInputFiles({ name: 's.png', mimeType: 'image/png', buffer: await fsp.readFile('assets/icons/icon-192.png') });
-  await layer.locator('.shotrow').waitFor({ timeout: 8000 });
+  await layer.locator('.shotrow, .verr').first().waitFor({ timeout: 8000 });
+  assert.equal(await layer.locator('.verr').count(), 0, `screenshot read: ${await layer.innerText()}`);
   assert.equal(await layer.locator('[data-change="hh"]').inputValue(), '7');
   assert.equal(await layer.locator('[data-change="mm"]').inputValue(), '20');
   const dw = (await layer.locator('.shotrow input[type="date"]').boundingBox())?.width ?? 0;
@@ -2421,7 +2430,7 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   const sl = await dayRow();
   assert.ok(Math.abs(sl.sleepH - (7 + 20 / 60)) < 0.01, `7 h 20 min saved (${sl.sleepH})`);
   assert.equal(sl.sleepQ, 4);
-  assert.match(await page.locator('.dayview .sleepcard').innerText(), /7 ч 20 мин/);
+  assert.match(await page.locator('.dayview .sleepcard').innerText(), /7 (ч|h) 20 (мин|min)/);
   await go('day/2099-01-01');
   assert.equal(await page.locator('.dayview .stepscard').count(), 0, 'no cards for a future day');
   assert.equal(await layer.locator('.panel').count(), 0);
@@ -2432,6 +2441,9 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   // Online food search never hangs on "Търся…": local results at once, then a clear
   // "not available" + retry; a barcode-style product keeps one brand and shows "–" for
   // what it does not list.
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
   await page.unroute('**/*openfoodfacts.org/**');
   await page.route('**/*openfoodfacts.org/**', (r) => r.abort());
   await go('food/add/lunch');
@@ -2468,5 +2480,8 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await page.keyboard.press('Escape');
   await settle();
   await page.unroute('**/*openfoodfacts.org/**');
+  await go('profile');
+  await page.locator('.lang [data-v="en"]').click();
+  await settle();
   console.log('  ✔ 1.4.0 online search ends (local first, "not available" + retry), brand once, unknown nutrients "–"');
 }

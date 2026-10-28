@@ -1089,12 +1089,12 @@ export default {
   'whatsNew.shot': '📷 Steps and sleep from a screenshot of your health or watch app – check the numbers and save.',
   'whatsNew.waterMinus': 'A “−” button for water removes a glass ticked by mistake.',
   'whatsNew.foods140':
-    'Fiber and salt for every food, boiled/breaded/fried meat and fish, curd and cottage cheese, mince 50/50, 60/40, 75/25 and a “Dishes & more” tile.',
+    'Fiber and salt for every food and in the list, raw and grilled meat, boiled/breaded/fried meat and fish, curd and cottage cheese with their own values, beef mince 80/20, mixed mince 50/50, 60/40, 75/25 and a “Dishes & more” tile.',
   'whatsNew.charts140': 'A weight chart, day labels and hints on empty charts.',
   'whatsNew.recap': 'The monthly recap now includes steps, sleep and mood and opens from the Calendar.',
   'whatsNew.feedback140': 'Feedback: a thank-you screen and a screenshot counter.',
   'whatsNew.fixes140':
-    'Fixes: the sleep night streak, emoji captions, deleting a sleep entry, clearer steps, barcode not found → manual entry.',
+    'Fixes: sleep is kept to the minute and shown as “7 h 20 min”, sleep quality in the screenshot import, online search never hangs, barcode names without a repeated brand, food for a past day gets the meal’s time, a short hint when calories don’t match the macros, sturdier loading and offline mode.',
   // 1.4.0 tester items: otter, streak, notice card, test push, badges, heatmap, technique sheet
   'food.goalHit': 'goal reached',
   'home.otterTap': 'Tap Vidrichka',

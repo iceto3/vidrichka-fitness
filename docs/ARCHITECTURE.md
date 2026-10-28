@@ -5,7 +5,7 @@ Vidrichka Fitness is a static, offline-first PWA. It is written in vanilla JavaS
 ```
 index.html            app shell (theme pre-paint script, iOS meta, splash screens)
 manifest.json         PWA manifest (relative URLs → works from a GitHub Pages subpath)
-sw.js                 service worker (dev: network-first; build: cache-first precache)
+sw.js                 service worker (dev: network-first; build: network-first pages, cache-first precached assets)
 src/
   main.js             entry: load data → settings → features → router → SW
   app.css             CSS entry (@imports every feature's CSS)
@@ -80,6 +80,7 @@ Features never import another feature's views, only its `api.js`. Removing a fea
 ## Daily rhythm and celebrations (1.1)
 
 - `features/daily/logic.js` is pure: it plans each day's reminder **slots** (`planDay`), picks the due ones (`dueSlots`, one per group, each shown once via `days.shown`), and computes sleep hours, the bedtime estimate and the protein countdown. Data lives in the `days` store (one row per day key; bedtime belongs to the evening's row until 04:00).
+- **Service worker and self-repair (1.4.0).** `sw.js` never fails a request: page navigations go to the network first (4 s) and fall back to the precached `index.html`; assets are cache-first with the network as fallback; anything unexpected falls back to `fetch`. Navigations are not cached, so an offline start always uses the shell of the same version as the assets. `install` precaches (one by one if `addAll` fails) and calls `skipWaiting()` only when no window is open; `activate` deletes only caches with this app's prefix (`vf-`, `vfb-` in the beta – GitHub Pages shares the origin with other repos) and claims clients. If the network and cache both fail, a small Bulgarian page offers **Опитай пак** and **Поправи и презареди**. The inline `<script id="heal">` in `index.html` (prefix replaced for the beta by `tools/build.mjs`) unregisters the worker, clears the app caches and reloads when a script/stylesheet fails, a lazy chunk fails (`router.js` → `__vfHeal('chunk')`) or the app has not started 20 s after load under a controller; it runs at most once per 5 minutes. Tests: `tests/unit/v140-sw.test.js`.
 - `features/daily/notify.js` localizes slots and posts the next 7 days to the service worker. `sw.js` keeps a copy of `dueSlots` between `// <due>` markers (a unit test checks they agree), shows due slots on `periodicsync`, and handles notification actions by writing straight to IndexedDB (it opens the DB without a version, so it never upgrades it). It then posts `{type:'db'}` so an open app reloads those rows.
 - `features/celebrations` maps app events (`water:added`, `set:done`, `protein:done`, `checkin:done`, `workout:finished`, `quests:all`, `level:up`, `badge:earned`, `streak:week`, `challenge:done`) to small, medium and big scenes. A queue plays them one at a time; scenes respect `prefers-reduced-motion`, and sounds respect the Profile toggle.
 

@@ -26,6 +26,13 @@ All notable changes to this project are documented here. The format follows
 - Home: tapping the otter answers, the streak card explains how weeks count, no backup card on day 1, no check-in right after onboarding, no wake-up prompt over a workout summary, „Готово за днес ✓“.
 - Food: online search gives up after 6 s (both endpoints in parallel), a protein over-goal cue, concrete portions instead of „малко“, „паста с пиле“ split into parts, „Храна“ everywhere, „ккал“ in Bulgarian.
 - Technique opens as a sheet inside the workout; the Profile footer clears the nav; accessible names on the nav and icon buttons; a longer post-voice tour.
+- **Tester round (beta 2):**
+  - Service worker: navigations are network-first with the cached app as the offline fallback, every request falls back to the network, it never answers `ERR_FAILED`; a new worker takes over at once when no tab is open and removes only this app's old caches. A small inline script in `index.html` repairs a stuck install (unregister, clear the app caches, reload; at most every 5 minutes), also when a lazy chunk fails to load.
+  - Sleep is stored to the minute (it was rounded to ½ h; the vision Worker asks for hours + minutes) and shown as „7 ч 20 мин“ everywhere; the screenshot sheet has hours/minutes fields, an optional 1–5 quality and a full-width date field.
+  - Barcode/online foods: the brand is not repeated („Nutella“, not „Nutella · Nutella“); a nutrient the product does not list shows „–“ (and a day without any fibre/salt data shows „–“ instead of 0). Online search runs both endpoints and takes the first answer, local results show at once, and the online part always ends with results, „няма“ or „не е достъпно“ + **Опитай пак**.
+  - Food added to a past day gets the meal's usual time (08:00 / 13:00 / 16:00 / 19:00). Manual food: a live hint when kcal differs from 4·П + 4·В + 9·М by more than 20 % and 30 kcal; saving is never blocked. Fibre and salt in the food list rows.
+  - Foods: separate извара (Bulgarian whey curd) and котидж values; raw chicken/turkey/pork/lean beef, beef mince 80/20 and grilled salmon; the plain cooked rows are labelled „(на скара)“, raw ones „(сурово/сурова)“, mince as „Кайма смес 60/40 (свинско/телешко, сурова)“ with a note that fat varies. `node tools/export-foods.mjs --since main` writes `docs/foods.csv` and `docs/foods-changes.csv` for the shared sheet.
+  - П/В/М and Bulgarian number formats („2 145“, „2,5“) everywhere; sleep chart dates; bigger fibre/salt charts; „Без тренировка този ден.“; the 1.3.3 note names the current „Кажи какво хапна“ screen.
 - Data version 5: fiber and salt back-filled on diary rows of built-in foods (add-only, tested).
 
 ## [1.3.4] – 2026-10-27
