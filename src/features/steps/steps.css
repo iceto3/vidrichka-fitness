@@ -90,12 +90,43 @@
 .sleeptimes .tbox {
   width: 100%;
 }
-.sleeptimes .sshift .link {
-  font-size: 12px;
-  padding: 0;
+/* 1.4.2 tester round: small but real buttons with a 44×44 px touch target */
+.sleeptimes .sshift {
+  flex-wrap: wrap;
+  gap: 6px;
 }
-.sleeptimes .sshift .link:disabled {
+.sleeptimes .sshiftb {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--accent-d);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.dark .sleeptimes .sshiftb,
+.dark .sleepnote {
+  color: var(--accent);
+}
+.sleeptimes .sshiftb:active {
+  transform: scale(0.97);
+}
+.sleeptimes .sshiftb:disabled {
   opacity: 0.35;
+  cursor: default;
+}
+.sleepnote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-d);
+}
+.sleepnote svg {
+  flex: none;
 }
 .sleeperr {
   color: var(--red);

@@ -16,12 +16,12 @@ import { settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { bar, stepper, timeInput } from '../../../ui/components.js';
-import { closeSheet, confirmDialog, openSheet, toast } from '../../../ui/sheet.js';
+import { closeSheet, confirmDialog, openSheet, snack, toast } from '../../../ui/sheet.js';
 import { FACES, scale } from '../../daily/views/checkin.js';
 import { MEALS, MEAL_STYLE, totals } from '../../food/logic.js';
 import { foodName, view as foodView } from '../../food/api.js';
 import { DEFAULT_CREATINE_DOSE } from '../../food/creatine.js';
-import { nightFrom } from '../../daily/sleeptimes.js';
+import { checkNight } from '../../daily/sleeptimes.js';
 import {
   DayEditError,
   MAX_GLASSES,
@@ -31,6 +31,7 @@ import {
   MAX_SLEEP_H,
   rateDayField,
   readDay,
+  removeDayCreatine,
   setDayCreatine,
   setDaySleep,
   setDaySleepTimes,
@@ -131,10 +132,12 @@ ${has ? '' : html`<button class="chip accent chip-sm" data-act="sleepSheet">${t(
  */
 export function openSleepSheet(date) {
   const cur = sleepEditorTimes(date);
-  /** @type {string} */
+  /** Error of the last save attempt that the live check does not cover (e.g. storage). */
   let err = '';
+  /** Save when the values are valid; invalid ones are only shown (Готово stays off). */
   const save = () => {
     err = '';
+    if (checkNight(date, cur).err) return;
     try {
       setDaySleepTimes(date, cur);
       cur.source = 'times';
@@ -148,19 +151,21 @@ export function openSleepSheet(date) {
   openSheet({
     render: () => {
       const s = readDay(date).sleep,
-        n = nightFrom(date, cur);
+        n = checkNight(date, cur),
+        msg = n.err ? t(`day.err.${n.err}`, { max: MAX_SLEEP_H }) : err;
       return html`<h2 class="h2">${t(isToday(date) ? 'sleep.cardTitle' : 'day.sleep')}</h2>
 <div class="sleeptimes mt12">
 <div class="stime sbed"><span class="b">${t('sleep.bedtime')}</span>${timeInput({ value: cur.bed, act: 'sbed', label: t('sleep.bedtime'), cls: 'wide' })}
 <span class="muted xs b sdate" data-day="${n.bedDay}">${dayLabel(n.bed)}</span>
-<span class="row gap8 sshift"><button class="link xs" data-act="sshift" data-d="-1" ${cur.shift <= -1 ? raw('disabled') : ''}>${t('sleep.dayBack')}</button><button class="link xs" data-act="sshift" data-d="1" ${cur.shift >= 1 ? raw('disabled') : ''}>${t('sleep.dayForward')}</button></span></div>
+<span class="row gap8 sshift"><button type="button" class="sshiftb" data-act="sshift" data-d="-1" ${cur.shift <= -1 ? raw('disabled') : ''}>${t('sleep.dayBack')}</button><button type="button" class="sshiftb" data-act="sshift" data-d="1" ${cur.shift >= 1 ? raw('disabled') : ''}>${t('sleep.dayForward')}</button></span></div>
 <div class="stime swake"><span class="b">${t('sleep.wakeTime')}</span>${timeInput({ value: cur.wake, act: 'swake', label: t('sleep.wakeTime'), cls: 'wide' })}
 <span class="muted xs b sdate" data-day="${n.wakeDay}">${dayLabel(n.wake)}</span></div></div>
+${n.moved ? html`<p class="small b mt8 sleepnote" role="status">${ic('info', 14, 2.4)}${t('sleep.datesNote', { bed: dayLabel(n.bed), wake: dayLabel(n.wake) })}</p>` : ''}
 <div class="row between mt12"><span class="b">${t('sleep.hours')}</span><span class="xb num big19 sleepdur">${fmtDuration(n.hours)}</span></div>
-${err ? html`<p class="warnc xs b mt4 sleeperr" role="alert">${err}</p>` : ''}
-${s.hours == null && !err ? html`<p class="muted xs b mt4">${t('sleep.timesHint')}</p>` : ''}
+${msg ? html`<p class="warnc xs b mt4 sleeperr" role="alert">${msg}</p>` : ''}
+${s.hours == null && !msg ? html`<p class="muted xs b mt4">${t('sleep.timesHint')}</p>` : ''}
 <h3 class="b mt16">${t('sleep.quality')}</h3>${scale('sleepQ', s.q ?? undefined, t('sleep.quality'))}
-<div class="row gap10 mt16">${s.manual ? html`<button class="btn sec f1" data-act="clear">${ic('trash', 16, 2.2)}${t('sleep.delete')}</button>` : ''}<button class="btn f1" data-act="done">${t('common.done')}</button></div>`;
+<div class="row gap10 mt16">${s.manual ? html`<button class="btn sec f1" data-act="clear">${ic('trash', 16, 2.2)}${t('sleep.delete')}</button>` : ''}<button class="btn f1" data-act="done" ${msg ? raw('disabled aria-disabled="true"') : ''}>${t('common.done')}</button></div>`;
     },
     actions: {
       sbed: (el) => {
@@ -182,6 +187,7 @@ ${s.hours == null && !err ? html`<p class="muted xs b mt4">${t('sleep.timesHint'
       },
       rate: (el) => void safely(() => setDaySleep(date, { q: Number(el.dataset.v) })),
       done: () => {
+        if (checkNight(date, cur).err) return; // the button is disabled; nothing to save
         // Closing with the offered times saves them (they were shown as the values).
         if (readDay(date).sleep.hours == null) save();
         if (err) return;
@@ -245,9 +251,15 @@ export function openCreatineSheet(date) {
         return false;
       },
       creaClear: () => {
-        safely(() => setDayCreatine(date, null));
+        // 1.4.2 tester round: removing is one tap, with „Отмени“ like every other deletion
+        const was = removeDayCreatine(date);
         closeSheet();
         emit('ui:refresh');
+        if (was)
+          snack(t('creatine.removed'), () => {
+            safely(() => setDayCreatine(date, was));
+            emit('ui:refresh');
+          });
         return false;
       },
     },

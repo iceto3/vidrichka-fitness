@@ -54,3 +54,31 @@ export function labelToForm(label, lang = 'bg') {
     }
   return { err: null, v, filled };
 }
+
+/**
+ * 1.4.2 tester round: put a new label reading into the form without leaving stale values.
+ * Every value the previous scan filled and the user has not changed since is cleared first
+ * (values typed by hand stay); then a successful reading fills its fields. So after a failed
+ * or blocked reading (implausible, unreadable, offline, limit, …) nothing from an older photo
+ * can be saved by mistake.
+ * @param {Record<string, string>} form The form values (changed in place and returned).
+ * @param {Record<string, string>} prev What the previous scan put in, by field.
+ * @param {{err: string|null, v: Record<string, string>}} res A {@link labelToForm} result
+ *   (`err` set and `v` empty for a failed request).
+ * @returns {{form: Record<string, string>, scan: Record<string, string>, filled: string[], cleared: string[]}}
+ */
+export function applyScan(form, prev, res) {
+  const cleared = [];
+  for (const [k, val] of Object.entries(prev))
+    if (form[k] === val) {
+      form[k] = '';
+      cleared.push(k);
+    }
+  /** @type {Record<string, string>} */
+  const scan = {};
+  for (const [k, val] of Object.entries(res.v ?? {})) {
+    form[k] = val;
+    scan[k] = val;
+  }
+  return { form, scan, filled: Object.keys(scan), cleared: cleared.filter((k) => !(k in scan)) };
+}

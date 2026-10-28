@@ -31,8 +31,8 @@ function openForm(o) {
   const { v, miss } = o;
   /** @type {Record<string, string>} */
   let errors = {};
-  /** 1.4.2 label photo state. @type {{phase: 'idle'|'busy'|'done'|'error', err: string, filled: string[]}} */
-  const lab = { phase: 'idle', err: '', filled: [] };
+  /** 1.4.2 label photo state; `scan` = the values the last reading put in. @type {{phase: 'idle'|'busy'|'done'|'error', err: string, filled: string[], cleared: string[], scan: Record<string, string>}} */
+  const lab = { phase: 'idle', err: '', filled: [], cleared: [], scan: {} };
   const labelBox = () =>
     !o.label
       ? ''
@@ -42,7 +42,7 @@ function openForm(o) {
             : html`<label class="btn sec w100 labelpick">${ic('camera', 18, 2.2)}${t('label.pick')}<input type="file" accept="image/*" class="sr-only" data-change="labelFile" aria-label="${t('label.pick')}"></label>`
         }
 ${lab.phase === 'done' ? html`<p class="okc small b mt8 labelok" role="status">${t('label.filled')}</p>` : ''}
-${lab.phase === 'error' ? html`<p class="verr small b mt8 labelerr" role="alert">${t(`label.err.${lab.err}`)}</p>` : ''}
+${lab.phase === 'error' ? html`<p class="verr small b mt8 labelerr" role="alert">${t(`label.err.${lab.err}`)}${lab.cleared.length ? html` <span class="labelcleared">${t('label.cleared')}</span>` : ''}</p>` : ''}
 <p class="muted xs b mt6">${t('label.privacy')}</p></div>`;
   const fromLabel = (/** @type {string} */ k) => (lab.filled.includes(k) ? ' fromlabel' : '');
   /** 1.4.0: a live, non-blocking hint when the calories do not match the macros. */
@@ -86,24 +86,32 @@ ${lab.phase === 'error' ? html`<p class="verr small b mt8 labelerr" role="alert"
         Object.assign(lab, { phase: 'busy', err: '' });
         emit('ui:refresh');
         try {
-          const [{ prepareImage }, { readLabel }, { labelToForm }] = await Promise.all([
+          const [{ prepareImage }, { readLabel }, { labelToForm, applyScan }] = await Promise.all([
             import('../../improve/images.js'),
             import('../../voice/api.js'),
             import('../label.js'),
           ]);
-          const img = await prepareImage(f);
-          URL.revokeObjectURL(img.url); // the photo itself is dropped right away
-          const res = labelToForm(await readLabel(img.blob), getLang());
-          Object.assign(v, res.v);
-          lab.filled = res.filled;
+          /** @type {{err: string|null, v: Record<string, string>}} */
+          let res;
+          try {
+            const img = await prepareImage(f);
+            URL.revokeObjectURL(img.url); // the photo itself is dropped right away
+            res = labelToForm(await readLabel(img.blob), getLang());
+          } catch (e) {
+            const m = /** @type {Error} */ (e).message;
+            res = { err: ['offline', 'limit', 'rate-limit', 'image'].includes(m) ? m : 'server', v: {} };
+          }
+          // nothing from an older photo may stay after a failed or blocked reading
+          const done = applyScan(
+            v,
+            lab.scan,
+            res.err ? { err: res.err, v: res.v.name ? { name: res.v.name } : {} } : res,
+          );
+          Object.assign(lab, { scan: done.scan, filled: done.filled, cleared: done.cleared });
           if (res.err) Object.assign(lab, { phase: 'error', err: res.err });
           else ((lab.phase = 'done'), (errors = {}));
-        } catch (e) {
-          const m = /** @type {Error} */ (e).message;
-          Object.assign(lab, {
-            phase: 'error',
-            err: ['offline', 'limit', 'rate-limit', 'image'].includes(m) ? m : 'server',
-          });
+        } catch {
+          Object.assign(lab, { phase: 'error', err: 'server' });
         }
         input.value = '';
         emit('ui:refresh');

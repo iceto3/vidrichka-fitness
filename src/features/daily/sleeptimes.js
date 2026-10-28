@@ -75,6 +75,28 @@ export function nightFrom(day, v) {
   return { bed, wake, hours: durationH(bed, wake), bedDay: dayKey(bed), wakeDay: dayKey(wake) };
 }
 
+/** Longest night the editor accepts (h) and how far a wake-up may be ahead of the clock (min). */
+export const MAX_NIGHT_H = 16;
+export const FUTURE_SLACK_MIN = 5;
+
+/**
+ * 1.4.2 (tester round): everything the editor shows before saving – the night, whether it can
+ * be saved (`err`: 'sleepFuture' = the wake-up has not come yet, 'sleepLong' = 0 h or more
+ * than 16 h) and whether the dates differ from the usual "evening before → this morning"
+ * (`moved`: bedtime after midnight, a day override, or a wake-up not on the day), so the
+ * editor can say so instead of moving dates silently.
+ * @param {string} day @param {{bed: string, wake: string, shift?: number}} v @param {number} [now]
+ */
+export function checkNight(day, v, now = Date.now()) {
+  const n = nightFrom(day, v),
+    eve = dayKey(addDays(parseDay(day), -1));
+  /** @type {null|'sleepFuture'|'sleepLong'} */
+  let err = null;
+  if (!(n.hours > 0 && n.hours <= MAX_NIGHT_H)) err = 'sleepLong';
+  else if (n.wake > now + FUTURE_SLACK_MIN * MIN) err = 'sleepFuture';
+  return { ...n, err, moved: n.bedDay !== eve || n.wakeDay !== day };
+}
+
 /** Override that reproduces a stored bedtime with the rule (-1 … +1, 0 when off by more). @param {string} day @param {number} ts */
 export function shiftOf(day, ts) {
   const ruled = bedDay(day, hhmm(ts), 0),

@@ -14,7 +14,7 @@ import { all, get } from '../../core/store.js';
 import { addDays, dayKey, parseDay } from '../../core/dates.js';
 import { addSteps, clampSteps, setSteps, stepGoal, stepRun } from '../steps/api.js';
 import { MAX_SLEEP_H, clearSleep, patchDay, rateDay, setSleep, setSleepTimes, sleepRun } from '../daily/api.js';
-import { editorTimes, nightFrom } from '../daily/sleeptimes.js';
+import { checkNight, editorTimes } from '../daily/sleeptimes.js';
 import { setWater } from '../food/api.js';
 import { MAX_GLASSES, dayError, dayFromIndex, indexData } from './logic.js';
 
@@ -84,9 +84,8 @@ export function setDaySleep(date, v) {
  * @param {string} date @param {{bed: string, wake: string, shift?: number}} v
  */
 export function setDaySleepTimes(date, v) {
-  const n = nightFrom(assertEditable(date), v);
-  if (!(n.hours > 0 && n.hours <= MAX_SLEEP_H)) throw new DayEditError('sleepLong');
-  if (n.wake > Date.now() + 5 * 60_000) throw new DayEditError('sleepFuture');
+  const n = checkNight(assertEditable(date), v);
+  if (n.err) throw new DayEditError(n.err);
   setSleepTimes(date, n);
   return n;
 }
@@ -118,4 +117,14 @@ export function setDayCreatine(date, g) {
   if (!Number.isFinite(v) || v < 0 || v > MAX_CREATINE_G) throw new DayEditError('range');
   patchDay(assertEditable(date), { creatineG: v > 0 ? v : null });
   return v;
+}
+
+/**
+ * Remove the day's creatine supplement; returns the grams it had (0 = nothing removed), so
+ * the „Отмени“ pill can put them back with {@link setDayCreatine}. @param {string} date
+ */
+export function removeDayCreatine(date) {
+  const was = Number(get('days', assertEditable(date))?.creatineG) || 0;
+  if (was) setDayCreatine(date, null);
+  return was;
 }
