@@ -94,10 +94,12 @@ index = index
 if (BETA)
   index = index
     .replace("localStorage.getItem('vf-theme'", "localStorage.getItem('vfb-theme'")
+    .replace("var P = 'vf-';", "var P = 'vfb-';")
     .replace(
       '<title>Vidrichka Fitness</title>',
       '<title>Vidrichka Fitness БЕТА</title>\n<meta name="robots" content="noindex">',
     );
+if (!index.includes(`var P = '${BETA ? 'vfb-' : 'vf-'}';`)) throw new Error('index.html heal prefix not found');
 await writeFile(join(out, 'index.html'), index);
 await writeFile(join(out, '.nojekyll'), '');
 
