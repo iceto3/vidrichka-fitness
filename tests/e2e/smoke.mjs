@@ -345,6 +345,7 @@ async function run(name, browser, P) {
   await v140(page, h);
   await v141(page, h, name, ctx);
   await v141tester(page, h, name, ctx);
+  await v142(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -1563,14 +1564,19 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.1/);
+  assert.match(txt, /Какво ново в 1\.4\.2/);
+  assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
   assert.match(txt, /Отмени/, 'the 1.3.2 pill item');
   assert.match(txt, /преименуваш/, 'the 1.3.2 rename item');
   assert.match(txt, /Запиши/, 'the 1.3.3 recording item');
   assert.doesNotMatch(txt, /What's new|Undo|Rename|Record/, 'no English');
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
-  assert.equal(await layer.locator('.whatsnew > div').count(), 20, 'the 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items');
+  assert.equal(
+    await layer.locator('.whatsnew > div').count(),
+    23,
+    'the 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
+  );
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
@@ -1874,11 +1880,12 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.1/);
+  assert.match(txt, /Какво ново в 1\.4\.2/);
+  assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
   assert.match(txt, /Запиши/);
   assert.match(txt, /Обичайният ти обяд/);
-  assert.equal(await layer.locator('.whatsnew > div').count(), 17, 'the 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 20, 'the 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items');
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
@@ -1980,12 +1987,17 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.1/);
+  assert.match(txt, /Какво ново в 1\.4\.2/);
+  assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
   assert.match(txt, /крачки/i);
   assert.match(txt, /Обратна връзка/);
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
-  assert.equal(await layer.locator('.whatsnew > div').count(), 15, 'the 1.4.1 item, eight 1.4.0 and six 1.3.4 items');
+  assert.equal(
+    await layer.locator('.whatsnew > div').count(),
+    18,
+    'three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
+  );
   await page.waitForTimeout(700);
   await shot('whats-new-134');
   await layer.locator('[data-close]').first().click();
@@ -2113,16 +2125,90 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await settle();
   console.log('  ✔ 1.3.4 steps card, goal celebration once, Profile goal');
 
-  // 5) Sleep card: hours (½ h) + quality
+  // 5) Sleep card: bedtime + wake-up time (1.4.2, instead of ± hours) + quality
   await go('home');
   await page.locator('.sleepcard').scrollIntoViewIfNeeded();
   await page.locator('.sleepcard').click();
-  await layer.locator('[data-act="h"][data-d="1"]').click();
+  await layer.locator('.sleeptimes').waitFor();
+  const key = await page.evaluate(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+  await layer.locator('input[data-change="sbed"]').fill('23:00');
+  await settle();
+  await layer.locator('input[data-change="swake"]').fill('07:00');
+  await settle();
   await layer.locator('[data-act="rate"][data-v="4"]').click();
   await settle();
-  // 1.4.0: the sheet starts at the suggested 7,5 h, so +½ h gives 8
+  // 23:00 is the evening before → 8 h across midnight
   assert.equal(await dayField('sleepH'), 8);
+  const sb = await dayField('sleepBed'),
+    swk = await dayField('sleepWake');
+  assert.equal(swk - sb, 8 * 3600e3, 'bed and wake saved (timestamps), 8 h apart');
+  assert.equal(new Date(sb).getHours(), 23);
   assert.equal(await dayField('sleepQ'), 4);
+  assert.match(await layer.locator('.sleepdur').innerText(), /^8 (ч|h) 00 (мин|min)$/);
+  const [bd, wd] = await layer.locator('.sdate').evaluateAll((e) => e.map((x) => x.getAttribute('data-day')));
+  assert.equal(wd, key, 'wake on the day');
+  assert.ok(bd < key, 'bed on the evening before');
+  assert.equal(await layer.locator('.sleepnote').count(), 0, 'the usual night needs no note');
+  // 1.4.2 tester round: ±1 day are real buttons with a 44×44 px target
+  for (const d of ['-1', '1']) {
+    const bb = await layer.locator(`button.sshiftb[data-act="sshift"][data-d="${d}"]`).boundingBox();
+    assert.ok(bb && bb.width >= 44 && bb.height >= 44, `day button ${d}: ${bb?.width}×${bb?.height}`);
+  }
+  const [yb, yf] = await layer
+    .locator('button.sshiftb')
+    .evaluateAll((e) => e.map((x) => x.getBoundingClientRect().top));
+  assert.equal(yb, yf, 'the two day buttons sit side by side');
+  // after midnight: 01:10 → same day, 5 ч 50 мин
+  await layer.locator('input[data-change="sbed"]').fill('01:10');
+  await settle();
+  assert.match(await layer.locator('.sleepdur').innerText(), /^5 (ч|h) 50 (мин|min)$/);
+  assert.equal(await layer.locator('.sbed .sdate').getAttribute('data-day'), key);
+  // dates never move silently: "Лягане <day> → ставане <day>"
+  const note = await layer.locator('.sleepnote').innerText();
+  assert.match(note, /(Лягане|Bedtime) .+ → (ставане|woke up) /, note);
+  const [nb, nw] = note.split('→');
+  assert.equal(
+    nb.replace(/^\s*(Лягане|Bedtime)\s*/, '').trim(),
+    (await layer.locator('.sbed .sdate').innerText()).trim(),
+  );
+  assert.equal(
+    nw.replace(/^\s*(ставане|woke up)\s*/, '').trim(),
+    (await layer.locator('.swake .sdate').innerText()).trim(),
+  );
+  // "ден назад" moves bedtime (and so the night) a day back; the duration stays
+  await layer.locator('[data-act="sshift"][data-d="-1"]').click();
+  await settle();
+  assert.ok(((await layer.locator('.sbed .sdate').getAttribute('data-day')) ?? '') < key, 'bed a day back');
+  assert.match(await layer.locator('.sleepdur').innerText(), /^5 (ч|h) 50 (мин|min)$/);
+  assert.ok(await layer.locator('[data-act="sshift"][data-d="-1"]').isDisabled(), 'one day at most');
+  // a new bedtime resets the override; "ден напред" on 23:00 → wake tomorrow → refused
+  await layer.locator('input[data-change="sbed"]').fill('23:00');
+  await settle();
+  await layer.locator('[data-act="sshift"][data-d="1"]').click();
+  await settle();
+  assert.equal(await layer.locator('.sleeperr').count(), 1, 'a wake-up in the future is refused');
+  // 1.4.2 tester round: shown right away, Готово is off (not refused only after the tap)
+  assert.match(
+    await layer.locator('.sleeperr').innerText(),
+    /Часът на ставане още не е дошъл|wake-up time has not come/,
+  );
+  assert.ok(await layer.locator('[data-act="done"]').isDisabled(), 'Готово disabled for a future wake-up');
+  assert.equal(
+    await layer.locator('[data-act="done"]').evaluate((e) => getComputedStyle(e).boxShadow),
+    'none',
+    'and it looks disabled',
+  );
+  assert.equal(await layer.locator('.sleepnote').count(), 1, 'the moved dates are shown');
+  assert.equal(await dayField('sleepH'), 8, 'the refused value is not saved');
+  assert.equal(new Date(await dayField('sleepBed')).getDate(), new Date(sb).getDate(), 'bed still the evening before');
+  await layer.locator('[data-act="sshift"][data-d="-1"]').click();
+  await settle();
+  assert.equal(await layer.locator('.sleeperr').count(), 0);
+  assert.ok(!(await layer.locator('[data-act="done"]').isDisabled()), 'Готово on again');
+  assert.equal(await dayField('sleepH'), 8);
   assert.equal(await layer.locator('[data-act="clear"]').count(), 1, 'a saved entry can be deleted');
   await layer.locator('[data-act="done"]').click();
   await settle();
@@ -2778,9 +2864,9 @@ async function v141tester(page, { go, settle, shot }, name, ctx) {
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
   // build id: 1.4.1-<hash> / 1.4.1-beta-<hash> from a build, the plain version from the sources
-  const idRe = DIR === '.' ? /^Билд: 1\.4\.1$/ : /^Билд: 1\.4\.1(-beta)?-[0-9a-f]{7,}$/;
+  const idRe = DIR === '.' ? /^Билд: 1\.4\.2$/ : /^Билд: 1\.4\.2(-beta)?-[0-9a-f]{7,}$/;
   const meta = await page.evaluate(
-    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.4.1',
+    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.4.2',
   );
   const foot = page.locator('#pbuild');
   await foot.scrollIntoViewIfNeeded();
@@ -2894,5 +2980,141 @@ async function v141tester(page, { go, settle, shot }, name, ctx) {
   await settle();
   console.log(
     `  ✔ 1.4.1 tester: build id ${meta} in Profile + What's new, muscles collapsed, nav pinned on exercise/food/progress${name === 'android' ? ' (also pinch-zoomed)' : ''}`,
+  );
+}
+
+/**
+ * 1.4.2 (in Bulgarian): the creatine card in Food (total, "Добавка креатин" 3 г, saved per
+ * day); "Снимай етикета" in the new-food form with a mocked /vision?kind=label (pre-filled
+ * per-100 g values, marked, nothing saved until "Запази"); the offline error.
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function v142(page, { go, settle, shot, layer, dayField }) {
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
+  // creatine card
+  await go('food');
+  const card = page.locator('.creatinecard');
+  await card.waitFor();
+  assert.match(await card.innerText(), /Креатин/);
+  const before = Number((await card.locator('.crtotal').innerText()).replace(/[^\d,]/g, '').replace(',', '.'));
+  await card.locator('.creaadd').click();
+  await layer.locator('[data-act="creaSave"]').waitFor();
+  assert.equal(await layer.locator('[data-change="creaG"]').inputValue(), '3', 'default 3 g');
+  await layer.locator('[data-act="creaSave"]').click();
+  await settle();
+  assert.equal(await dayField('creatineG'), 3);
+  const txt = await card.innerText();
+  assert.match(txt, /добавка 3 г/);
+  const after = Number((await card.locator('.crtotal').innerText()).replace(/[^\d,]/g, '').replace(',', '.'));
+  assert.ok(Math.abs(after - before - 3) < 0.11, `supplement counted (${before} → ${after})`);
+  await card.scrollIntoViewIfNeeded();
+  await shot('creatine-card');
+  // 1.4.2 tester round: removing the supplement has „Отмени“
+  await card.locator('.creaadd').click();
+  await layer.locator('[data-act="creaClear"]').click();
+  await settle();
+  assert.equal(await dayField('creatineG'), null, 'removed');
+  assert.doesNotMatch(await card.innerText(), /добавка 3 г/);
+  const pill = page.locator('.undopill');
+  assert.equal((await pill.innerText()).trim(), 'Отмени');
+  assert.match(String(await pill.getAttribute('aria-label')), /креатин/i);
+  await pill.click();
+  await settle();
+  assert.equal(await dayField('creatineG'), 3, 'Отмени puts the supplement back');
+  assert.match(await card.innerText(), /добавка 3 г/);
+
+  // label photo → pre-filled form
+  await page.evaluate(() => localStorage.setItem('vf-voice-url', 'https://voice.test'));
+  /** @type {string[]} */
+  const calls = [];
+  await page.route(/^https:\/\/voice\.test\/vision/, (route) => {
+    if (route.request().method() === 'OPTIONS')
+      return route.fulfill({
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      });
+    calls.push(route.request().url());
+    if (calls.length === 1 || calls.length === 4) return route.abort('internetdisconnected'); // no connection
+    if (calls.length === 3)
+      // implausible (kcal ≠ macros by far) → blocked; the values of the earlier scan must go
+      return route.fulfill({
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label: { name: 'Грешно', kcal: 950, p: 90, f: 90, c: 90, basis: '100g' },
+          days: [],
+          via: 'mock',
+        }),
+      });
+    return route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        label: { name: 'Овесени ядки', kcal: 372, p: 13.5, f: 7, c: 58.7, fib: 10, salt: 0.01, basis: '100g' },
+        days: [],
+        via: 'mock',
+      }),
+    });
+  });
+  await page.route('**/*openfoodfacts.org/**', (r) =>
+    r.fulfill({ json: { count: 0, products: [] }, headers: { 'access-control-allow-origin': '*' } }),
+  );
+  await go('food/add/snack');
+  await page.locator('#fq').fill('zzqx етикет');
+  await settle();
+  await page.locator('[data-act="manual"]').first().click();
+  await layer.locator('.labelpick').waitFor();
+  assert.match(await layer.locator('.labelbox').innerText(), /Снимай етикета/);
+  const fsp = await import('node:fs/promises');
+  const file = { name: 'l.png', mimeType: 'image/png', buffer: await fsp.readFile('assets/icons/icon-192.png') };
+  await layer.locator('input[data-change="labelFile"]').setInputFiles(file);
+  await layer.locator('.labelerr').waitFor({ timeout: 8000 });
+  assert.match(
+    await layer.locator('.labelerr').innerText(),
+    /Няма връзка/,
+    `a network error → offline (${calls.length})`,
+  );
+  await layer.locator('input[data-change="labelFile"]').setInputFiles(file);
+  await layer.locator('.labelok').waitFor({ timeout: 8000 });
+  assert.equal(calls.length, 2, 'one failed try, one read');
+  assert.match(calls[1], /kind=label/);
+  assert.equal(await layer.locator('#mname').inputValue(), 'Овесени ядки');
+  assert.equal(await layer.locator('#mkcal').inputValue(), '372');
+  assert.equal(await layer.locator('#mp').inputValue(), '13,5');
+  assert.equal(await layer.locator('#mc').inputValue(), '58,7');
+  assert.equal(await layer.locator('#mf').inputValue(), '7');
+  assert.ok((await layer.locator('.input.fromlabel').count()) >= 5, 'filled fields are marked');
+  await shot('label-filled');
+  // 1.4.2 tester round: a blocked / failed reading clears what an earlier photo filled,
+  // a value typed by hand stays
+  await layer.locator('#mfib').fill('9');
+  await layer.locator('input[data-change="labelFile"]').setInputFiles(file);
+  await layer.locator('.labelerr').waitFor({ timeout: 8000 });
+  assert.match(await layer.locator('.labelerr').innerText(), /Провери етикета/);
+  assert.match(await layer.locator('.labelerr').innerText(), /предишната снимка/);
+  for (const k of ['kcal', 'p', 'c', 'f', 'salt'])
+    assert.equal(await layer.locator(`#m${k}`).inputValue(), '', `${k} of the old scan cleared`);
+  assert.equal(await layer.locator('#mfib').inputValue(), '9', 'typed by hand → kept');
+  assert.equal(await layer.locator('#mname').inputValue(), 'Грешно');
+  assert.equal(await layer.locator('.input.fromlabel').count(), 1, 'only the name is marked');
+  await layer.locator('input[data-change="labelFile"]').setInputFiles(file);
+  await layer
+    .locator('.labelerr')
+    .filter({ hasText: /Няма връзка/ })
+    .waitFor({ timeout: 8000 });
+  assert.equal(calls.length, 4);
+  assert.equal(await layer.locator('#mname').inputValue(), '', 'the name of the failed photo goes too');
+  assert.equal(await layer.locator('#mfib').inputValue(), '9');
+  assert.equal(await layer.locator('.input.fromlabel').count(), 0);
+  await closeAllSheets(page, layer, settle);
+  await page.unroute(/^https:\/\/voice\.test\/vision/);
+  await page.evaluate(() => localStorage.removeItem('vf-voice-url'));
+  console.log(
+    '  ✔ 1.4.2 creatine card + supplement 3 г, label photo pre-fills the form (no-connection error first); fixes: undo, stale label values',
   );
 }

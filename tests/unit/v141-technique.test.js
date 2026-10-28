@@ -168,12 +168,9 @@ test('gendered technique text resolves to one form', async () => {
 });
 
 test("1.4.1: version, What's new entry in Bulgarian", async () => {
-  const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-  assert.equal(pkg.version, '1.4.1');
-  const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.4.1');
+  // 1.4.2: the version moved on (checked in v142.test.js); the 1.4.1 entry stays as shipped.
   const { NOTES, newSince } = await import('../../src/features/whatsnew/notes.js');
-  assert.equal(NOTES[0].v, '1.4.1');
+  assert.ok(NOTES.some((n) => n.v === '1.4.1'));
   assert.deepEqual(
     newSince('1.4.0', { voice: false, push: false }, NOTES, '1.4.1').items.map(([, k]) => k),
     ['whatsNew.technique141'],

@@ -110,7 +110,7 @@ export const fmtNum = (n, digits = 0) => fmtGrouped(n, digits); // 1.4.0: "2 145
 export const unitText = (u) => (['kg', 'cm', 'g', 't'].includes(u) ? t(`unit.${u}`) : u);
 
 /**
- * 1.4.0: a duration in hours as hours and minutes: "7 ч 20 мин" / "7 h 20 min", "8 ч" on the
+ * 1.4.0: a duration in hours as hours and minutes: "7 ч 20 мин" / "7 h 20 min", (1.4.2) "8 ч 00 мин" on the
  * hour, "45 мин" under an hour (rounded to the minute). Sleep is never shown as "7,3 ч".
  * @param {number} hours
  */
@@ -119,7 +119,7 @@ export function fmtDuration(hours) {
     h = Math.floor(total / 60),
     m = total % 60;
   if (!h) return `${m} ${t('unit.min')}`;
-  return m ? `${h} ${t('unit.h')} ${String(m).padStart(2, '0')} ${t('unit.min')}` : `${h} ${t('unit.h')}`;
+  return `${h} ${t('unit.h')} ${String(m).padStart(2, '0')} ${t('unit.min')}`; // 1.4.2: always "X ч MM мин"
 }
 
 /**

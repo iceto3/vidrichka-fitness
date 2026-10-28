@@ -12,9 +12,11 @@
  *   POST /vision?kind=steps|sleep&today=YYYY-MM-DD&lang=bg|en  body: a screenshot (image/jpeg|png|webp,
  *                ≤ 600 kB) → 200 {days: [{date, steps} | {date, hours, quality}], via}
  *                (1.4.0: Workers AI vision first, xAI fallback; 4 per minute per IP; never stored)
+ *   POST /vision?kind=label  body: a photo of a food label → 200 {label: {name, kcal, p, f, c, fib,
+ *                salt, basis} | null, days: [], via} (1.4.2: per 100 g, re-checked; same limits)
  *   GET  /off-search?q=…&lang=bg|en → 200 {products: [...]} (1.4.0: Open Food Facts text search
  *                proxied for the app – OFF's search has no usable CORS; cached, 20 per minute per IP)
- *   GET  /health → {ok, version, configured, transcribe, vision, offSearch}
+ *   GET  /health → {ok, version, configured, transcribe, vision, label, offSearch}
  * Privacy: the text is forwarded to xAI and never logged or stored here; audio is only
  * transcribed in memory by Workers AI and never stored or logged.
  * Cost guards: Origin check, text length cap, max_tokens cap, per-IP rate limit
@@ -27,7 +29,7 @@ import { readAudio, transcribe } from './transcribe.js';
 import { readScreenshot, readVision } from './vision.js';
 import { CACHE_TTL, cacheKey, memo, offSearch, readQuery } from './off.js';
 
-export const VERSION = '1.4.0';
+export const VERSION = '1.4.2';
 export const XAI_URL = 'https://api.x.ai/v1/chat/completions';
 const MAX_BODY = 4096;
 
@@ -246,6 +248,7 @@ export async function handle(req, env, deps = {}) {
         configured: !!env.XAI_API_KEY,
         transcribe: !!env.AI,
         vision: !!(env.AI || env.XAI_API_KEY),
+        label: !!(env.AI || env.XAI_API_KEY), // 1.4.2: /vision?kind=label
         offSearch: true,
       },
       h,

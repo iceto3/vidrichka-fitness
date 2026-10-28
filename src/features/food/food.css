@@ -350,3 +350,34 @@
 .noreliable {
   padding: 12px;
 }
+
+/* 1.4.2 creatine card (Food day view) and its supplement quick log */
+.creatinecard {
+  padding: 12px 14px;
+}
+.creatinecard .creaic {
+  background: var(--violet-soft, #efeaff);
+  color: var(--violet);
+  font-size: 20px;
+}
+.creatinecard .crtotal {
+  margin-left: 4px;
+}
+.creatinecard .creaadd {
+  flex: none;
+}
+
+/* 1.4.2 "Снимай етикета" in the new-food form */
+.labelbox .labelpick {
+  position: relative;
+}
+.labelbox .okc {
+  color: var(--ok-t, #12804a);
+}
+.labelbox .verr {
+  color: var(--red);
+}
+.input.fromlabel {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}

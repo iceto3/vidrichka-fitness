@@ -12,6 +12,14 @@
 
 /** @type {Release[]} */
 export const NOTES = [
+  {
+    v: '1.4.2',
+    items: [
+      ['bolt', 'whatsNew.creatine142'],
+      ['camera', 'whatsNew.label142', 'voice'],
+      ['moon', 'whatsNew.sleep142'],
+    ],
+  },
   { v: '1.4.1', items: [['dumbbell', 'whatsNew.technique141']] },
   {
     v: '1.4.0',
