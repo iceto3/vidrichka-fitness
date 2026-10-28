@@ -44,7 +44,7 @@ export function openGrams(food, onDone, initial) {
 <div class="f1"><h2 class="h2">${foodName(food)}</h2><div class="muted small b">${cat ? `${t(`foodcat.${cat.id}`)} · ` : ''}${t('food.per100', { n: Math.round(food.kcal) })}</div></div></div>
 <div class="mt14">${stepper({ act: 'g', value: g, unit: t('unit.g'), label: t('food.grams'), big: true, id: 'grams' })}</div>
 ${food.portion && food.portion !== g ? html`<div class="row center-j mt8"><button class="chip" data-act="portion">${t('food.portion', { n: food.portion })}</button></div>` : ''}
-<div class="row between mt14 px4"><div class="num kcalbig">${n.kcal} <small>${t('unit.kcal')}</small></div>${macroLine(n)}</div>
+<div class="row between mt14 px4"><div class="num kcalbig">${fmtNum(n.kcal)} <small>${t('unit.kcal')}</small></div>${macroLine(n)}</div>
 ${extraLine(n)}
 <button class="btn w100 mt14" data-act="done">${ic('check', 20, 3)}${t('workout.done')}</button>`;
     },

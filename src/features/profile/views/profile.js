@@ -6,7 +6,7 @@
  */
 import { html, raw } from '../../../ui/dom.js';
 import { LANGUAGES } from '../../../data/i18n/index.js';
-import { fmtDate, fmtHM, getLang, t, weekdayName } from '../../../core/i18n.js';
+import { fmtDate, fmtHM, fmtNum, getLang, t, weekdayName } from '../../../core/i18n.js';
 import { dailySettings, settings, setSettings } from '../../../core/settings.js';
 import { kv } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
@@ -117,7 +117,7 @@ export default () => ({
 <button class="avatar" data-act="names" aria-label="${t('profile.names')}">${otter({ size: 104, pose: 'dumbbell' })}</button>
 <div class="f1"><button class="h2 plain" data-act="names">${s.userName || t('profile.addName')} ${ic('edit', 15, 2.2, 'var(--muted)')}</button>
 <div class="muted small b">${t('profile.with', { otter: otterName(), date: fmtDate(since, { month: 'short', year: 'numeric' }) })}</div>
-<div class="row gap8 mt8"><div class="lvl xs30">${lv.level}</div><div class="f1"><div class="row between xs b"><span>${t('home.level', { n: lv.level })}</span><span class="muted num">${lv.into}/${lv.need} XP</span></div>
+<div class="row gap8 mt8"><div class="lvl xs30">${lv.level}</div><div class="f1"><div class="row between xs b"><span>${t('home.level', { n: lv.level })}</span><span class="muted num">${fmtNum(lv.into)}/${fmtNum(lv.need)} XP</span></div>
 <div class="bar mt6 h7">${raw(`<i style="width:${lv.pct * 100}%;background:var(--gold)"></i>`)}</div></div></div></div></div>
 <button class="row gap8 mt12 outfitrow" data-act="outfit">${ic('shirt', 18, 2.2, 'var(--accent-d)')}<span class="small b f1 left">${t('profile.outfit')}: <span class="acc">${t(`outfit.${s.outfit}`)}</span></span><span class="link">${t('common.change')}</span></button>
 <div class="row mt12 center pstats"><div class="f1"><div class="xb num fs18">${st.totalWorkouts}</div><div class="muted xs b">${t('profile.workouts')}</div></div><i class="vsep"></i>
@@ -153,7 +153,7 @@ ${srow(
 <button class="srow" data-go="profile/reminders"><span class="sic orange">${ic('bell', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.reminders')}</span><span class="muted xs b">${remindersSummary(r)}</span></span>${r.enabled ? html`<span class="b num acc">${fmtHM(r.time)}</span>` : ''}${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${srow('target', 'teal', t('profile.weeklyGoal'), t('profile.weeklyGoalSub'), stepper({ act: 'goal', value: s.weeklyGoal, label: t('profile.weeklyGoal') }))}
 ${srow('steps', 'orange', t('steps.goal'), t('steps.goalSub'), stepper({ act: 'sgoal', value: s.stepGoal, label: t('steps.goal') }), 'id="stepgoal"')}
-<button class="srow" data-act="nutrition"><span class="sic green">${ic('food', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.nutrition')}</span><span class="muted xs b">${s.kcalGoal} ${t('unit.kcal')} · P ${s.proteinGoal} · C ${s.carbsGoal} · F ${s.fatGoal} · ${t('profile.waterN', { n: s.waterGoal })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
+<button class="srow" data-act="nutrition"><span class="sic green">${ic('food', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.nutrition')}</span><span class="muted xs b">${fmtNum(s.kcalGoal)} ${t('unit.kcal')} · ${t('food.p')} ${s.proteinGoal} · ${t('food.c')} ${s.carbsGoal} · ${t('food.f')} ${s.fatGoal} · ${t('profile.waterN', { n: s.waterGoal })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${srow('timer', 'blue', t('profile.restAlert'), canVibrate() ? t('profile.restAlertSub') : t('profile.noVibrate'), html`<div class="row gap8"><span class="muted">${ic('volume', 17, 2.2)}</span>${toggle(s.restSound, 'tg', t('profile.sound'), { k: 'restSound' })}${canVibrate() ? html`<span class="muted">${ic('vibrate', 17, 2.2)}</span>${toggle(s.restVibrate, 'tg', t('profile.vibration'), { k: 'restVibrate' })}` : ''}</div>`)}
 ${srow('gift', 'gold', t('profile.celebrationSounds'), t('profile.celebrationSoundsSub'), toggle(s.celebrationSounds, 'tg', t('profile.celebrationSounds'), { k: 'celebrationSounds' }))}
 ${srow(

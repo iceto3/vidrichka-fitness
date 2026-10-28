@@ -96,18 +96,49 @@ export const L = (v) =>
 export const fmtDate = (d, opts) => new Intl.DateTimeFormat(locale(), opts).format(new Date(d));
 
 /**
- * Format a number.
+ * Format a number: the app language's decimal comma/point and thousands separator, e.g.
+ * "2 145" and "2,5" in Bulgarian.
  * @param {number} n
  * @param {number} [digits] Max fraction digits.
  */
-export const fmtNum = (n, digits = 0) =>
-  new Intl.NumberFormat(locale(), { maximumFractionDigits: digits }).format(n || 0);
+export const fmtNum = (n, digits = 0) => fmtGrouped(n, digits); // 1.4.0: "2 145" in Bulgarian too (CLDR leaves 4 digits ungrouped)
 
 /**
  * A unit code shown in the app language ("kg" → "кг", "cm" → "см", "g" → "г" in Bulgarian).
  * @param {string} u
  */
 export const unitText = (u) => (['kg', 'cm', 'g', 't'].includes(u) ? t(`unit.${u}`) : u);
+
+/**
+ * 1.4.0: a duration in hours as hours and minutes: "7 ч 20 мин" / "7 h 20 min", "8 ч" on the
+ * hour, "45 мин" under an hour (rounded to the minute). Sleep is never shown as "7,3 ч".
+ * @param {number} hours
+ */
+export function fmtDuration(hours) {
+  const total = Math.round((Number(hours) || 0) * 60),
+    h = Math.floor(total / 60),
+    m = total % 60;
+  if (!h) return `${m} ${t('unit.min')}`;
+  return m ? `${h} ${t('unit.h')} ${String(m).padStart(2, '0')} ${t('unit.min')}` : `${h} ${t('unit.h')}`;
+}
+
+/**
+ * Read a typed duration back to hours: "7 ч 20 мин", "7h20", "7:20", "7 20", "7,5", "7.5",
+ * "45 мин". Returns NaN when it is not a duration. @param {string} s
+ */
+export function parseDuration(s) {
+  const x = String(s ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(',', '.');
+  if (!x) return NaN;
+  const mins = /^(\d{1,3})\s*(?:мин\.?|min|m)$/.exec(x);
+  if (mins) return Number(mins[1]) / 60;
+  const hm = /^(\d{1,2})(?:\s*(?::|ч\.?|h|час(?:а|ове)?)\s*|\s+)(\d{1,2})\s*(?:мин\.?|min|m)?$/.exec(x);
+  if (hm) return Number(hm[2]) < 60 ? Number(hm[1]) + Number(hm[2]) / 60 : NaN;
+  const dec = /^(\d{1,2}(?:\.\d+)?)\s*(?:ч\.?|h|час(?:а|ове)?)?$/.exec(x);
+  return dec ? Number(dec[1]) : NaN;
+}
 
 /** A weight with its unit, e.g. "42,5 кг" / "42.5 kg" (up to 2 decimals). @param {number} kg */
 export const fmtKg = (kg) => `${fmtNum(kg, 2)} ${t('unit.kg')}`;

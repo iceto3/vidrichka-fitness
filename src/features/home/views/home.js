@@ -5,7 +5,7 @@
  * @module features/home/views/home
  */
 import { esc, html, raw } from '../../../ui/dom.js';
-import { L, fmtDate, t, weekdayName } from '../../../core/i18n.js';
+import { L, fmtDate, fmtNum, t, weekdayName } from '../../../core/i18n.js';
 import { dailySettings, settings } from '../../../core/settings.js';
 import { kv, setKv } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
@@ -179,7 +179,7 @@ ${stepsCard(dayKey())}
 ${sleepCard(dayKey())}
 ${mealsCard(dayKey())}
 <section class="card mt12 quests" aria-label="${t('home.quests')}"><div class="row between qhead"><h2 class="h3 xb">${t('home.quests')}</h2>
-<div class="row gap6"><div class="lvl sm" aria-label="${t('home.level', { n: lv.level })}">${lv.level}</div><div class="bar w96">${raw(`<i style="width:${lv.pct * 100}%;background:var(--gold)"></i>`)}</div><span class="xs b muted num">${lv.into}/${lv.need} XP</span></div></div>
+<div class="row gap6"><div class="lvl sm" aria-label="${t('home.level', { n: lv.level })}">${lv.level}</div><div class="bar w96">${raw(`<i style="width:${lv.pct * 100}%;background:var(--gold)"></i>`)}</div><span class="xs b muted num">${fmtNum(lv.into)}/${fmtNum(lv.need)} XP</span></div></div>
 ${quests().map(
   (
     q,

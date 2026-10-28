@@ -7,7 +7,7 @@
  * @module features/day/views/shot
  */
 import { html, raw } from '../../../ui/dom.js';
-import { fmtDate, fmtNum, t } from '../../../core/i18n.js';
+import { fmtDate, fmtDuration, fmtNum, t } from '../../../core/i18n.js';
 import { dayKey, parseDay } from '../../../core/dates.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
@@ -17,6 +17,7 @@ import { prepareImage } from '../../improve/images.js';
 import { readDays, setDaySleep, setDaySteps, MAX_SLEEP_H } from '../api.js';
 import { shotRows } from '../logic.js';
 import { safely } from './cards.js';
+import { FACES } from '../../daily/views/checkin.js';
 
 /**
  * @param {'steps'|'sleep'} kind @param {string} date The day the button belongs to (used
@@ -26,12 +27,22 @@ export function openShot(kind, date) {
   /** @type {{phase: 'pick'|'busy'|'confirm'|'none'|'error', err: string, rows: import('../logic.js').ShotRow[]}} */
   const st = { phase: 'pick', err: '', rows: [] };
   const today = dayKey();
-  const unit = kind === 'steps' ? '' : t('unit.h');
   const current = () =>
     new Map(readDays(st.rows.map((r) => r.date)).map((d) => [d.date, kind === 'steps' ? d.steps : d.sleep.hours]));
 
   const picker = () =>
     html`<label class="btn w100 mt16 shotpick">${ic('image', 18, 2.2)}${t('shot.pick')}<input type="file" accept="image/*" class="sr-only" data-change="file" aria-label="${t('shot.pick')}"></label>`;
+
+  /** @param {HTMLElement} el @param {'h'|'m'} part */
+  const setSleepPart = (el, part) => {
+    const r = st.rows[Number(el.dataset.i)],
+      n = Number(/** @type {HTMLInputElement} */ (el).value.trim() || 0),
+      mins = Math.round(r.value * 60);
+    const next = part === 'h' ? n * 60 + (mins % 60) : Math.floor(mins / 60) * 60 + n;
+    if (Number.isInteger(n) && n >= 0 && (part === 'h' || n < 60) && next > 0 && next <= MAX_SLEEP_H * 60)
+      r.value = next / 60;
+    else toast(t('day.err.range'));
+  };
 
   openSheet({
     render: () => {
@@ -44,13 +55,24 @@ ${st.phase === 'none' ? html`<p class="verr small b mt12" role="alert">${t('shot
 ${st.phase === 'error' ? html`<p class="verr small b mt12" role="alert">${t(`shot.err.${st.err}`)}</p>` : ''}
 ${picker()}<p class="muted xs b mt8">${t('shot.privacy')}</p>`;
       const cur = current();
+      const fmt = (/** @type {number} */ v) => (kind === 'steps' ? fmtNum(v) : fmtDuration(v));
       return html`${title}<p class="muted small b mt4">${t('shot.confirm')}</p>
-<div class="list mt8 shotrows">${st.rows.map((r, i) => {
+<div class="col gap10 mt8 shotrows">${st.rows.map((r, i) => {
         const was = cur.get(r.date);
-        return html`<div class="lrow shotrow"><input type="checkbox" class="chk" data-change="on" data-i="${i}" ${r.on ? raw('checked') : ''} aria-label="${t('shot.use')}">
-<span class="f1 minw0"><input type="date" class="input sm" data-change="date" data-i="${i}" value="${r.date}" max="${today}" aria-label="${t('shot.date')}">
-<span class="muted xs b block">${fmtDate(parseDay(r.date), { weekday: 'long' })}${was != null ? ` · ${t('shot.was', { n: `${fmtNum(was, kind === 'steps' ? 0 : 1)}${unit ? ` ${unit}` : ''}` })}` : ''}</span></span>
-<input class="input sm num shotval" type="text" inputmode="decimal" data-change="val" data-i="${i}" value="${kind === 'steps' ? String(r.value) : fmtNum(r.value, 1)}" aria-label="${t(kind === 'steps' ? 'steps.count' : 'sleep.hours')}">${unit ? html`<span class="muted b">${unit}</span>` : ''}</div>`;
+        // 1.4.0: stacked layout — the date field gets the full width (it was squashed next to
+        // the weekday and the value), the weekday and the current value sit under it.
+        return html`<div class="card pad14 shotrow"><div class="row gap10"><input type="checkbox" class="chk" data-change="on" data-i="${i}" ${r.on ? raw('checked') : ''} aria-label="${t('shot.use')}">
+<label class="f1 minw0 shotdate"><span class="sr-only">${t('shot.date')}</span><input type="date" class="input" data-change="date" data-i="${i}" value="${r.date}" max="${today}" aria-label="${t('shot.date')}"></label></div>
+<p class="muted xs b mt6">${fmtDate(parseDay(r.date), { weekday: 'long', day: 'numeric', month: 'long' })}${was != null ? ` · ${t('shot.was', { n: fmt(was) })}` : ''}</p>
+${
+  kind === 'steps'
+    ? html`<label class="row gap8 mt8 shotval"><span class="b f1">${t('steps.count')}</span><input class="input num" type="text" inputmode="numeric" data-change="val" data-i="${i}" value="${fmtNum(r.value)}" aria-label="${t('steps.count')}"></label>`
+    : html`<div class="row gap8 mt8 shotval"><span class="b f1">${t('sleep.hours')}</span>
+<input class="input num" type="text" inputmode="numeric" data-change="hh" data-i="${i}" value="${Math.floor(Math.round(r.value * 60) / 60)}" aria-label="${t('shot.hoursAria')}"><span class="muted b">${t('unit.h')}</span>
+<input class="input num" type="text" inputmode="numeric" data-change="mm" data-i="${i}" value="${String(Math.round(r.value * 60) % 60).padStart(2, '0')}" aria-label="${t('shot.minutesAria')}"><span class="muted b">${t('unit.min')}</span></div>
+<p class="xs b mt8">${t('sleep.quality')} <span class="muted">${t('shot.optional')}</span></p>
+<div class="scale sm shotq" role="radiogroup" aria-label="${t('sleep.quality')}">${FACES.map((f, k) => html`<button class="${r.q === k + 1 ? 'on' : ''}" role="radio" aria-checked="${String(r.q === k + 1)}" data-act="q" data-i="${i}" data-v="${k + 1}" aria-label="${t(`scale.sleep${k + 1}`)} (${k + 1}/5)"><span aria-hidden="true">${f}</span></button>`)}</div>`
+}</div>`;
       })}</div>
 <p class="muted xs b mt8">${t(kind === 'steps' ? 'shot.replaceSteps' : 'shot.replaceSleep')}</p>
 <div class="row gap10 mt12"><button class="btn sec f1" data-act="again">${t('shot.again')}</button><button class="btn f1" data-act="save" ${st.rows.some((r) => r.on) ? '' : raw('disabled')}>${t('shot.save', { n: st.rows.filter((r) => r.on).length })}</button></div>`;
@@ -83,11 +105,18 @@ ${picker()}<p class="muted xs b mt8">${t('shot.privacy')}</p>`;
         else toast(t(v > today ? 'day.err.future' : 'shot.dupDate'));
       },
       val: (el) => {
-        const v = Number(/** @type {HTMLInputElement} */ (el).value.replace(/\s/g, '').replace(',', '.')),
+        const v = Number(/** @type {HTMLInputElement} */ (el).value.replace(/[\s\u00a0\u202f.,]/g, '')),
           r = st.rows[Number(el.dataset.i)];
-        const max = kind === 'steps' ? 100_000 : MAX_SLEEP_H;
-        if (Number.isFinite(v) && v > 0 && v <= max) r.value = kind === 'steps' ? Math.round(v) : v;
+        if (Number.isFinite(v) && v > 0 && v <= 100_000) r.value = Math.round(v);
         else toast(t('day.err.range'));
+      },
+      // sleep: hours and minutes are typed separately; the value is kept to the minute
+      hh: (el) => setSleepPart(el, 'h'),
+      mm: (el) => setSleepPart(el, 'm'),
+      q: (el) => {
+        const r = st.rows[Number(el.dataset.i)],
+          v = Number(el.dataset.v);
+        r.q = r.q === v ? null : v; // tap again to clear (quality is optional)
       },
       again: () => void Object.assign(st, { phase: 'pick', rows: [] }),
       save: () => {

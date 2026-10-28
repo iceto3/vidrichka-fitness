@@ -123,7 +123,7 @@ export function setSleep(date, v) {
   /** @type {Record<string, any>} */
   const patch = {};
   if (v.hours != null && Number.isFinite(Number(v.hours)))
-    patch.sleepH = Math.round(Math.min(MAX_SLEEP_H, Math.max(0, Number(v.hours))) * 2) / 2;
+    patch.sleepH = Math.round(Math.min(MAX_SLEEP_H, Math.max(0, Number(v.hours))) * 60) / 60; // 1.4.0: to the minute
   if (v.q != null && Number.isFinite(Number(v.q))) patch.sleepQ = Math.min(5, Math.max(1, Math.round(Number(v.q))));
   if (!Object.keys(patch).length) return day(date);
   const rec = patchDay(date, patch);

@@ -6,7 +6,7 @@
  * @module features/daily/views/morning
  */
 import { html, raw } from '../../../ui/dom.js';
-import { fmtDate, fmtNum, t } from '../../../core/i18n.js';
+import { fmtDate, fmtDuration, t } from '../../../core/i18n.js';
 import { dailySettings, settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { clock } from '../../../core/dates.js';
@@ -63,7 +63,7 @@ export default () => {
 <h1 class="h1 center">${t('morning.title')}${name ? `, ${name}` : ''}!</h1>
 ${
   rec.wake
-    ? html`<p class="center muted b mt6">${t('morning.wokeAt', { time: hm(rec.wake) })}${hrs != null ? html` · ${t('morning.slept', { h: fmtNum(hrs, 1) })}${night.bedEst ? html` <span class="chip chip-sm">${t('sleep.estimated')}</span>` : ''}` : ''}</p>`
+    ? html`<p class="center muted b mt6">${t('morning.wokeAt', { time: hm(rec.wake) })}${hrs != null ? html` · ${t('morning.slept', { h: fmtDuration(hrs) })}${night.bedEst ? html` <span class="chip chip-sm">${t('sleep.estimated')}</span>` : ''}` : ''}</p>`
     : html`<button class="btn big w100 mt16" data-act="wake">${ic('sun', 20, 2.4)}${t('morning.justWoke')}</button>`
 }
 ${proteinCard()}

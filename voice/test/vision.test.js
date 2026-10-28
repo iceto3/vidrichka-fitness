@@ -84,22 +84,25 @@ test('falls back to xAI when Workers AI fails or reads nothing; multi-day week v
   }
 });
 
-test('sleep: hours rounded to ¼ h, quality 1–5 or null, absurd values dropped', () => {
+test('sleep: hours + minutes kept to the minute, quality 1–5 or null, absurd values dropped', () => {
   assert.deepEqual(
     normalizeVision(
       {
         days: [
-          { date: '2026-10-28', hours: 7.4, quality: 4 },
+          { date: '2026-10-28', hours: 7, minutes: 20, quality: 4 },
           { date: '2026-10-27', hours: 30 },
           { date: '2026-10-26', hours: '6.1', quality: 9 },
+          { date: '2026-10-25', hours: 6, minutes: 75 },
+          { date: '2026-10-24', hours: 7.5 },
         ],
       },
       'sleep',
       '2026-10-28',
     ),
     [
-      { date: '2026-10-28', hours: 7.5, quality: 4 },
-      { date: '2026-10-26', hours: 6, quality: null },
+      { date: '2026-10-28', hours: 7 + 20 / 60, quality: 4 },
+      { date: '2026-10-26', hours: 6.1, quality: null },
+      { date: '2026-10-24', hours: 7.5, quality: null },
     ],
   );
 });

@@ -47,7 +47,7 @@ export function visionPrompt(kind, today) {
   const what =
     kind === 'steps'
       ? 'the STEP COUNT per day. Use {"date": "YYYY-MM-DD" or null, "steps": integer}. Ignore distance, calories, floors, minutes and goals.'
-      : 'the SLEEP per night. Use {"date": "YYYY-MM-DD" or null, "hours": number, "quality": 1-5 or null}. "date" is the MORNING the person woke up. Convert "7 h 30 min" to 7.5. quality only if the app shows a score (map 0-100 to 1-5), else null.';
+      : 'the SLEEP per night. Use {"date": "YYYY-MM-DD" or null, "hours": integer, "minutes": integer 0-59, "quality": 1-5 or null}. "date" is the MORNING the person woke up. Copy the duration exactly as shown: "7 h 20 min" is hours 7, minutes 20; "7.5 h" is hours 7, minutes 30. quality only if the app shows a score (map 0-100 to 1-5), else null.';
   return [
     `This is a screenshot from a phone health or fitness app. Today is ${weekday}, ${today}.`,
     `Read ${what}`,
@@ -93,10 +93,13 @@ export function normalizeVision(out, kind, today) {
       if (!Number.isFinite(n) || n <= 0 || n > 100_000) continue;
       res.push({ date, steps: n });
     } else {
-      const h = Number(d.hours);
+      // 1.4.0: hours + minutes (exact to the minute; "7 h 20 min" was rounded to 7.25 before).
+      // A decimal "hours" alone is still accepted (older prompts / models).
+      const m = d.minutes == null || d.minutes === '' ? 0 : Number(d.minutes);
+      const h = Number(d.hours) + (Number.isFinite(m) && m >= 0 && m < 60 ? m : NaN) / 60;
       if (!Number.isFinite(h) || h <= 0 || h > 16) continue;
       const q = Number(d.quality);
-      res.push({ date, hours: Math.round(h * 4) / 4, quality: q >= 1 && q <= 5 ? Math.round(q) : null });
+      res.push({ date, hours: Math.round(h * 60) / 60, quality: q >= 1 && q <= 5 ? Math.round(q) : null });
     }
     if (date) seen.add(date);
     if (res.length >= MAX_DAYS) break;

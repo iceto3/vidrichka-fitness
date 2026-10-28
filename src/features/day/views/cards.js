@@ -9,7 +9,7 @@
  * @module features/day/views/cards
  */
 import { html, raw } from '../../../ui/dom.js';
-import { L, fmtDate, fmtNum, t } from '../../../core/i18n.js';
+import { L, fmtDate, fmtDuration, fmtNum, parseDuration, t } from '../../../core/i18n.js';
 import { dayKey, durationMin, parseDay } from '../../../core/dates.js';
 import { settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
@@ -61,7 +61,7 @@ export function stepsCard(date) {
 <div class="muted xs b">${done ? t('steps.goalMet') : t('steps.left', { n: fmtNum(goal - n) })}${run ? html` · 🔥 ${t('steps.streak', { n: run })}` : ''}</div></div>
 <div class="right"><span class="xb num big19 stepsn">${fmtNum(n)}</span><span class="muted xs b num"> / ${fmtNum(goal)}</span></div></div>
 <div class="stepsbar mt10">${bar(n / goal, done ? 'var(--ok, #1FB46B)' : 'var(--accent)')}</div>
-<div class="row gap8 mt10 wrap"><button class="chip" data-act="stepsAdd" data-n="1000">+1000</button><button class="chip" data-act="stepsAdd" data-n="2000">+2000</button>
+<div class="row gap8 mt10 wrap"><button class="chip" data-act="stepsAdd" data-n="1000">+${fmtNum(1000)}</button><button class="chip" data-act="stepsAdd" data-n="2000">+${fmtNum(2000)}</button>
 <span class="f1"></span><button class="btn sm sec" data-act="stepsShot" aria-label="${t('shot.stepsAria')}">📷 ${t('shot.btn')}</button><button class="btn sm sec" data-act="stepsSheet">${ic('edit', 15, 2.4)}${t('steps.enter')}</button></div></section>`;
 }
 
@@ -72,7 +72,7 @@ export function openStepsSheet(date) {
     render:
       () => html`<h2 class="h2">${t(isToday(date) ? 'steps.title' : 'day.steps')}</h2><p class="muted small b mt4">${t('steps.manualHint')}</p>
 <div class="row between mt12 b"><span>${isToday(date) ? t('steps.today') : fmtDate(parseDay(date), { weekday: 'short', day: 'numeric', month: 'short' })}</span><span class="num">${fmtNum(readDay(date).steps ?? 0)} / ${fmtNum(stepGoal())}</span></div>
-<label class="field mt12"><span>${t('steps.count')}</span><input class="input num" id="stepsin" type="text" inputmode="numeric" data-input="v" value="${v}" placeholder="5000" autocomplete="off"></label>
+<label class="field mt12"><span>${t('steps.count')}</span><input class="input num" id="stepsin" type="text" inputmode="numeric" data-input="v" value="${v}" placeholder="${fmtNum(5000)}" autocomplete="off"></label>
 <div class="row gap10 mt16"><button class="btn sec f1" data-act="set">${t('steps.setTotal')}</button><button class="btn f1" data-act="add">${ic('plus', 18, 2.8)}${t('steps.add')}</button></div>
 <p class="muted xs b mt8 stepshelp">${t('steps.setHelp')}<br>${t('steps.addHelp')}</p>`,
     actions: {
@@ -101,7 +101,7 @@ export function sleepCard(date) {
     title = t(isToday(date) ? 'sleep.cardTitle' : 'day.sleep');
   return html`<div class="card mt12 pad14 row gap10 sleepcard"><button class="row gap10 f1 minw0 left" data-act="sleepSheet"><span class="sq violet">${ic('moon', 20, 2.1)}</span>
 <span class="f1 left minw0"><span class="b block">${title}</span><span class="muted xs b">${has ? t('sleep.cardSub') : t('sleep.cardAsk')}</span></span>
-${has ? html`<span class="xb num big19">${s.hours == null ? '–' : `${fmtNum(s.hours, 1)} ${t('unit.h')}`}</span><span class="fs18">${s.q ? FACES[s.q - 1] : ''}</span>` : html`<span class="muted b num">0 ${t('unit.h')}</span>`}</button>
+${has ? html`<span class="xb num big19">${s.hours == null ? '–' : fmtDuration(s.hours)}</span><span class="fs18">${s.q ? FACES[s.q - 1] : ''}</span>` : html`<span class="muted b num">0 ${t('unit.h')}</span>`}</button>
 ${has ? '' : html`<button class="chip accent chip-sm" data-act="sleepSheet">${t('sleep.add')}</button>`}
 <button class="iconbtn flat sm" data-act="sleepShot" aria-label="${t('shot.sleepAria')}">📷</button></div>`;
 }
@@ -115,15 +115,15 @@ export function openSleepSheet(date) {
     render: () => {
       const s = readDay(date).sleep;
       return html`<h2 class="h2">${t(isToday(date) ? 'sleep.cardTitle' : 'day.sleep')}</h2>
-<div class="row between mt12"><span class="b">${t('sleep.hours')}</span>${stepper({ act: 'h', value: fmtNum(s.hours ?? DEFAULT_SLEEP_H, 1), unit: t('unit.h'), label: t('sleep.hours') })}</div>
-${s.hours == null ? html`<p class="muted xs b mt4">${t('sleep.defaultHint', { n: fmtNum(DEFAULT_SLEEP_H, 1) })}</p>` : ''}
+<div class="row between mt12"><span class="b">${t('sleep.hours')}</span>${stepper({ act: 'h', value: fmtDuration(s.hours ?? DEFAULT_SLEEP_H), label: t('sleep.hours'), wide: true })}</div>
+${s.hours == null ? html`<p class="muted xs b mt4">${t('sleep.defaultHint', { n: fmtDuration(DEFAULT_SLEEP_H) })}</p>` : ''}
 <h3 class="b mt16">${t('sleep.quality')}</h3>${scale('sleepQ', s.q ?? undefined, t('sleep.quality'))}
 <div class="row gap10 mt16">${s.manual ? html`<button class="btn sec f1" data-act="clear">${ic('trash', 16, 2.2)}${t('sleep.delete')}</button>` : ''}<button class="btn f1" data-act="done">${t('common.done')}</button></div>`;
     },
     actions: {
       h: (el, ev) => {
         const cur = readDay(date).sleep.hours ?? DEFAULT_SLEEP_H;
-        const typed = Number(/** @type {HTMLInputElement} */ (el).value?.replace(',', '.'));
+        const typed = parseDuration(/** @type {HTMLInputElement} */ (el).value ?? ''); // "7 ч 20 мин", "7:20", "7,5"
         const v = ev.type === 'change' ? (Number.isFinite(typed) ? typed : cur) : cur + Number(el.dataset.d) * 0.5;
         safely(() => setDaySleep(date, { hours: Math.max(0, v) }));
       },

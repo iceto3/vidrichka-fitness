@@ -2391,8 +2391,39 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   assert.deepEqual(order.filter(Boolean), ['waterminus', 'glasses', 'waterplus'], 'minus, glasses, plus');
   await page.evaluate(() => scrollTo(0, 0));
   await shot('day-view');
+
+  // Sleep from a screenshot (tester bug): 7 h 20 min is saved as read (not the 7.5 h default),
+  // shown as "7 ч 20 мин", the date field is wide enough, and a quality can be picked.
+  await page.route('https://voice.test/vision**', (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: { 'Access-Control-Allow-Origin': '*' } })
+      : route.fulfill({
+          headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ days: [{ date: key, hours: 7 + 20 / 60, quality: null }], via: 'mock' }),
+        }),
+  );
+  await page.locator('.dayview [data-act="sleepShot"]').click();
+  const fsp = await import('node:fs/promises');
+  await layer
+    .locator('input[type="file"]')
+    .setInputFiles({ name: 's.png', mimeType: 'image/png', buffer: await fsp.readFile('assets/icons/icon-192.png') });
+  await layer.locator('.shotrow').waitFor({ timeout: 8000 });
+  assert.equal(await layer.locator('[data-change="hh"]').inputValue(), '7');
+  assert.equal(await layer.locator('[data-change="mm"]').inputValue(), '20');
+  const dw = (await layer.locator('.shotrow input[type="date"]').boundingBox())?.width ?? 0;
+  assert.ok(dw >= 150, `date field readable (${dw}px)`);
+  await layer.locator('.shotq [data-v="4"]').click();
+  await shot('sleep-shot');
+  await layer.locator('[data-act="save"]').click();
+  await settle();
+  const sl = await dayRow();
+  assert.ok(Math.abs(sl.sleepH - (7 + 20 / 60)) < 0.01, `7 h 20 min saved (${sl.sleepH})`);
+  assert.equal(sl.sleepQ, 4);
+  assert.match(await page.locator('.dayview .sleepcard').innerText(), /7 ч 20 мин/);
   await go('day/2099-01-01');
   assert.equal(await page.locator('.dayview .stepscard').count(), 0, 'no cards for a future day');
   assert.equal(await layer.locator('.panel').count(), 0);
-  console.log('  ✔ 1.4.0 day history: past day opens, edits land on that date, water −/+, no future days');
+  console.log(
+    '  ✔ 1.4.0 day history: past day opens, edits land on that date, water −/+, sleep screenshot 7 ч 20 мин, no future days',
+  );
 }

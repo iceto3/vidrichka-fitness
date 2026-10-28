@@ -7,7 +7,7 @@
  * @module features/food/views/add
  */
 import { html, patch } from '../../../ui/dom.js';
-import { fmtDate, getLang, t } from '../../../core/i18n.js';
+import { fmtDate, fmtNum, getLang, t } from '../../../core/i18n.js';
 import { dayKey, parseDay } from '../../../core/dates.js';
 import { all } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
@@ -33,7 +33,7 @@ import { openVoice, voiceReady } from '../../voice/api.js';
 const foodRow = (
   f,
 ) => html`<button class="lrow" data-act="pick" data-id="${f.id}"><span class="fic">${f.emoji ?? '🍽️'}</span>
-<span class="f1 left"><span class="b block">${foodName(f)}</span><span class="muted xs b">${Math.round(f.kcal)} ${t('unit.kcal')} / 100 ${t('unit.g')}</span></span>${ic('plus', 18, 2.6, 'var(--accent-d)')}</button>`;
+<span class="f1 left"><span class="b block">${foodName(f)}</span><span class="muted xs b">${fmtNum(f.kcal)} ${t('unit.kcal')} / 100 ${t('unit.g')}</span></span>${ic('plus', 18, 2.6, 'var(--accent-d)')}</button>`;
 
 /** @param {{meal: string}} p @returns {import('../../../core/registry.js').View} */
 export default ({ meal }) => {
@@ -134,7 +134,7 @@ ${basket.length ? html`<button class="btn sm" data-act="finish">${t('food.finish
 ${voiceReady() ? html`<button class="iconbtn flat sm" data-act="voice" aria-label="${t('voice.say')}">${ic('mic', 20, 2.2)}</button>` : ''}<button class="iconbtn flat sm acc-bg" data-act="scan" aria-label="${t('food.scan')}">${ic('scan', 20, 2.2)}</button></label>
 ${
   basket.length
-    ? html`<div class="card mt12 basket"><div class="row between"><span class="xs xb muted caps">${t('food.inMeal', { n: basket.length })}</span><span class="b num small">${totals(basket).kcal} ${t('unit.kcal')}</span></div>
+    ? html`<div class="card mt12 basket"><div class="row between"><span class="xs xb muted caps">${t('food.inMeal', { n: basket.length })}</span><span class="b num small">${fmtNum(totals(basket).kcal)} ${t('unit.kcal')}</span></div>
 <div class="row gap6 wrap mt8">${basket.map((r, i) => html`<span class="chip">${r.emoji} ${foodName(r)} · ${r.grams} ${t('unit.g')}<button class="x" data-act="undo" data-i="${i}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('close', 14, 2.6)}</button></span>`)}</div></div>`
     : ''
 }
@@ -147,7 +147,7 @@ ${
 ${
   meals.length
     ? html`<div class="section-title"><h2 class="h3">${t('food.regularMeals')}</h2><button class="link" data-go="food/meals">${t('common.all')}</button></div>
-<div class="chips combos" role="group" aria-label="${t('food.regularMeals')}">${meals.map((m) => html`<button class="chip${picked === m.id ? ' on' : ''}" data-act="logMeal" data-id="${m.id}" aria-pressed="${String(picked === m.id)}">${picked === m.id ? '✓' : '⭐'} ${m.name} · ${totals(m.items).kcal}</button>`)}</div>
+<div class="chips combos" role="group" aria-label="${t('food.regularMeals')}">${meals.map((m) => html`<button class="chip${picked === m.id ? ' on' : ''}" data-act="logMeal" data-id="${m.id}" aria-pressed="${String(picked === m.id)}">${picked === m.id ? '✓' : '⭐'} ${m.name} · ${fmtNum(totals(m.items).kcal)}</button>`)}</div>
 ${(() => {
   const m = meals.find((x) => x.id === picked);
   return m

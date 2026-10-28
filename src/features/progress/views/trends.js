@@ -5,7 +5,7 @@
  * @module features/progress/views/trends
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, fmtNum, t } from '../../../core/i18n.js';
+import { fmtDate, fmtDuration, fmtNum, t } from '../../../core/i18n.js';
 import { dayKey, parseDay } from '../../../core/dates.js';
 import { all } from '../../../core/store.js';
 import { settings } from '../../../core/settings.js';
@@ -44,6 +44,12 @@ const lbl = (x) =>
 const avgOf = (pts, d = 0) => {
   const m = mean(pts.map((p) => p.y));
   return m == null ? '–' : fmtNum(m, d);
+};
+
+/** Average sleep as "7 ч 20 мин" ('–' if none). @param {{y: number|null}[]} pts */
+const sleepAvg = (pts) => {
+  const m = mean(pts.map((p) => p.y));
+  return m == null ? '–' : fmtDuration(m);
 };
 
 /** A chart card. @param {string} cls @param {string} title @param {any} right @param {any} body */
@@ -124,7 +130,7 @@ ${card(
 ${card(
   'ch-sleep',
   t('sleep.hours'),
-  html`<span class="xs b muted">${per}: <span class="num">${avgOf(pt('sleep'), 1)}</span> ${t('unit.h')}</span>`,
+  html`<span class="xs b muted">${per}: <span class="num">${sleepAvg(pt('sleep'))}</span></span>`,
   orEmpty(
     pt('sleep'),
     t('trends.emptySleep'),
@@ -163,8 +169,10 @@ ${card(
 ${barChart(pt('kcal'), { goal: s.kcalGoal, goalLabel: fmtNum(s.kcalGoal), color: '#f08a5d', aria: t('trends.kcal'), label: lbl, hit: (y) => y <= s.kcalGoal * 1.1 })}
 <div class="xs b muted mt10">${t('trends.protein')} · ${per}: <span class="num">${avgOf(pt('protein'))}</span> / ${s.proteinGoal} ${t('unit.g')}</div>
 ${barChart(pt('protein'), { goal: s.proteinGoal, goalLabel: `${s.proteinGoal} ${t('unit.g')}`, color: '#14a3a8', aria: t('trends.protein'), label: lbl })}
-<div class="grid2 gap12 mt10"><div><div class="xs b muted">${t('food.fiber')} · <span class="num">${avgOf(pt('fib'), 1)}</span> ${t('unit.g')}</div>${barChart(pt('fib'), { goal: FIBER_REF, goalLabel: `${FIBER_REF}`, color: '#6cbf6a', aria: t('food.fiber') })}</div>
-<div><div class="xs b muted">${t('food.salt')} · <span class="num">${avgOf(pt('salt'), 1)}</span> ${t('unit.g')}</div>${barChart(pt('salt'), { goal: SALT_MAX, goalLabel: `≤${SALT_MAX}`, color: '#a08bd6', aria: t('food.salt'), hit: (y) => y <= SALT_MAX })}</div></div>
+<div class="xs b muted mt10">${t('food.fiber')} · ${per}: <span class="num">${avgOf(pt('fib'), 1)}</span> / ${FIBER_REF} ${t('unit.g')}</div>
+${barChart(pt('fib'), { goal: FIBER_REF, goalLabel: `${FIBER_REF} ${t('unit.g')}`, color: '#6cbf6a', aria: t('food.fiber'), label: lbl })}
+<div class="xs b muted mt10">${t('food.salt')} · ${per}: <span class="num">${avgOf(pt('salt'), 1)}</span> / ≤${SALT_MAX} ${t('unit.g')}</div>
+${barChart(pt('salt'), { goal: SALT_MAX, goalLabel: `≤${SALT_MAX} ${t('unit.g')}`, color: '#a08bd6', aria: t('food.salt'), label: lbl, hit: (y) => y <= SALT_MAX })}
 <div class="xs muted mt6">${t('trends.refs', { f: FIBER_REF, s: SALT_MAX })}</div>`,
 )}
 ${card(

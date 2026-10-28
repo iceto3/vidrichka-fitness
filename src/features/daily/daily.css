@@ -283,6 +283,12 @@
 .sbars .sb span {
   margin-top: 4px;
 }
+.sbars .sb b {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
 
 /* home */
 .daycard {

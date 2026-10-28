@@ -6,7 +6,7 @@
  * @module features/workouts/views/history
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, fmtKg, fmtVolume, t } from '../../../core/i18n.js';
+import { fmtDate, fmtKg, fmtNum, fmtVolume, t } from '../../../core/i18n.js';
 import { durationMin } from '../../../core/dates.js';
 import { get } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
@@ -42,7 +42,7 @@ export default ({ id, tab = 'progress' }) => {
           t('summary.volume'),
           html`${fmtVolume(s.volume).value} <small>${fmtVolume(s.volume).unit}</small>`,
         ],
-        ['flame', t('summary.kcal'), html`~${s.kcal} <small>${t('unit.kcal')}</small>`],
+        ['flame', t('summary.kcal'), html`~${fmtNum(s.kcal)} <small>${t('unit.kcal')}</small>`],
         ['star', t('summary.xp'), html`<span class="gold">+${s.xp}</span>`],
       ];
       return html`<div class="content history">${topBar(planName(s), fmtDate(s.endedAt, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}

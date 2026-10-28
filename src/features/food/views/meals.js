@@ -3,7 +3,7 @@
  * @module features/food/views/meals
  */
 import { html } from '../../../ui/dom.js';
-import { t } from '../../../core/i18n.js';
+import { fmtNum, t } from '../../../core/i18n.js';
 import { get } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
@@ -25,7 +25,7 @@ ${
     ? list.map(
         (
           m,
-        ) => html`<article class="card mt12"><div class="row between"><h2 class="h3 xb">⭐ ${m.name}</h2><span class="b num">${totals(m.items).kcal} ${t('unit.kcal')}</span></div>
+        ) => html`<article class="card mt12"><div class="row between"><h2 class="h3 xb">⭐ ${m.name}</h2><span class="b num">${fmtNum(totals(m.items).kcal)} ${t('unit.kcal')}</span></div>
 <div class="muted small b mt4">${m.items.map((/** @type {any} */ i) => `${foodName(i)} ${i.grams} ${t('unit.g')}`).join(' · ')}</div>
 <div class="row gap8 mt10"><button class="btn sm f1" data-act="log" data-id="${m.id}">${ic('plus', 16, 2.6)}${t('food.logNow')}</button>
 <button class="iconbtn flat sm" data-act="rename" data-id="${m.id}" aria-label="${t('food.rename')} ${m.name}">${ic('edit', 18)}</button>

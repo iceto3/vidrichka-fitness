@@ -42,7 +42,7 @@ export function openMeal(meal, date) {
 <div class="list mt8 mealitems">${rows.map(
         (r) =>
           html`<div class="lrow"><button class="f1 row gap10 left itembtn" data-act="edit" data-id="${r.id}" aria-label="${t('food.editItem')}: ${foodName(r)}"><span class="fic">${r.emoji ?? '🍽️'}</span><span class="f1 minw0"><span class="b block">${foodName(r)}</span><span class="muted xs b">${r.time} · ${r.grams} ${t('unit.g')}${extras(r)}</span></span>
-<span class="b num small">${r.kcal}</span></button><button class="iconbtn flat sm" data-act="del" data-id="${r.id}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('trash', 18)}</button></div>`,
+<span class="b num small">${fmtNum(r.kcal)}</span></button><button class="iconbtn flat sm" data-act="del" data-id="${r.id}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('trash', 18)}</button></div>`,
       )}</div>
 <div class="row gap10 mt12"><button class="btn sec f1 savecombo" data-act="combo">${ic('star', 18, 2.2)}${t('food.saveCombo')}</button></div>
 <button class="btn w100 mt10" data-go="food/add/${meal}">${ic('plus', 20, 2.8)}${t('food.addTo', { meal: t(`meal.${meal}`) })}</button>`;
@@ -108,7 +108,7 @@ export default () => ({
 <button class="iconbtn flat sm" data-act="day" data-d="1" aria-label="${t('food.nextDay')}" ${isToday ? raw('disabled') : ''}>${ic('right', 18)}</button></div>
 <div class="card mt12 row gap16 kcalcard">${ring(132, 13, tot.kcal / s.kcalGoal, {
       color: leftK < 0 ? 'var(--warm)' : 'var(--accent)',
-      label: `${tot.kcal} / ${s.kcalGoal} ${t('unit.kcal')}`,
+      label: `${fmtNum(tot.kcal)} / ${fmtNum(s.kcalGoal)} ${t('unit.kcal')}`,
       inner: html`<div class="xs b muted caps">${t('food.eaten')}</div><div class="xb num big24">${fmtNum(tot.kcal)}</div><div class="small b muted num">/ ${fmtNum(s.kcalGoal)} ${t('unit.kcal')}</div>`,
     })}
 <div class="f1"><div class="chip ${leftK < 0 ? 'warm' : 'accent'}">${leftK < 0 ? t('food.over', { n: fmtNum(-leftK) }) : t('food.left', { n: fmtNum(leftK) })}</div>
