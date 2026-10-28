@@ -24,7 +24,7 @@ const face = (/** @type {number|null} */ v) => (v ? FACES[Math.round(v) - 1] : '
  * manual and screenshot entries have no times, "– → –" was noise).
  * @param {{bed?: number|null, wake?: number|null, bedEst?: boolean}} n
  */
-const bedWake = (n) => {
+export const bedWake = (n) => {
   if (!n.bed && !n.wake) return '';
   const bed = n.bed ? `${hm(n.bed)}${n.bedEst ? ` (${t('sleep.estimated')})` : ''}` : '';
   const txt = bed && n.wake ? `${bed} → ${hm(n.wake)}` : bed ? `${bed} →` : `→ ${hm(/** @type {number} */ (n.wake))}`;

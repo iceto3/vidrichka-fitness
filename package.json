@@ -16,6 +16,7 @@
     "typecheck": "tsc -p .",
     "test": "node --test tests/unit/*.test.js",
     "test:e2e": "node tests/e2e/smoke.mjs",
+    "test:sw": "node tests/e2e/sw.mjs --dir dist-beta",
     "test:e2e:dist": "npm run build && node tests/e2e/smoke.mjs --dir dist",
     "lighthouse": "node tools/lighthouse.mjs",
     "check": "npm run lint && npm run format:check && npm run typecheck && npm test && npm run build",

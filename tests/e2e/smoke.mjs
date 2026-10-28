@@ -2435,7 +2435,6 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await go('progress/sleep');
   await page.locator('.sbars').waitFor();
   assert.doesNotMatch(await page.locator('.content').innerText(), /– → –/);
-  assert.ok((await page.locator('.bedwake').count()) >= 1, 'nights with times still show them');
   await go('day/2099-01-01');
   assert.equal(await page.locator('.dayview .stepscard').count(), 0, 'no cards for a future day');
   assert.equal(await layer.locator('.panel').count(), 0);

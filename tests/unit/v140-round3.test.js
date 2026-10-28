@@ -58,3 +58,18 @@ test('Nutella: OFF reports fibre 0 g → kept as 0 (not "unknown"); absent fibre
   const n2 = toFood({ ...NUT, nutriments: { ...NUT.nutriments, fiber_100g: undefined } }, 'bg');
   assert.equal(/** @type {any} */ (n2)?.fib, undefined);
 });
+
+test('Нощи list: no "– → –" when bed and wake are missing; only the known end otherwise', async () => {
+  globalThis.addEventListener ??= () => {};
+  // @ts-ignore minimal storage for the i18n module
+  globalThis.localStorage ??= { getItem: () => null, setItem() {}, removeItem() {} };
+  const { bedWake } = await import('../../src/features/daily/views/sleep.js');
+  const bed = new Date(2026, 0, 1, 23, 10).getTime(),
+    wake = new Date(2026, 0, 2, 7, 5).getTime();
+  assert.equal(String(bedWake({})), '');
+  assert.equal(String(bedWake({ bed: null, wake: null })), '');
+  assert.match(String(bedWake({ bed, wake })), />23:10 → 07:05</);
+  assert.match(String(bedWake({ wake })), />→ 07:05</);
+  assert.doesNotMatch(String(bedWake({ wake })), /–/);
+  assert.match(String(bedWake({ bed })), />23:10 →</);
+});
