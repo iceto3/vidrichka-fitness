@@ -98,7 +98,7 @@ test('a gender variant can wrap plurals, and missing male forms fall back to fem
   assert.equal(byGender('plain', 'm'), 'plain');
 });
 
-test('L() resolves gendered data texts (1.4.2 technique: "изправена/изправен")', async () => {
+test('L() resolves gendered data texts (1.4.1 technique: "изправена/изправен")', async () => {
   const texts = Object.values(TECHNIQUE)
     .flatMap((x) => [
       ...x.setup,

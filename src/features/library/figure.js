@@ -1,7 +1,7 @@
 /**
- * Verified exercise technique (1.4.2): the two-frame illustration with numbered markers and
+ * Verified exercise technique (1.4.1): the two-frame illustration with numbered markers and
  * the technique sections (Изходна позиция, Изпълнение, Дишане, Ключови точки, Чести грешки
- * → как да ги избегнеш, Работещи мускули, Източници). Shared by the exercise page and the
+ * → как да ги избегнеш, Подробно за мускулите (свито), Източници). Shared by the exercise page and the
  * in-workout technique sheet.
  *
  * Content: `data/technique.js`; drawings: `data/figures/<id>.js` – one lazy chunk per
@@ -13,6 +13,7 @@
 import { html, raw, esc } from '../../ui/dom.js';
 import { L, getLang, t } from '../../core/i18n.js';
 import { TECHNIQUE } from '../../data/technique.js';
+import { ic } from '../../ui/icons.js';
 
 /** @typedef {import('../../data/technique.js').BgText} BgText */
 
@@ -112,11 +113,8 @@ ${section(
   )}</ul>`,
   'mistakes',
 )}
-${section(
-  t('technique.muscles'),
-  html`<ul class="tlist tmus">${tq.muscles.map((m) => html`<li><strong>${m.role}:</strong> ${rich(m.text)}</li>`)}</ul>`,
-  'muscles',
-)}
+<details class="tsec muscles tmore"><summary><h3 class="h3 xb">${t('technique.muscles')}</h3><span class="tchev" aria-hidden="true">${ic('down', 18, 2.4)}</span></summary>
+<ul class="tlist tmus">${tq.muscles.map((m) => html`<li><strong>${m.role}:</strong> ${rich(m.text)}</li>`)}</ul></details>
 <section class="tsec tsrc"><h3 class="xs xb muted caps">${t('technique.sources')}</h3><ul>${tq.sources.map(
     (s) =>
       html`<li>${s.url ? html`<a href="${s.url}" target="_blank" rel="noopener noreferrer">${rich(s.text)}</a>` : rich(s.text)}</li>`,

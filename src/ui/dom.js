@@ -111,7 +111,9 @@ function morphNode(a, b) {
     x.setAttribute(name, value);
     if (name === 'value' && 'value' in x) x.value = value;
   }
-  for (const { name } of [...x.attributes]) if (!y.hasAttribute(name)) x.removeAttribute(name);
+  for (const { name } of [...x.attributes])
+    // 1.4.1: a <details> the user opened (e.g. Подробно за мускулите) stays open across re-renders
+    if (!y.hasAttribute(name) && !(name === 'open' && x.tagName === 'DETAILS')) x.removeAttribute(name);
   if (x.tagName === 'INPUT' || x.tagName === 'TEXTAREA' || x.tagName === 'SELECT') {
     // A focused field keeps what is being typed; otherwise reflect the rendered value.
     if (document.activeElement !== x && x.type !== 'file' && x.value !== (y.getAttribute('value') ?? x.value))

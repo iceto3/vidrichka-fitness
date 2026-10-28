@@ -1,5 +1,5 @@
 /**
- * Exercise detail (1.4.2): the verified two-frame illustration with numbered markers, the
+ * Exercise detail (1.4.1): the verified two-frame illustration with numbered markers, the
  * muscle map, default rest, the technique sections (features/library/figure.js) with their
  * sources, and a "Watch on YouTube" search link.
  * @module features/library/views/detail
@@ -47,7 +47,7 @@ export default ({ id }) => {
   <div class="f1"><div class="xs xb muted caps">${t('library.musclesWorked')}</div>
    <div class="mt8 small b">${t('library.primary')}</div><div class="row gap6 mt6 wrap">${chipsFor(e.primary, 'warm', 'var(--warm)')}</div>
    ${e.secondary.length ? html`<div class="mt10 small b">${t('library.secondary')}</div><div class="row gap6 mt6 wrap">${chipsFor(e.secondary, 'accent', 'var(--accent)')}</div>` : ''}
-   <div class="row gap8 mt12 restpill">${ic('timer', 18, 2.2, 'var(--accent-d)')}<span class="small b">${t('library.defaultRest')} <span class="acc">${e.rest} s</span></span></div></div>
+   <div class="row gap8 mt12 restpill">${ic('timer', 18, 2.2, 'var(--accent-d)')}<span class="small b">${t('library.defaultRest')} <span class="acc">${e.rest} ${t('unit.s')}</span></span></div></div>
 </div>
 <div class="card mt12 tech">${techniqueSections(id)}</div>
 <a class="btn yt mt12" href="${youtubeUrl(id)}" target="_blank" rel="noopener"><svg width="26" height="18" viewBox="0 0 26 18" aria-hidden="true"><rect width="26" height="18" rx="5" fill="#fff"/><path d="M10.5 5v8l7-4z" fill="#E5484D"/></svg>${t('library.youtube')}</a>

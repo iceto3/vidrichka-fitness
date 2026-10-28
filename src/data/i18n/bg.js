@@ -184,7 +184,7 @@ export default {
   'library.favourite': 'Любимо',
   'library.strength': 'Сила',
   'library.notFound': 'Упражнението не е намерено.',
-  // 1.4.2 verified technique (features/library/figure.js)
+  // 1.4.1 verified technique (features/library/figure.js)
   'technique.setup': 'Изходна позиция',
   'technique.steps': 'Изпълнение',
   'technique.breathing': 'Дишане',
@@ -192,10 +192,10 @@ export default {
   'technique.mistakes': 'Чести грешки → как да ги избегнеш',
   'technique.mistake': 'Грешка',
   'technique.fix': 'Как да я избегнеш',
-  'technique.muscles': 'Работещи мускули',
+  'technique.muscles': 'Подробно за мускулите',
   'technique.sources': 'Източници',
   'technique.bgOnly': 'Описанията на техниката са на български.',
-  'whatsNew.technique142':
+  'whatsNew.technique141':
     'Нови, точни илюстрации и описания на техниката за всички 20 упражнения, с ключови точки и чести грешки, сверени с NSCA, ACE и ExRx.',
   'equip.barbell': 'Щанга',
   'equip.bodyweight': 'Собствено тегло',
@@ -229,6 +229,7 @@ export default {
   'unit.reps': 'Повт.',
   'unit.perLeg': 'Повт./крак',
   'unit.sec': 'Секунди',
+  'unit.s': 'сек',
   'unit.repsShort': 'повт.',
   'unit.min': 'мин',
   // food

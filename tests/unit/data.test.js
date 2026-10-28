@@ -69,7 +69,7 @@ test('every literal t("key") used in the source exists in en', () => {
   assert.ok(used.size > 100);
 });
 
-test('exercise library: 15–20 exercises with bilingual names, muscles and rest (technique: v142 test)', () => {
+test('exercise library: 15–20 exercises with bilingual names, muscles and rest (technique: v141 test)', () => {
   assert.ok(EXERCISES.length >= 15 && EXERCISES.length <= 20, String(EXERCISES.length));
   for (const e of EXERCISES) {
     assert.ok(e.name.en && e.name.bg, e.id);

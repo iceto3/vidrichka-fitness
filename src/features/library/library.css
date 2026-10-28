@@ -1,6 +1,6 @@
 /**
  * Exercise library styles: list rows, filters, illustration frames, muscle map, technique
- * sections (1.4.2). The illustration palette itself is figure.css (generated).
+ * sections (1.4.1). The illustration palette itself is figure.css (generated).
  * Ported from E_CSS.
  */
 .fchip {
@@ -86,7 +86,7 @@
   text-decoration: none;
 }
 
-/* 1.4.2 illustration: two frames side by side on wide screens, stacked on a phone so the
+/* 1.4.1 illustration: two frames side by side on wide screens, stacked on a phone so the
    drawing and markers stay at full size. */
 .tfigs {
   display: grid;
@@ -173,6 +173,33 @@
 }
 .tsec h3 {
   margin: 0 0 8px;
+}
+/* 1.4.1: Подробно за мускулите – collapsed by default */
+.tmore > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+.tmore > summary::-webkit-details-marker {
+  display: none;
+}
+.tmore > summary h3 {
+  margin: 0;
+}
+.tmore .tchev {
+  display: flex;
+  color: var(--muted);
+  transition: transform 0.2s;
+}
+.tmore[open] .tchev {
+  transform: rotate(180deg);
+}
+.tmore[open] > summary {
+  margin-bottom: 8px;
 }
 .tlist {
   margin: 0;

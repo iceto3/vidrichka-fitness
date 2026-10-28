@@ -1,5 +1,5 @@
 /**
- * Exercise thumbnail (1.4.2): frame 2 of the verified illustration, cropped and without
+ * Exercise thumbnail (1.4.1): frame 2 of the verified illustration, cropped and without
  * markers. Inline SVG, so it follows the app's light/dark theme. Kept out of library/api.js
  * so the thumbnails only load with the views that show them.
  * @module features/library/thumb

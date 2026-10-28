@@ -91,7 +91,7 @@
   width: 52px;
   height: 52px;
 }
-/* 1.4.2: the exercise thumbnail sits on the illustration panel colour */
+/* 1.4.1: the exercise thumbnail sits on the illustration panel colour */
 .exicon:has(svg.vf) {
   background: linear-gradient(180deg, #e9f6f6, #d6eeee);
   overflow: hidden;

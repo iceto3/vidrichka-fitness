@@ -1,5 +1,5 @@
 /**
- * 1.4.2: verified exercise technique – every exercise has complete technique content and a
+ * 1.4.1: verified exercise technique – every exercise has complete technique content and a
  * two-frame illustration, and nothing of the old unverified steps/tips/stick figures is left.
  */
 import test from 'node:test';
@@ -137,7 +137,7 @@ test('technique sheet / page: sections in order, mistakes as mistake → fix, so
     'Дишане',
     'Ключови точки',
     'Чести грешки → как да ги избегнеш',
-    'Работещи мускули',
+    'Подробно за мускулите',
     'Източници',
   ]);
   assert.match(before, /1 · Изходна позиция/);
@@ -167,20 +167,20 @@ test('gendered technique text resolves to one form', async () => {
   await setLang('en');
 });
 
-test("1.4.2: version, What's new entry in Bulgarian", async () => {
+test("1.4.1: version, What's new entry in Bulgarian", async () => {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-  assert.equal(pkg.version, '1.4.2');
+  assert.equal(pkg.version, '1.4.1');
   const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.4.2');
+  assert.equal(APP_VERSION, '1.4.1');
   const { NOTES, newSince } = await import('../../src/features/whatsnew/notes.js');
-  assert.equal(NOTES[0].v, '1.4.2');
+  assert.equal(NOTES[0].v, '1.4.1');
   assert.deepEqual(
-    newSince('1.4.0', { voice: false, push: false }, NOTES, '1.4.2').items.map(([, k]) => k),
-    ['whatsNew.technique142'],
+    newSince('1.4.0', { voice: false, push: false }, NOTES, '1.4.1').items.map(([, k]) => k),
+    ['whatsNew.technique141'],
   );
   assert.equal(
-    bg['whatsNew.technique142'],
+    bg['whatsNew.technique141'],
     'Нови, точни илюстрации и описания на техниката за всички 20 упражнения, с ключови точки и чести грешки, сверени с NSCA, ACE и ExRx.',
   );
-  assert.ok(en['whatsNew.technique142']);
+  assert.ok(en['whatsNew.technique141']);
 });

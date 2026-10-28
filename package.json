@@ -1,6 +1,6 @@
 {
   "name": "vidrichka-fitness",
-  "version": "1.4.2",
+  "version": "1.4.1",
   "private": true,
   "description": "Vidrichka Fitness – offline-first personal fitness PWA (vanilla JS ES modules, zero runtime dependencies).",
   "type": "module",
