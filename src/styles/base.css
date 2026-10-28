@@ -36,7 +36,10 @@
   --blue-soft: #e0f0ff;
   --violet: #7c5cff;
   --shadow: 0 1px 2px rgba(19, 35, 44, 0.04), 0 6px 20px rgba(19, 35, 44, 0.06);
-  --sat: env(safe-area-inset-top, 0px);
+  /* 1.4.1: --updh is the height the "new version" bar takes at the top (0 when it is not shown), so
+     every header, close and Край button that is placed below var(--sat) moves down under it */
+  --updh: 0px;
+  --sat: calc(env(safe-area-inset-top, 0px) + var(--updh));
   --sab: env(safe-area-inset-bottom, 0px);
   --nav-h: calc(66px + max(18px, var(--sab)));
   color-scheme: light;
@@ -134,7 +137,9 @@ a {
   position: relative;
 }
 #page {
+  /* --nav-h already holds the bottom safe area; 1.4.1: the last card always ends above the nav */
   padding-bottom: calc(var(--nav-h) + 16px);
+  scroll-padding-bottom: calc(var(--nav-h) + 16px);
 }
 body.no-nav #page {
   padding-bottom: calc(24px + var(--sab));

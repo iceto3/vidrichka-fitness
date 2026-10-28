@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.1] – 2026-10-28
+
+### Changed
+
+- **Verified exercise technique** for all 20 exercises (ids unchanged). The old placeholder stick figures (`features/library/figures.js`) and the unverified `steps`/`tips` texts are removed. Each exercise now has a two-frame illustration (start/end position) with numbered markers and a legend, and Bulgarian sections: **Изходна позиция**, **Изпълнение**, **Дишане**, **Ключови точки**, **Чести грешки → как да ги избегнеш** (each mistake with its fix), **Подробно за мускулите** (collapsible) and small **Източници** links (NSCA, ACE, ExRx). Shown on the exercise page and in the technique sheet during a workout; the library list and the workout rows use thumbnails of the new drawings.
+- The content is generated from the verified set in `exercise-styles/final` by `tools/make-technique.mjs`: `src/data/technique.js` (texts), `src/data/figures/<id>.js` (two svgo-optimised inline SVG frames per exercise, ids prefixed per exercise, one lazy chunk each and precached by the service worker, so they work offline), `src/data/figure-thumbs.js` and `src/features/library/figure.css` (light and `.dark` palette, app font).
+- Technique texts are Bulgarian only; in English the sections show a short note.
+- What's new entry for 1.4.1.
+
+### Fixed (beta tester round)
+
+- **Update bar** („Има нова версия. Обнови“) no longer covers **Край** or any top button: it sits in its own strip under the notch, and while it is shown `--updh` pushes every header, Край and close button down (`--sat` = safe area + `--updh`). New SW e2e: during a workout, Край is hit-testable and a normal click opens its dialog (412×860, 390×844, 360×740).
+- **Bottom nav** stays pinned to the bottom of the screen on every page. It is centred with `left/right + margin` instead of a transform, and `ui/nav-pin.js` keeps it on the visible part of the screen while the page is pinch-zoomed (before, with zoom it stayed at the bottom of the unzoomed page and scrolled away with the content, on Android and iPhone). New e2e: exercise page, food and progress scrolled to the end on Android and iPhone, plus pinch-zoom on Android.
+- **Sources** show only the title and the link; the notes about the drawings moved to the verification notes. Клек с щанга cites ACE **Back Squat** (not Bodyweight Squat).
+- **Bulgarian only:** no English/Latin words left in the technique texts (bracing, butt wink, V-дръжка, cm …), source titles and brands aside; the rest time on the exercise page reads „45 сек“.
+- **One muscle glossary** (`src/data/muscle-glossary.js`): every muscle is written in one form in all 20 exercises; the section is now the collapsible **Подробно за мускулите** (collapsed by default; a tapped-open section stays open on re-render).
+- **Drawings:** Клек с щанга bottom position redrawn (bar over mid-foot, torso 37° forward, shins 27°, thighs just below parallel, heels down; plus a 3rd marker for the bar); Мъртва буболечка frame 2 shows the opposite arm extended back over the head toward the floor. Smoother wording in several texts and legends.
+- **Sources listed once:** Хоризонтален скрипец showed „ACE Exercise Library – Seated Row“ twice (two ACE pages with the same title); the duplicate (machine row, ACE 168) is removed from the source card, and `tools/make-technique.mjs` now drops any repeated source (same title or same link) for every exercise. New unit test: no exercise has duplicate sources.
+- **Build id** (e.g. `1.4.1-beta-<hash>`) in the Profile footer, at the top of Какво ново and in the What's new popup.
+
 ## [1.4.0] – 2026-10-28
 
 ### Added

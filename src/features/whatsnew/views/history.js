@@ -8,24 +8,18 @@ import { html } from '../../../ui/dom.js';
 import { t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
 import { topBar } from '../../../ui/components.js';
-import { APP_VERSION } from '../../../core/version.js';
+import { APP_VERSION, buildId } from '../../../core/version.js';
 import { IS_BETA } from '../../../core/channel.js';
 import { pushUrl } from '../../daily/push-config.js';
 import { voiceUrl } from '../../voice/config.js';
 import { allNotes } from '../notes.js';
-
-/** The full build id written into index.html by the build (e.g. 1.4.0-beta-<hash>); the app version in dev. */
-function buildId() {
-  if (typeof document === 'undefined') return APP_VERSION;
-  return document.querySelector('meta[name="vf-build"]')?.getAttribute('content') || APP_VERSION;
-}
 
 /** @returns {import('../../../core/registry.js').View} */
 export default () => ({
   tab: 'profile',
   render: () => {
     const notes = allNotes({ voice: !!voiceUrl(), push: !!pushUrl() }, APP_VERSION);
-    return html`<div class="content whatsnewpage">${topBar(t('whatsNew.page'), `v${APP_VERSION}${IS_BETA ? ' · БЕТА' : ''}`)}
+    return html`<div class="content whatsnewpage">${topBar(t('whatsNew.page'), `${buildId()}${IS_BETA ? ' · БЕТА' : ''}`)}
 ${notes.map(
   (
     r,

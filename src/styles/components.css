@@ -136,19 +136,26 @@ button.chip {
   color: var(--text);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
+/* 1.4.1: pinned to the bottom of the screen on every page. Centred with left/right + margin, so the only
+   transform is the one ui/nav-pin.js sets to keep the bar on screen while the page is pinch-zoomed */
 .nav {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  margin: 0 auto;
   width: 100%;
   max-width: 480px;
   bottom: 0;
+  transform-origin: 0 100%;
   height: var(--nav-h);
   background: var(--card);
   border-top: 1px solid var(--line);
   display: flex;
   padding: 8px 8px max(18px, var(--sab));
   z-index: 20;
+}
+#nav.pinned .nav {
+  transform: translate(var(--pin-x, 0px), var(--pin-y, 0px)) scale(var(--pin-s, 1));
 }
 .nav .t {
   flex: 1;
@@ -542,11 +549,12 @@ html[lang='bg'] .nav .t {
   border-radius: 999px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
+/* 1.4.1: the bar sits in its own strip under the notch; html.has-upd + --updh push the rest down */
 .update-bar {
   position: fixed;
   left: 12px;
   right: 12px;
-  top: calc(var(--sat) + 10px);
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
   z-index: 70;
   max-width: 456px;
   margin: 0 auto;

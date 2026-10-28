@@ -8,7 +8,7 @@ import { t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
 import { seg, topBar } from '../../../ui/components.js';
 import { EXERCISES, MUSCLE_GROUPS, exName, muscleTags } from '../api.js';
-import { stepFigure } from '../figures.js';
+import { exThumb } from '../thumb.js';
 
 const f = { place: 'all', group: 'all' };
 
@@ -44,7 +44,7 @@ export const filters = () => html`${seg(
  * @param {any} [right]
  */
 export const exRow = (e, attrs, right = ic('right', 18, 2.2, 'var(--muted)')) =>
-  html`<button class="exrow" ${raw(attrs)}><span class="exthumb">${raw(stepFigure(e.fig, 1))}</span>
+  html`<button class="exrow" ${raw(attrs)}><span class="exthumb" aria-hidden="true">${exThumb(e.id)}</span>
 <span class="f1"><span class="b exname">${exName(e.id)}</span><span class="row gap6 mt6 wrap">${muscleTags(e, 2)}</span></span>${right}</button>`;
 
 /** Shared filter actions. */

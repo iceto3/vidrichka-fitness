@@ -8,12 +8,14 @@
  *  3. a fresh install: controlled after the first load, offline reload and a new offline tab
  *     load the app shell, no cached response is redirected and 'index.html' is not cached;
  *  4. a slow network: the cached shell after the navigation timeout;
- *  5. /repair is a static page the worker never intercepts; it unregisters and clears caches
+ *  5. (1.4.1) the update bar during a workout never covers Край or the top buttons (phone sizes);
+ *  6. /repair is a static page the worker never intercepts; it unregisters and clears caches
  *     and reopens the app; Profile links to it; the build id is shown in full.
  * Usage: node tests/e2e/sw.mjs --dir dist-beta [--prev /path/to/previous/dist-beta]
  */
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { existsSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import assert from 'node:assert/strict';
@@ -39,6 +41,8 @@ const TYPES = /** @type {Record<string, string>} */ ({
 const srv = { root: PREV || DIR, slowHtml: 0 };
 const isFile = async (/** @type {string} */ f) => (await stat(f).catch(() => null))?.isFile() ?? false;
 const LOG = process.env.SW_E2E_LOG ? [] : null;
+/** SW_SHOTS=<dir>: also save screenshots of the update bar cases */
+const SHOTS = process.env.SW_SHOTS ?? '';
 const server = createServer(async (req, res) => {
   if (LOG) res.on('finish', () => LOG.push(`${res.statusCode} ${req.url}`));
   const url = new URL(req.url ?? '/', 'http://x');
@@ -235,6 +239,87 @@ try {
     const txt = await page.textContent('#buildid', { timeout: 10000 }).catch(() => '');
     assert.ok(txt?.includes(NEW), `build label "${txt}" has ${NEW}`);
   });
+  // 1.4.1: a second copy of the build whose sw.js differs by one comment = "a new version is out"
+  const NEXT = await mkdtemp(join(tmpdir(), 'vf-next-'));
+  await cp(DIR, NEXT, { recursive: true });
+  await writeFile(join(NEXT, 'sw.js'), `${await readFile(join(DIR, 'sw.js'), 'utf8')}\n// next\n`);
+  /** [viewport, from, to]: each phone size updates in the opposite direction */
+  const sizes = /** @type {[{width: number, height: number}, string, string][]} */ ([
+    [{ width: 412, height: 860 }, DIR, NEXT],
+    [{ width: 390, height: 844 }, NEXT, DIR],
+    [{ width: 360, height: 740 }, DIR, NEXT],
+  ]);
+  for (const [vp, from, to] of sizes) {
+    await step(
+      `update bar during a workout (${vp.width}×${vp.height}): Край and the top buttons stay clickable`,
+      async () => {
+        srv.root = from;
+        const c2 = await browser.newContext({ viewport: vp, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+        const p = await c2.newPage();
+        await p.goto(BASE);
+        await appLoaded(p);
+        await p.locator('#layer input').first().fill('Maria');
+        await p.locator('#layer .btn').last().click();
+        await p.waitForTimeout(800);
+        await p.evaluate(() => (location.hash = '#/home'));
+        await p.locator('.wcard [data-act="start"]').first().click();
+        await p.locator('.wtop .finish').waitFor();
+        const before = await p.locator('.wtop .finish').boundingBox();
+        // the new version appears while the workout runs
+        srv.root = to;
+        await p.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update());
+        await p.waitForSelector('#updatebar', { timeout: 15000 });
+        await p.waitForTimeout(400);
+        const bar = /** @type {{x: number, y: number, width: number, height: number}} */ (
+          await p.locator('#updatebar').boundingBox()
+        );
+        /** every top button: hit-testable at its centre and not under the bar */
+        const free = async (/** @type {string} */ sel, /** @type {string} */ what) => {
+          const els = await p.locator(sel).all();
+          assert.ok(els.length, `${what}: found`);
+          for (const el of els) {
+            const b = /** @type {{x: number, y: number, width: number, height: number}} */ (await el.boundingBox());
+            assert.ok(
+              b.y >= bar.y + bar.height,
+              `${what} (top ${b.y}) is below the bar (bottom ${bar.y + bar.height})`,
+            );
+            const hit = await el.evaluate((e) => {
+              const r = e.getBoundingClientRect();
+              const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              return !!h && e.contains(h);
+            });
+            assert.ok(hit, `${what}: nothing covers it`);
+          }
+        };
+        if (SHOTS) await p.screenshot({ path: join(SHOTS, `update-bar-workout-${vp.width}x${vp.height}.png`) });
+        await free('.wtop .finish', 'Край');
+        await free('.wtop .iconbtn', 'minimise');
+        assert.ok(before && (await p.locator('.wtop .finish').boundingBox())?.y !== undefined);
+        // a normal click (no force) on Край opens its dialog
+        await p.locator('.wtop .finish').click({ timeout: 3000 });
+        await p
+          .locator('#layer .panel, #layer [role="dialog"], #layer [role="alertdialog"]')
+          .first()
+          .waitFor({ timeout: 5000 });
+        assert.ok(await p.locator('#updatebar').isVisible(), 'the bar is still there');
+        // other screens with top buttons: a page header with back, and the bar's own button works
+        await p.keyboard.press('Escape');
+        await p.evaluate(() => (location.hash = '#/whatsnew'));
+        await p.waitForTimeout(500);
+        await free('.content [data-back]', "What's new back");
+        await p.evaluate(() => (location.hash = '#/exercise/back_squat'));
+        await p.waitForTimeout(500);
+        await free('.content [data-back]', 'exercise page back');
+        if (SHOTS) await p.screenshot({ path: join(SHOTS, `update-bar-exercise-${vp.width}x${vp.height}.png`) });
+        const h1 = await p.locator('.content h1').first().boundingBox();
+        assert.ok(h1 && h1.y >= bar.y + bar.height, 'page title is below the bar');
+        assert.ok(bar.y >= 0 && bar.y + bar.height <= 120, `bar sits at the top (${bar.y}+${bar.height})`);
+        await c2.close();
+      },
+    );
+  }
+  await rm(NEXT, { recursive: true, force: true });
+  srv.root = DIR;
   await step('Profile links to /repair („Поправи приложението“)', async () => {
     await page.goto(`${BASE}#/profile`);
     await appLoaded(page);

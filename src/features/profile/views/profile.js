@@ -19,7 +19,7 @@ import { GEAR_LEVELS, OUTFITS, otter, otterName } from '../../mascot/api.js';
 import { badges, level, recordGoal, stats } from '../../motivation/api.js';
 import { canInstall, installApp, isIOS } from '../install.js';
 import { dailyOnCount } from '../../daily/api.js';
-import { APP_VERSION } from '../../../core/version.js';
+import { APP_VERSION, buildId } from '../../../core/version.js';
 import { IS_BETA } from '../../../core/channel.js';
 import { GOAL_MAX, GOAL_MIN, GOAL_STEP } from '../../steps/logic.js';
 
@@ -186,7 +186,7 @@ ${srow('chart', 'blue', t('profile.shareFoods'), t('profile.shareFoodsSub'), tog
 ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic teal">${ic('download', 19, 2.2)}</span><span class="t left"><span class="st block">${t('install.cta')}</span><span class="muted xs b">${isIOS() ? t('install.iosShort') : t('install.cardBody')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>` : ''}
 </div>
 <button class="btn sec danger-t w100 mt16" data-act="reset">${ic('trash', 18)}${t('profile.reset')}</button>
-<button class="linkbtn xs center w100 mt12 pfooter" data-go="whatsnew">Vidrichka Fitness v${APP_VERSION}${IS_BETA ? ' · БЕТА' : ''} · ${t('profile.local')}</button>
+<button class="linkbtn xs center w100 mt12 pfooter" data-go="whatsnew">Vidrichka Fitness v${APP_VERSION}${IS_BETA ? ' · БЕТА' : ''} · ${t('profile.local')}<span class="block" id="pbuild">${t('whatsNew.build', { id: buildId() })}</span></button>
 <div class="pfspace" aria-hidden="true"></div>
 </div>`;
   },

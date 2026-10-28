@@ -6,7 +6,8 @@
  *   - "iphone":  WebKit, iPhone 14 profile (iOS Safari engine)
  * Flows: onboarding → workout (steppers, Done locks set, rest timer, skip, finish) → summary;
  * food via category → grams sheet → second item → "save as regular meal?" prompt;
- * a body measurement; Bulgarian language; dark theme; backup export; offline reload (Chromium).
+ * a body measurement; Bulgarian language; dark theme; backup export; offline reload (Chromium);
+ * 1.4.1 exercise technique (library thumbnails, page + in-workout sheet, light/dark, offline drawings).
  * 1.1: + buttons update in place (same DOM nodes, sheet animation not restarted, scroll kept);
  * daily rhythm on a fixed clock: 7:30 in-app prompt → #morning countdown (survives reload) →
  * "Yes, I ate" small celebration; 11:00 and 19:30 check-ins; goodnight ritual; four nights →
@@ -342,6 +343,8 @@ async function run(name, browser, P) {
   await v133(page, h, name);
   await v134(page, h, name);
   await v140(page, h);
+  await v141(page, h, name, ctx);
+  await v141tester(page, h, name, ctx);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -1560,13 +1563,14 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.0/);
+  assert.match(txt, /Какво ново в 1\.4\.1/);
+  assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
   assert.match(txt, /Отмени/, 'the 1.3.2 pill item');
   assert.match(txt, /преименуваш/, 'the 1.3.2 rename item');
   assert.match(txt, /Запиши/, 'the 1.3.3 recording item');
   assert.doesNotMatch(txt, /What's new|Undo|Rename|Record/, 'no English');
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
-  assert.equal(await layer.locator('.whatsnew > div').count(), 19, 'the 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 20, 'the 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items');
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
@@ -1870,10 +1874,11 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.0/);
+  assert.match(txt, /Какво ново в 1\.4\.1/);
+  assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
   assert.match(txt, /Запиши/);
   assert.match(txt, /Обичайният ти обяд/);
-  assert.equal(await layer.locator('.whatsnew > div').count(), 16, 'the 1.4.0, 1.3.4 and 1.3.3 items');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 17, 'the 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items');
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
@@ -1975,11 +1980,12 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.0/);
+  assert.match(txt, /Какво ново в 1\.4\.1/);
+  assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
   assert.match(txt, /крачки/i);
   assert.match(txt, /Обратна връзка/);
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
-  assert.equal(await layer.locator('.whatsnew > div').count(), 14, 'the eight 1.4.0 and six 1.3.4 items');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 15, 'the 1.4.1 item, eight 1.4.0 and six 1.3.4 items');
   await page.waitForTimeout(700);
   await shot('whats-new-134');
   await layer.locator('[data-close]').first().click();
@@ -2632,5 +2638,261 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await settle();
   console.log(
     '  ✔ 1.4.0 online search via the Worker (1 request), ends ("not available" + retry), brand once, unknown "–", step „2,5“; missing values named + filled in (grams sheet and diary item), impossible OFF values filtered (search + barcode → „Въведи я сам“)',
+  );
+}
+
+/**
+ * 1.4.1 verified technique: library thumbnails, the exercise page and the in-workout sheet show the
+ * two-frame drawing with numbered markers + legend, the sections, mistakes as mistake → fix and the
+ * sources; readable on a phone (no sideways scroll, ≥ 14 px text) in light and dark; with a built
+ * app (service worker) the drawings of a not yet opened exercise also load offline.
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ * @param {string} name
+ * @param {import('playwright-core').BrowserContext} ctx
+ */
+async function v141(page, { go, settle, shot, layer, clearCel }, name, ctx) {
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
+  const noSideScroll = async (/** @type {string} */ what) =>
+    assert.ok(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      `${what}: no sideways scroll`,
+    );
+  const heads = [
+    'Изходна позиция',
+    'Изпълнение',
+    'Дишане',
+    'Ключови точки',
+    'Чести грешки → как да ги избегнеш',
+    'Подробно за мускулите',
+    'Източници',
+  ];
+  /** Checks one technique view (page or sheet) inside `root`. */
+  const checkTech = async (/** @type {import('playwright-core').Locator} */ root, /** @type {string} */ what) => {
+    await root.locator('.tsvg svg.vf').nth(1).waitFor({ timeout: 8000 });
+    assert.equal(await root.locator('.tsvg.wait').count(), 0, `${what}: both drawings loaded`);
+    assert.equal(await root.locator('figure.tfig').count(), 2, `${what}: 2 frames`);
+    for (const f of await root.locator('figure.tfig').all()) {
+      const markers = await f.locator('svg .c-cot').count();
+      assert.ok(markers >= 1, `${what}: numbered markers`);
+      assert.equal(await f.locator('.tleg li').count(), markers, `${what}: legend = markers`);
+    }
+    assert.deepEqual(await root.locator('.tech h3').allTextContents(), heads, `${what}: sections`);
+    const mis = await root.locator('.tmist li').count();
+    assert.ok(mis >= 3, `${what}: mistakes`);
+    assert.equal(await root.locator('.tmist .mis').count(), mis);
+    assert.equal(await root.locator('.tmist .fix').count(), mis, `${what}: every mistake has a fix`);
+    const links = await root
+      .locator('.tsrc a')
+      .evaluateAll((as) => as.map((a) => [a.getAttribute('href'), a.getAttribute('rel')]));
+    assert.ok(
+      links.length >= 1 && links.every(([u, r]) => /^https:\/\//.test(u ?? '') && /noopener/.test(r ?? '')),
+      `${what}: source links`,
+    );
+    const px = await root
+      .locator('.tech .tlist li, .tleg li span, .tmist p')
+      .evaluateAll((els) => Math.min(...els.map((e) => parseFloat(getComputedStyle(e).fontSize))));
+    assert.ok(px >= 14, `${what}: readable text (${px}px)`);
+    const w = await root
+      .locator('.tsvg')
+      .first()
+      .evaluate((e) => e.getBoundingClientRect().width);
+    assert.ok(w >= 280, `${what}: drawing uses the phone width (${w}px)`);
+    await noSideScroll(what);
+  };
+
+  for (const theme of ['light', 'dark']) {
+    await go('profile');
+    await page.locator(`[data-act="theme"][data-v="${theme}"]`).click();
+    await settle();
+    assert.equal(await page.evaluate(() => document.documentElement.classList.contains('dark')), theme === 'dark');
+    // library list: a thumbnail of the new drawing for every exercise
+    await go('library');
+    await page.locator('.exthumb svg.vf').first().waitFor();
+    assert.equal(await page.locator('.exthumb svg.vf').count(), 20, 'library: 20 thumbnails');
+    await noSideScroll('library');
+    await page.evaluate(() => scrollTo(0, 0));
+    await shot(`tech-library-${theme}`);
+    // exercise page
+    await page.locator('[data-go="exercise/back_squat"]').click();
+    await settle();
+    await checkTech(page.locator('.content'), `page (${theme})`);
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.waitForTimeout(200);
+    await shot(`tech-page-${theme}`);
+    await shot(`tech-page-${theme}-full`, true);
+    // in a workout: the sheet over the set
+    await go('home');
+    await clearCel();
+    if (!(await page.locator('.wtop').count())) {
+      await page.locator('.wcard [data-act="start"]').first().click();
+      await page.locator('.wtop').waitFor();
+    }
+    await page.locator('[data-act="howTo"]').first().click();
+    await layer.locator('.panel .tfig').first().waitFor();
+    await checkTech(layer.locator('.panel').last(), `sheet (${theme})`);
+    await page.waitForTimeout(300);
+    await shot(`tech-sheet-${theme}`);
+    await layer.locator('.panel').last().locator('.tsec').nth(4).scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
+    await shot(`tech-sheet-${theme}-mistakes`);
+    await layer.locator('[data-close]').last().click();
+    await settle();
+    assert.equal(await layer.locator('.panel').count(), 0, 'sheet closes, the set stays');
+    assert.equal(await page.locator('.wtop').count(), 1);
+  }
+
+  // Offline drawings (only a built app precaches them; the source dev server does not)
+  if (name === 'android' && DIR !== '.') {
+    await ctx.setOffline(true);
+    await go('exercise/lateral_raise');
+    await checkTech(page.locator('.content'), 'offline page');
+    await go('exercise/dead_bug');
+    await page.locator('.content .tsvg svg.vf').nth(1).waitFor({ timeout: 8000 });
+    await ctx.setOffline(false);
+    console.log('  ✔ 1.4.1 drawings of not yet opened exercises load offline');
+  }
+  await go('profile');
+  await page.locator('[data-act="theme"][data-v="light"]').click();
+  await page.locator('.lang [data-v="en"]').click();
+  await settle();
+  console.log(
+    '  ✔ 1.4.1 technique: 20 thumbnails, page + workout sheet with 2 frames, markers = legend, 7 sections, mistake → fix, sources; phone-readable in light and dark',
+  );
+}
+
+/**
+ * 1.4.1 tester round: "Подробно за мускулите" collapsed by default, the full build id in the Profile
+ * footer and on the What's new page, and the bottom nav pinned to the bottom of the screen while
+ * long pages (exercise page, food, progress) scroll – also while the page is pinch-zoomed.
+ * (The update bar over Край is covered by tests/e2e/sw.mjs, which needs a real worker update.)
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ * @param {string} name
+ * @param {import('playwright-core').BrowserContext} ctx
+ */
+async function v141tester(page, { go, settle, shot }, name, ctx) {
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
+  // build id: 1.4.1-<hash> / 1.4.1-beta-<hash> from a build, the plain version from the sources
+  const idRe = DIR === '.' ? /^Билд: 1\.4\.1$/ : /^Билд: 1\.4\.1(-beta)?-[0-9a-f]{7,}$/;
+  const meta = await page.evaluate(
+    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.4.1',
+  );
+  const foot = page.locator('#pbuild');
+  await foot.scrollIntoViewIfNeeded();
+  assert.ok(await foot.isVisible(), 'Profile footer shows the build id');
+  assert.match((await foot.textContent())?.trim() ?? '', idRe);
+  assert.equal((await foot.textContent())?.trim(), `Билд: ${meta}`);
+  await go('whatsnew');
+  assert.match(
+    (await page.locator('.content').first().textContent()) ?? '',
+    new RegExp(meta.replace(/\./g, '\\.')),
+    "What's new shows the build id",
+  );
+  assert.ok(await page.locator('#buildid').isVisible());
+
+  // muscles: collapsed by default, opens on tap
+  await go('exercise/back_squat');
+  await page.locator('.content .tsvg svg.vf').nth(1).waitFor({ timeout: 8000 });
+  const det = page.locator('.content details.tmore');
+  assert.equal(await det.count(), 1);
+  assert.equal(await det.getAttribute('open'), null, 'Подробно за мускулите is collapsed');
+  assert.equal(await det.locator('summary h3').textContent(), 'Подробно за мускулите');
+  assert.ok(!(await det.locator('.tmus').isVisible()), 'muscle list hidden while collapsed');
+  await det.locator('summary').click();
+  await page.waitForTimeout(150);
+  assert.ok(await det.locator('.tmus').isVisible(), 'muscle list shows after a tap');
+  assert.doesNotMatch(
+    (await page.locator('.content').textContent()) ?? '',
+    /илюстрацията|нарисуван|няма отделна страница|показва вариант|bracing|butt wink/i,
+  );
+
+  // bottom nav stays at the bottom of the viewport while long pages scroll
+  const navAt = () =>
+    page.evaluate(() => {
+      const nav = /** @type {HTMLElement} */ (document.querySelector('#nav .nav'));
+      const r = nav.getBoundingClientRect();
+      const v = /** @type {VisualViewport} */ (visualViewport);
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      const page = document.getElementById('page');
+      const last = [...(page?.querySelectorAll('.content > *') ?? [])]
+        .filter((e) => e.getBoundingClientRect().height > 0)
+        .pop();
+      return {
+        top: r.top,
+        bottom: r.bottom,
+        height: r.height,
+        ih: innerHeight,
+        vTop: v.offsetTop,
+        vBottom: v.offsetTop + v.height,
+        scale: v.scale,
+        onTop: !!hit && nav.contains(hit),
+        y: scrollY,
+        max: document.documentElement.scrollHeight - innerHeight,
+        lastBottom: last ? last.getBoundingClientRect().bottom : 0,
+      };
+    });
+  const scrollDown = async () => {
+    for (let i = 0; i < 12; i++) {
+      if (name === 'android') await page.mouse.wheel(0, 400);
+      else await page.evaluate(() => scrollBy(0, 400)); // mobile WebKit has no wheel events
+      await page.waitForTimeout(60);
+    }
+    await page.waitForTimeout(250);
+  };
+  for (const route of ['exercise/back_squat', 'food', 'progress']) {
+    await go(route);
+    await page.waitForTimeout(route.startsWith('exercise') ? 500 : 250);
+    await page.mouse.move(200, 300);
+    const a = await navAt();
+    assert.ok(Math.abs(a.bottom - a.ih) <= 1 && a.onTop, `${route}: nav at the bottom before scrolling`);
+    await page.evaluate(() => scrollTo(0, 300));
+    await page.waitForTimeout(200);
+    const m = await navAt();
+    assert.ok(Math.abs(m.bottom - m.ih) <= 1 && m.onTop, `${route}: nav pinned mid-page (${JSON.stringify(m)})`);
+    await scrollDown();
+    const b = await navAt();
+    assert.ok(Math.abs(b.bottom - b.ih) <= 1 && b.onTop, `${route}: nav pinned at the end (${JSON.stringify(b)})`);
+    if (route.startsWith('exercise'))
+      assert.ok(b.max > 1000 && b.y > 1000, `${route}: a long page really scrolled (${b.y})`);
+    // the last card ends above the nav, so nothing is hidden behind it
+    assert.ok(b.lastBottom <= b.top + 1, `${route}: content clears the nav (${b.lastBottom} vs ${b.top})`);
+    await shot(`nav-${route.replace('/', '-')}-end`);
+  }
+  // pinch-zoomed (only Chromium can set the zoom from a test): the nav stays on the visible part
+  if (name === 'android') {
+    await go('exercise/back_squat');
+    await page.waitForTimeout(400);
+    const a0height = (await navAt()).height;
+    const cdp = await ctx.newCDPSession(page);
+    await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 2 });
+    for (const y of [0, 900, 1800]) {
+      await page.evaluate((y) => scrollTo(0, y), y);
+      await page.waitForTimeout(300);
+      const z = await navAt();
+      assert.ok(z.scale > 1.9, 'zoomed');
+      assert.ok(
+        Math.abs(z.bottom - z.vBottom) <= 2,
+        `zoomed: nav at the bottom of the visible part (${JSON.stringify(z)})`,
+      );
+      assert.ok(Math.abs(z.height * z.scale - a0height) <= 3, 'zoomed: nav keeps its normal size');
+    }
+    await shot('nav-zoomed');
+    await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
+    await page.waitForTimeout(300);
+    const back = await navAt();
+    assert.ok(Math.abs(back.bottom - back.ih) <= 1 && back.onTop, 'nav back in place after zooming out');
+    assert.equal(await page.evaluate(() => document.getElementById('nav')?.classList.contains('pinned')), false);
+    await cdp.detach();
+  }
+  await go('profile');
+  await page.locator('.lang [data-v="en"]').click();
+  await settle();
+  console.log(
+    `  ✔ 1.4.1 tester: build id ${meta} in Profile + What's new, muscles collapsed, nav pinned on exercise/food/progress${name === 'android' ? ' (also pinch-zoomed)' : ''}`,
   );
 }

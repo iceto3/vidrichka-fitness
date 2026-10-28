@@ -12,6 +12,7 @@
 
 /** @type {Release[]} */
 export const NOTES = [
+  { v: '1.4.1', items: [['dumbbell', 'whatsNew.technique141']] },
   {
     v: '1.4.0',
     items: [

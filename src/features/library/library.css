@@ -1,5 +1,6 @@
 /**
- * Exercise library styles: list rows, filters, detail step figures, muscle map, tips.
+ * Exercise library styles: list rows, filters, illustration frames, muscle map, technique
+ * sections (1.4.1). The illustration palette itself is figure.css (generated).
  * Ported from E_CSS.
  */
 .fchip {
@@ -31,14 +32,13 @@
   width: 56px;
   height: 48px;
   border-radius: 14px;
-  background: linear-gradient(180deg, #e6f5f5, #d3eeee);
+  background: linear-gradient(180deg, #e9f6f6, #d6eeee); /* = the illustration panel */
   flex: none;
   overflow: hidden;
   display: block;
 }
-.dark .exthumb,
-.dark .stp {
-  background: linear-gradient(180deg, #17343a, #12292e);
+.dark .exthumb {
+  background: linear-gradient(180deg, #1c2c34, #17262d);
 }
 .exthumb svg {
   width: 100%;
@@ -54,42 +54,6 @@
 }
 .iconbtn.fav svg {
   fill: currentColor;
-}
-.steps {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-}
-.stp {
-  border-radius: 16px;
-  background: linear-gradient(180deg, #e6f5f5, #d3eeee);
-  height: 104px;
-  position: relative;
-  overflow: hidden;
-}
-.stp svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.stp .lb {
-  position: absolute;
-  left: 8px;
-  top: 7px;
-  font-size: 10.5px;
-  font-weight: 800;
-  background: #fff;
-  color: var(--accent-d);
-  padding: 2px 7px;
-  border-radius: 999px;
-}
-.dark .stp .lb {
-  background: var(--card);
-  color: var(--accent);
-}
-.steps.xs {
-  align-items: start;
-  line-height: 1.3;
 }
 .musc {
   padding: 12px 14px;
@@ -115,35 +79,201 @@
   border-radius: 12px;
   padding: 8px 10px;
 }
-.tips {
-  padding: 14px 16px;
-}
-.tip {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  font-size: 13.5px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-.tip i {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent-d);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-style: normal;
-  font-size: 11px;
-  font-weight: 800;
-  margin-top: 1px;
-}
 .btn.yt {
   background: #d93a40;
   box-shadow: 0 6px 16px rgba(229, 72, 77, 0.28);
   width: 100%;
   text-decoration: none;
+}
+
+/* 1.4.1 illustration: two frames side by side on wide screens, stacked on a phone so the
+   drawing and markers stay at full size. */
+.tfigs {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .tfigs {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.tfig {
+  margin: 0;
+  background: var(--card);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: 10px 10px 12px;
+}
+.tcap {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent-d);
+  padding: 2px 4px 8px;
+}
+.dark .tcap {
+  color: var(--accent);
+}
+.tsvg {
+  aspect-ratio: 340 / 292;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.tsvg.wait {
+  background: linear-gradient(180deg, #e9f6f6, #d6eeee);
+}
+.dark .tsvg.wait {
+  background: linear-gradient(180deg, #1c2c34, #17262d);
+}
+.tsvg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.tleg {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0 2px;
+  display: grid;
+  gap: 6px;
+}
+.tleg li,
+.tmist p {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.tleg i {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--warm);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: -1px;
+}
+/* Technique sections */
+.tech {
+  padding: 2px 16px 14px;
+}
+.layer-item .tech {
+  padding: 0;
+}
+.tsec {
+  margin-top: 16px;
+}
+.tsec h3 {
+  margin: 0 0 8px;
+}
+/* 1.4.1: Подробно за мускулите – collapsed by default */
+.tmore > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+.tmore > summary::-webkit-details-marker {
+  display: none;
+}
+.tmore > summary h3 {
+  margin: 0;
+}
+.tmore .tchev {
+  display: flex;
+  color: var(--muted);
+  transition: transform 0.2s;
+}
+.tmore[open] .tchev {
+  transform: rotate(180deg);
+}
+.tmore[open] > summary {
+  margin-bottom: 8px;
+}
+.tlist {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  font-size: 14.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.tlist.num {
+  padding-left: 22px;
+}
+.tlist li::marker {
+  color: var(--accent-d);
+  font-weight: 800;
+}
+.dark .tlist li::marker {
+  color: var(--accent);
+}
+.tmist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.tmist li {
+  border-radius: 14px;
+  background: var(--soft);
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+.tmist p {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.tmist .mk {
+  flex: none;
+  width: 18px;
+  text-align: center;
+  font-weight: 800;
+}
+.tmist .mis .mk {
+  color: var(--red);
+}
+.tmist .fix .mk {
+  color: var(--ok-t);
+}
+.tmist .fix {
+  font-weight: 500;
+}
+.tsrc ul {
+  margin: 0;
+  padding-left: 16px;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.tsrc a {
+  color: var(--accent-d);
+}
+.dark .tsrc a {
+  color: var(--accent);
+}
+/* The technique sheet is long: "back to the set" stays reachable at the bottom. */
+.tback {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  box-shadow: 0 -10px 14px var(--card);
 }

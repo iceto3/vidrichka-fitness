@@ -4,7 +4,7 @@
  * @module main
  */
 import { kv, load, setKv } from './core/store.js';
-import { WHATS_NEW } from './core/version.js';
+import { WHATS_NEW, buildId } from './core/version.js';
 import { newSince } from './features/whatsnew/notes.js';
 import { IS_BETA } from './core/channel.js';
 import { settings, setSettings } from './core/settings.js';
@@ -23,6 +23,7 @@ import { otter } from './features/mascot/api.js';
 import { stats } from './features/motivation/api.js';
 import { pushUrl } from './features/daily/push-config.js';
 import { voiceUrl } from './features/voice/config.js';
+import { pinNav } from './ui/nav-pin.js';
 import './features/profile/install.js'; // catch beforeinstallprompt early
 
 const $id = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -115,6 +116,7 @@ function whatsNew(next = () => {}) {
       () => html`<div class="center">${otter({ size: 110, pose: 'cheer' })}<h1 class="h2 mt8">${t('whatsNew.title', { v: WHATS_NEW })}</h1></div>
 <div class="col gap10 mt12 whatsnew">${items.map(([i, k]) => html`<div class="row gap10"><span class="sq acc">${ic(i, 18, 2.3)}</span><span class="f1 b small">${t(k)}</span></div>`)}</div>
 <p class="muted xs b mt10 center">${t('whatsNew.findLater')}</p>
+<p class="muted xs b mt6 center" id="wnbuild">${t('whatsNew.build', { id: buildId() })}</p>
 ${askGender ? html`<div class="card mt12"><p class="small b">${t('whatsNew.gender')}</p>${genderRow()}</div>` : ''}
 ${
   push
@@ -158,6 +160,12 @@ function startServiceWorker() {
       else location.reload();
     });
     document.body.append(bar);
+    // 1.4.1: reserve the bar's strip at the top, so it never covers a header, Край or a close button
+    const root = document.documentElement;
+    const fit = () => root.style.setProperty('--updh', `${Math.ceil(bar.getBoundingClientRect().height) + 12}px`);
+    root.classList.add('has-upd');
+    fit();
+    if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(bar);
   };
   sw.addEventListener('controllerchange', () => {
     if (!hadController) return; // the very first worker claiming the page is not an update
@@ -256,6 +264,7 @@ async function start() {
   startMotivation();
   startCelebrations();
   await startRouter($id('page'), $id('nav'));
+  pinNav($id('nav'));
   document.documentElement.classList.add('ready');
   if (!persistent) emit('toast', { key: 'common.noStorage' });
   if (new URLSearchParams(location.search).has('cheer')) (await import('./features/partner/api.js')).handleCheer();

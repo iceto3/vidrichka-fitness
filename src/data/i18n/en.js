@@ -176,8 +176,6 @@ export default {
   // library
   'library.title': 'Exercise library',
   'library.count': '{n} exercises',
-  'library.step': 'Step {n}',
-  'library.tips': 'Tips',
   'library.muscles': 'Muscles',
   'library.musclesWorked': 'Muscles worked',
   'library.primary': 'Primary',
@@ -187,6 +185,19 @@ export default {
   'library.favourite': 'Favourite',
   'library.strength': 'Strength',
   'library.notFound': 'Exercise not found.',
+  // 1.4.1 verified technique (features/library/figure.js)
+  'technique.setup': 'Starting position',
+  'technique.steps': 'Execution',
+  'technique.breathing': 'Breathing',
+  'technique.keyPoints': 'Key points',
+  'technique.mistakes': 'Common mistakes → how to avoid them',
+  'technique.mistake': 'Mistake',
+  'technique.fix': 'How to avoid it',
+  'technique.muscles': 'Muscles in detail',
+  'technique.sources': 'Sources',
+  'technique.bgOnly': 'The technique descriptions are in Bulgarian.',
+  'whatsNew.technique141':
+    'New, accurate technique illustrations and descriptions for all 20 exercises, with key points and common mistakes, checked against NSCA, ACE and ExRx.',
   'equip.barbell': 'Barbell',
   'equip.bodyweight': 'Bodyweight',
   'equip.machine': 'Machine',
@@ -219,6 +230,7 @@ export default {
   'unit.reps': 'Reps',
   'unit.perLeg': 'Reps/leg',
   'unit.sec': 'Seconds',
+  'unit.s': 's',
   'unit.repsShort': 'reps',
   'unit.min': 'min',
   // food
