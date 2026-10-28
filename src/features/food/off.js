@@ -1,7 +1,7 @@
 /**
  * Open Food Facts client (online, optional). Product lookups by barcode use the v2 API
- * (CORS-enabled). Text search tries the search service, then the legacy endpoint; both
- * may be unavailable from a browser, so callers must handle `null` gracefully.
+ * (CORS-enabled). Text search goes through the voice Worker (1.4.0), so callers must still
+ * handle `null` (offline, Worker or OFF down) gracefully.
  * @module features/food/off
  */
 import { fromOff } from './logic.js';
@@ -75,48 +75,65 @@ export async function product(code, lang) {
   return (j.status === 1 && toFood(j.product, lang)) || 'notfound';
 }
 
-/**
- * Text search.
- * @param {string} q
- * @param {string} lang
- * @returns {Promise<NonNullable<ReturnType<typeof toFood>>[]|null>} null = unavailable.
- */
-export async function search(q, lang) {
-  // Both at once (1.4.0): whichever answers first with a list wins (the search service often
-  // answers in < 1 s, the legacy endpoint is slower but more complete); null only when both
-  // fail or time out, so the screen can say so instead of waiting.
-  const a = getJson(
-    `https://search.openfoodfacts.org/search?q=${encodeURIComponent(q)}&page_size=20&langs=${lang},en&fields=${FIELDS}`,
-    SEARCH_TIMEOUT,
-  ).then((j) => j?.hits ?? null);
-  const b = getJson(
-    `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=20&fields=${FIELDS}`,
-    SEARCH_TIMEOUT,
-  ).then((j) => j?.products ?? null);
-  const list = await firstList([a, b]);
-  return list ? list.map((/** @type {any} */ p) => toFood(p, lang)).filter(Boolean) : null;
-}
+/** Session memo of finished searches (lang + normalised text → foods). */
+const found = new Map();
+/** @param {string} q */
+export const normQuery = (q) => q.normalize('NFC').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
 
 /**
- * The first promise that resolves to an array (a non-empty one is preferred: an empty answer
- * waits for the other source). Resolves null when none gives an array. Never rejects.
- * @template T @param {Promise<T[]|null>[]} ps @returns {Promise<T[]|null>}
+ * Text search: one request per search (1.4.0). Through the voice Worker's `/off-search`
+ * when there is one (OFF's own search endpoints are not usable from a browser: no CORS for
+ * search.openfoodfacts.org, and rate-limit/error pages without CORS from cgi/search.pl, which
+ * filled the console with errors); straight to the legacy endpoint only when no Worker is
+ * configured or it predates /off-search (404).
+ * @param {string} q
+ * @param {string} lang
+ * @param {{proxy?: string, fetchJson?: (url: string, ms: number) => Promise<any>}} [o] For tests.
+ * @returns {Promise<NonNullable<ReturnType<typeof toFood>>[]|null>} null = unavailable.
  */
-export function firstList(ps) {
-  return new Promise((done) => {
-    let left = ps.length;
-    /** @type {T[]|null} */
-    let empty = null;
-    if (!left) return done(null);
-    for (const p of ps)
-      Promise.resolve(p)
-        .catch(() => null)
-        .then((v) => {
-          if (Array.isArray(v) && v.length) return done(v);
-          if (Array.isArray(v)) empty = v;
-          if (--left === 0) done(empty);
-        });
-  });
+export async function search(q, lang, o = {}) {
+  const norm = normQuery(q),
+    key = `${lang}|${norm}`;
+  if (found.has(key)) return found.get(key);
+  const get = o.fetchJson ?? getJsonStatus;
+  const proxy = o.proxy ?? (await proxyUrl());
+  let j = null;
+  if (proxy) j = await get(`${proxy}/off-search?q=${encodeURIComponent(norm)}&lang=${lang}`, SEARCH_TIMEOUT);
+  if (!proxy || j === 404)
+    j = await get(
+      `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(norm)}&search_simple=1&action=process&json=1&page_size=20&fields=${FIELDS}`,
+      SEARCH_TIMEOUT,
+    );
+  const list = j && typeof j === 'object' && Array.isArray(j.products) ? j.products : null;
+  if (!list) return null;
+  const foods = list.map((/** @type {any} */ p) => toFood(p, lang)).filter(Boolean);
+  found.set(key, foods);
+  if (found.size > 100) found.delete(found.keys().next().value);
+  return foods;
+}
+
+/** The voice Worker URL ('' when none). Lazy so this module stays light. */
+async function proxyUrl() {
+  try {
+    return (await import('../voice/config.js')).voiceUrl();
+  } catch {
+    return '';
+  }
+}
+
+/** Like getJson, but a 404 is reported as the number 404 (an older Worker without /off-search). @param {string} url @param {number} ms */
+async function getJsonStatus(url, ms) {
+  const ctl = new AbortController(),
+    timer = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctl.signal });
+    if (r.status === 404) return 404;
+    return r.ok ? await r.json() : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**

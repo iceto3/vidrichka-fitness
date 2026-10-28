@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fmtDuration, fmtNum, parseDuration, setLang } from '../../src/core/i18n.js';
-import { firstList, offView, toFood, within, withBrand } from '../../src/features/food/off.js';
+import { offView, toFood, within, withBrand } from '../../src/features/food/off.js';
 import { MEAL_TIME, fromOff, kcalOff, mealTs, validateFood } from '../../src/features/food/logic.js';
 import { FOODS, FOOD_NOTES } from '../../src/data/foods.js';
 
@@ -66,12 +66,7 @@ test('a product that does not list a nutrient keeps it unknown (shown "–")', (
   assert.equal(full?.fib, 3);
 });
 
-test('online search: first non-empty list wins, both failing gives null, never rejects', async () => {
-  const later = (/** @type {any} */ v, ms = 5) => new Promise((ok) => setTimeout(() => ok(v), ms));
-  assert.deepEqual(await firstList([later(['slow'], 30), later(['fast'], 1)]), ['fast']);
-  assert.deepEqual(await firstList([later([], 1), later(['b'], 10)]), ['b']);
-  assert.deepEqual(await firstList([later([], 1), later(null, 2)]), []);
-  assert.equal(await firstList([Promise.reject(new Error('x')), later(null)]), null);
+test('a search never hangs: within() caps it and swallows rejections', async () => {
   assert.equal(await within(new Promise(() => {}), 10, 'cap'), 'cap');
   assert.equal(await within(Promise.reject(new Error('x')), 50, 'cap'), 'cap');
 });

@@ -14,14 +14,10 @@ import { pushUrl } from '../../daily/push-config.js';
 import { voiceUrl } from '../../voice/config.js';
 import { allNotes } from '../notes.js';
 
-/** The build id from sw.js (`const VERSION = '1.4.0-<hash>'`), or null. */
-async function buildId() {
-  try {
-    const r = await fetch('./sw.js', { cache: 'no-cache' });
-    return /const VERSION = '([^']+)'/.exec(await r.text())?.[1] ?? null;
-  } catch {
-    return null;
-  }
+/** The full build id written into index.html by the build (e.g. 1.4.0-beta-<hash>); the app version in dev. */
+function buildId() {
+  if (typeof document === 'undefined') return APP_VERSION;
+  return document.querySelector('meta[name="vf-build"]')?.getAttribute('content') || APP_VERSION;
 }
 
 /** @returns {import('../../../core/registry.js').View} */
@@ -37,12 +33,6 @@ ${notes.map(
   ) => html`<section class="card mt12" aria-labelledby="wn${i}"><h2 class="h3" id="wn${i}">${t('whatsNew.version', { v: r.v })}${i === 0 ? html` <span class="wnlatest">${t('whatsNew.latest')}</span>` : ''}</h2>
 <div class="col gap10 mt10">${r.items.map(([icon, k]) => html`<div class="row gap10"><span class="sq acc">${ic(icon, 18, 2.3)}</span><span class="f1 b small">${t(k)}</span></div>`)}</div></section>`,
 )}
-<p class="muted xs b center mt16" id="buildid">${t('whatsNew.build', { id: APP_VERSION })}</p><div class="h24"></div></div>`;
-  },
-  mount: () => {
-    void buildId().then((id) => {
-      const el = document.getElementById('buildid');
-      if (id && id !== 'dev' && el) el.textContent = t('whatsNew.build', { id });
-    });
+<p class="muted xs b center mt16" id="buildid">${t('whatsNew.build', { id: buildId() })}</p><div class="h24"></div></div>`;
   },
 });

@@ -3,8 +3,8 @@
  * - Precache: the build replaces VERSION and PRECACHE with the full file list. Navigations
  *   are network-first with the cached shell as fallback, files are cache-first with a network
  *   fallback, and no request ever ends in a network error (see <shell> below, 1.4.0).
- * - Updates: a new version waits until the page asks it to SKIP_WAITING (update prompt),
- *   unless no window of the app is open (then it takes over at once).
+ * - Updates (1.4.0): a new version takes over at once (skipWaiting + clients.claim); the
+ *   page shows an "update ready" bar and reloads when the user taps it.
  * - Reminders: best-effort via Periodic Background Sync (installed Chromium only) and
  *   notification clicks that focus/open the app.
  * - Daily rhythm (1.1): the app posts the next days' reminder slots (already localized);
@@ -17,7 +17,7 @@
  *   offline they are queued in the config cache and sent by the app on its next open.
  */
 const VERSION = 'dev';
-const PRECACHE = ['./', 'index.html', 'manifest.json'];
+const PRECACHE = ['./', 'manifest.json'];
 // 1.4.0: release channel (the build sets 'beta' for the beta URL). A beta keeps its own cache
 // names and database (see src/core/channel.js), so it never touches the live app's data.
 const CHANNEL = 'live';
@@ -26,36 +26,48 @@ const CACHE = `${PFX}${VERSION}`;
 const CONFIG = `${PFX}config`;
 
 // <shell>
-// 1.4.0 (critical fix): the fetch handler never rejects. Older builds answered navigations
-// from the cache only and let a failed network request reject, so a missing cache entry or a
-// flaky network ended in ERR_FAILED even for '/', with no way back for the user. Now:
-//  - navigations go network-first (fresh index.html, so a new release is picked up right away)
-//    with the precached shell as the fallback after NAV_TIMEOUT ms or a network error, and a
-//    small recovery page (retry / repair) when both fail;
-//  - other same-origin GETs are cache-first (hashed files) with a network fallback; when both
-//    fail they get a 504 response instead of a network error;
-//  - install never fails because one file could not be precached, and it activates at once
-//    when no window of the app is open (nothing can break), so a broken old worker is replaced
-//    on the next visit even if its page never loads;
-//  - activate deletes only this app's old versioned caches (prefix + version), keeps the
-//    config cache, and claims the open pages.
+// 1.4.0 (critical fix, tester round 3 – the real root cause of ERR_FAILED):
+// Cloudflare Pages answers /index.html with a 308 redirect to / (and strips .html everywhere).
+// Earlier builds precached 'index.html', so the cache held a *redirected* Response; Chrome
+// refuses a redirected response for a navigation (its redirect mode is 'manual') and shows
+// ERR_FAILED – on every offline open, on every navigation that fell back to the cache, and on
+// every open while an older cache-first worker was in control. Now:
+//  - the shell is cached only under './' and every cached or served response is "clean"
+//    (a redirected one is copied into a fresh Response, which has no redirect flag);
+//  - navigations go network-first with the cached shell after NAV_TIMEOUT ms or a network
+//    error, and a small recovery page when both fail – the fetch handler never rejects;
+//  - /repair (a static page that unregisters this worker and clears the caches) is never
+//    intercepted, so it works even when everything else is broken;
+//  - a new version takes over at once (skipWaiting + clients.claim); open pages show an
+//    "update ready" bar and reload when the user taps it. The previous version's cache is kept
+//    until the next update so an open old page can still load its lazy files.
 const NAV_TIMEOUT = 4000;
+const SHELL = './';
+/** Paths the worker never touches (static self-repair page, the worker itself). */
+const BYPASS = /\/(repair(\.html)?\/?|sw\.js)$/;
+
+/** A response without the "redirected" flag (safe for navigations). @param {Response} r */
+const clean = (r) =>
+  r.redirected ? new Response(r.body, { status: r.status, statusText: r.statusText, headers: r.headers }) : r;
+
+/** Precache one URL; the shell and anything that redirects is stored clean. @param {Cache} c @param {string} u */
+async function put(c, u) {
+  const r = await fetch(new Request(u, { cache: 'reload', redirect: 'follow' }));
+  if (!r.ok) throw new Error(`${u} ${r.status}`);
+  await c.put(u, clean(r));
+}
 
 self.addEventListener('install', (e) =>
   e.waitUntil(
     (async () => {
       try {
         const c = await caches.open(CACHE);
-        await c.addAll(PRECACHE).catch(() =>
-          // one bad file must not block the whole update: cache what we can, the rest comes
-          // from the network on first use
-          Promise.allSettled(PRECACHE.map((u) => c.add(u))),
-        );
+        // one bad file must not block the whole update: the rest comes from the network on use
+        await Promise.allSettled(PRECACHE.filter((u) => u !== 'index.html').map((u) => put(c, u)));
       } catch {
         /* no cache storage (private mode, quota): the network fallback still works */
       }
-      const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true }).catch(() => []);
-      if (!open.length) await self.skipWaiting(); // no page to disturb: take over right away
+      await self.skipWaiting();
     })(),
   ),
 );
@@ -64,8 +76,11 @@ self.addEventListener('activate', (e) =>
   e.waitUntil(
     (async () => {
       try {
+        const cfg = await caches.open(CONFIG);
+        const prev = (await (await cfg.match('active'))?.text().catch(() => '')) || '';
         for (const k of await caches.keys())
-          if (k.startsWith(PFX) && k !== CACHE && k !== CONFIG) await caches.delete(k);
+          if (k.startsWith(PFX) && k !== CACHE && k !== CONFIG && k !== prev) await caches.delete(k);
+        if (prev !== CACHE) await cfg.put('active', new Response(CACHE));
       } catch {
         /* ignore: stale caches are harmless now that every miss falls back to the network */
       }
@@ -83,46 +98,54 @@ const RECOVER_HTML = `<!doctype html><html lang="bg"><meta charset="utf-8"><meta
 <title>Vidrichka</title><body style="font-family:system-ui,sans-serif;padding:32px 24px;text-align:center;line-height:1.5">
 <h1 style="font-size:22px">Видричка не успя да се зареди</h1><p>Провери интернета и опитай пак.<br>Your data is safe on this phone.</p>
 <p><button id="r" style="font-size:18px;padding:12px 22px;border-radius:12px">Опитай пак</button></p>
-<p><button id="x" style="font-size:15px;padding:10px 18px;border-radius:12px">Поправи и презареди</button></p>
-<script>
-document.getElementById('r').onclick=function(){location.reload()};
-document.getElementById('x').onclick=async function(){try{var g=await navigator.serviceWorker.getRegistration();if(g)await g.unregister();for(var k of await caches.keys())if(/^vfb?-/.test(k)&&!/config$/.test(k))await caches.delete(k)}catch(e){}location.reload()};
-</script></body></html>`;
+<p><a href="repair" style="font-size:15px">Поправи и презареди</a></p>
+<script>document.getElementById('r').onclick=function(){location.reload()};</script></body></html>`;
 
-/** Navigation: network first, the precached shell after a timeout or an error. @param {Request} req */
+/** The cached app shell (clean), or undefined. */
+async function shell() {
+  try {
+    const hit = (await (await caches.open(CACHE)).match(SHELL)) ?? (await caches.match(SHELL));
+    return hit ? clean(hit) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Navigation: network first, the cached shell after a timeout or an error. @param {Request} req */
 async function navigate(req) {
-  const shell = () =>
-    caches
-      .match('index.html', { ignoreSearch: true })
-      .then((r) => r ?? caches.match('./', { ignoreSearch: true }))
-      .catch(() => undefined);
   const net = fetch(req).then(
     (r) => r,
     () => null,
   );
   /** @type {Response | null | undefined} */
   let res = await Promise.race([net, new Promise((ok) => setTimeout(() => ok(undefined), NAV_TIMEOUT))]);
-  if (res && (res.ok || res.type === 'opaqueredirect')) return res;
+  // an opaque redirect is fine for a navigation (the browser follows it); a followed one is not
+  if (res && (res.ok || res.type === 'opaqueredirect')) return clean(res);
   const cached = await shell();
   if (cached) return cached;
   if (res === undefined) res = await net; // slow network and nothing cached: keep waiting
-  return res ?? new Response(RECOVER_HTML, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  return res
+    ? clean(res)
+    : new Response(RECOVER_HTML, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
-/** Other same-origin GETs: cache first, then the network; never a network error. @param {Request} req */
+/** Other same-origin GETs: cache first (this or the previous version), then the network. @param {Request} req */
 async function asset(req) {
-  /** @type {Cache | null} */
-  let cache = null;
   try {
-    cache = await caches.open(CACHE);
-    const hit = await cache.match(req, { ignoreSearch: true });
+    const hit =
+      (await (await caches.open(CACHE)).match(req, { ignoreSearch: true })) ??
+      (await caches.match(req, { ignoreSearch: true }));
     if (hit) return hit;
   } catch {
     /* fall through to the network */
   }
   try {
     const res = await fetch(req);
-    if (res.ok && cache) cache.put(req, res.clone()).catch(() => {});
+    if (res.ok && !res.redirected)
+      caches
+        .open(CACHE)
+        .then((c) => c.put(req, res.clone()))
+        .catch(() => {});
     return res;
   } catch {
     return plain(504, 'offline');
@@ -135,9 +158,9 @@ async function devFetch(req) {
     return await fetch(req);
   } catch {
     const hit = await caches
-      .match(req.mode === 'navigate' ? 'index.html' : req, { ignoreSearch: true })
+      .match(req.mode === 'navigate' ? SHELL : req, { ignoreSearch: true })
       .catch(() => undefined);
-    return hit ?? plain(504, 'offline');
+    return hit ? clean(hit) : plain(504, 'offline');
   }
 }
 
@@ -145,7 +168,7 @@ self.addEventListener('fetch', (e) => {
   const req = e.request,
     url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin) return; // Open Food Facts etc. go straight to the network
-  if (url.pathname.endsWith('/sw.js')) return;
+  if (BYPASS.test(url.pathname)) return; // /repair and sw.js: always the plain network
   const run = VERSION === 'dev' ? devFetch(req) : req.mode === 'navigate' ? navigate(req) : asset(req);
   // last line of defence: whatever went wrong above, answer with the plain network
   e.respondWith(run.catch(() => fetch(req).catch(() => plain(504, 'offline'))));

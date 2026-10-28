@@ -30,6 +30,8 @@ export const PATHS = {
   back: '<path d="M15 5 8 12l7 7"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
   undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  repair:
+    '<path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 20.5V16h-4.5"/>',
   right: '<path d="m9 5 7 7-7 7"/>',
   left: '<path d="m15 5-7 7 7 7"/>',
   down: '<path d="m6 9 6 6 6-6"/>',

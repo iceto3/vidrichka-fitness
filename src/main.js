@@ -129,44 +129,57 @@ ${
   });
 }
 
-/** Register the service worker and offer updates. */
+/**
+ * Register the service worker and offer updates. 1.4.0: a new worker takes over at once
+ * (skipWaiting + clients.claim in sw.js); a page that was already controlled then shows the
+ * "update ready" bar and reloads when tapped (never by itself – a workout may be in progress).
+ * A worker still waiting (from an older sw.js) is offered the same way and told to SKIP_WAITING.
+ */
 function startServiceWorker() {
   if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
-  // Reload only when an *existing* controller is replaced (user accepted an update),
-  // not when the very first worker claims the page.
-  const hadController = !!navigator.serviceWorker.controller;
-  let reloading = false;
-  navigator.serviceWorker.addEventListener(
-    'controllerchange',
-    () => hadController && !reloading && ((reloading = true), location.reload()),
-  );
-  navigator.serviceWorker
-    .register('./sw.js')
+  const sw = navigator.serviceWorker;
+  const hadController = !!sw.controller;
+  let accepted = false;
+  let shown = false;
+  /** @param {ServiceWorker | null} [waiting] */
+  const offer = (waiting) => {
+    if (shown) return;
+    shown = true;
+    const bar = document.createElement('div');
+    bar.className = 'update-bar';
+    bar.id = 'updatebar';
+    bar.setAttribute('role', 'status');
+    bar.innerHTML = String(
+      html`<span>${t('update.ready')}</span><button class="btn sm">${t('update.reload')}</button>`,
+    );
+    bar.querySelector('button')?.addEventListener('click', () => {
+      accepted = true;
+      if (waiting && waiting.state === 'installed') waiting.postMessage({ type: 'SKIP_WAITING' });
+      else location.reload();
+    });
+    document.body.append(bar);
+  };
+  sw.addEventListener('controllerchange', () => {
+    if (!hadController) return; // the very first worker claiming the page is not an update
+    if (accepted) location.reload();
+    else offer();
+  });
+  sw.register('./sw.js')
     .then((reg) => {
       if (!reg) return;
-      let offered = false;
-      const offer = (/** @type {ServiceWorker} */ w) => {
-        if (offered) return;
-        offered = true;
-        const bar = document.createElement('div');
-        bar.className = 'update-bar';
-        bar.setAttribute('role', 'status');
-        bar.innerHTML = String(
-          html`<span>${t('update.ready')}</span><button class="btn sm">${t('update.reload')}</button>`,
-        );
-        bar.querySelector('button')?.addEventListener('click', () => w.postMessage({ type: 'SKIP_WAITING' }));
-        document.body.append(bar);
-      };
-      /** Offer a worker once it has installed (1.3.4: also one already installing at load). */
-      const watch = (/** @type {ServiceWorker | null} */ w) =>
+      /** @param {ServiceWorker | null} w */
+      const watch = (w) =>
         w?.addEventListener(
           'statechange',
-          () => w.state === 'installed' && navigator.serviceWorker.controller && offer(w),
+          () => w.state === 'installed' && reg.waiting === w && sw.controller && offer(w),
         );
-      if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+      if (reg.waiting && sw.controller) offer(reg.waiting);
       watch(reg.installing);
       reg.addEventListener('updatefound', () => watch(reg.installing));
-      setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+      // look for a new version every hour and whenever the app comes back to the foreground
+      const check = () => navigator.onLine && reg.update().catch(() => {});
+      setInterval(check, 60 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check());
     })
     .catch((e) => console.warn('[sw] registration failed', e));
 }

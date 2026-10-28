@@ -162,7 +162,7 @@ ${srow(
   t('profile.weightStep'),
   t('profile.weightStepSub'),
   seg(
-    [1, 2.5, 5].map((v) => ({ value: String(v), label: `${v}` })),
+    [1, 2.5, 5].map((v) => ({ value: String(v), label: fmtNum(v, 1) })), // 1.4.0: „2,5“ in Bulgarian
     String(s.weightStep),
     'wstep',
     'mini',
@@ -182,6 +182,7 @@ ${srow('chart', 'blue', t('profile.shareFoods'), t('profile.shareFoodsSub'), tog
 <button class="srow" data-act="partner"><span class="sic gold">${ic('users', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.partner')}</span><span class="muted xs b">${s.partnerName ? t('profile.partnerWith', { name: s.partnerName }) : t('profile.partnerSub')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 <button class="srow" data-act="feedback" id="feedbackrow"><span class="sic violet">${ic('message', 19, 2.2)}</span><span class="t left"><span class="st block">${t('feedback.title')}</span><span class="muted xs b">${t('feedback.rowSub')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 <button class="srow" data-go="whatsnew" id="whatsnewrow"><span class="sic teal">${ic('star', 19, 2.2)}</span><span class="t left"><span class="st block">${t('whatsNew.page')}</span><span class="muted xs b">${t('whatsNew.rowSub', { v: APP_VERSION })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
+<a class="srow" href="repair" id="repairrow"><span class="sic gray">${ic('repair', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.repair')}</span><span class="muted xs b">${t('profile.repairSub')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</a>
 ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic teal">${ic('download', 19, 2.2)}</span><span class="t left"><span class="st block">${t('install.cta')}</span><span class="muted xs b">${isIOS() ? t('install.iosShort') : t('install.cardBody')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>` : ''}
 </div>
 <button class="btn sec danger-t w100 mt16" data-act="reset">${ic('trash', 18)}${t('profile.reset')}</button>

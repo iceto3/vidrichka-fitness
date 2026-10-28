@@ -19,6 +19,18 @@ const hm = (/** @type {number} */ ts) => fmtDate(ts, { hour: '2-digit', minute: 
 const face = (/** @type {number|null} */ v) => (v ? FACES[Math.round(v) - 1] : '–');
 
 /** @returns {import('../../../core/registry.js').View} */
+/**
+ * "23:10 → 07:05" under a night, or only the known end; nothing when both are missing (1.4.0:
+ * manual and screenshot entries have no times, "– → –" was noise).
+ * @param {{bed?: number|null, wake?: number|null, bedEst?: boolean}} n
+ */
+const bedWake = (n) => {
+  if (!n.bed && !n.wake) return '';
+  const bed = n.bed ? `${hm(n.bed)}${n.bedEst ? ` (${t('sleep.estimated')})` : ''}` : '';
+  const txt = bed && n.wake ? `${bed} → ${hm(n.wake)}` : bed ? `${bed} →` : `→ ${hm(/** @type {number} */ (n.wake))}`;
+  return html`<span class="muted xs b bedwake">${txt}</span>`;
+};
+
 export default () => ({
   render: () => {
     const list = sleepNights(14),
@@ -47,7 +59,7 @@ ${
         (
           n,
         ) => html`<div class="lrow"><span class="f1 left"><span class="b block">${fmtDate(parseDay(n.day), { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-<span class="muted xs b">${n.bed ? hm(n.bed) : '–'}${n.bedEst ? ` (${t('sleep.estimated')})` : ''} → ${n.wake ? hm(n.wake) : '–'}</span></span>
+${bedWake(n)}</span>
 <span class="row gap8"><span title="${t('sleep.quality')}">${face(n.sleepQ)}</span><span class="b num">${n.hours == null ? '' : fmtDuration(n.hours)}</span></span></div>`,
       )}</div>`
     : empty('moon', t('sleep.none'))

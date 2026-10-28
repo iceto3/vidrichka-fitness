@@ -81,6 +81,7 @@ const latinFont = relative(
 await cp(join(root, 'assets/icons'), join(out, 'assets/icons'), { recursive: true });
 await cp(join(root, 'assets/vendor'), join(out, 'assets/vendor'), { recursive: true });
 await cp(join(root, 'assets/sounds'), join(out, 'assets/sounds'), { recursive: true }); // celebration sounds (precached)
+await cp(join(root, 'repair.html'), join(out, 'repair.html')); // 1.4.0: static self-repair page (/repair)
 const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8'));
 if (BETA) Object.assign(manifest, { name: 'Vidrichka Fitness БЕТА', short_name: 'Vidrichka β' });
 await writeFile(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2));
@@ -121,7 +122,9 @@ const files = (await walk()).filter((f) => !/splash-|vendor\/|\.nojekyll|build-r
 const hash = createHash('sha256');
 for (const f of files) hash.update(f).update(await readFile(join(out, f)));
 const version = `${pkg.version}${BETA ? '-beta' : ''}-${hash.digest('hex').slice(0, 10)}`;
-const precache = ['./', ...files];
+// 1.4.0: the shell only under './' – on Cloudflare Pages /index.html is a 308 to /, and a
+// cached redirected response breaks navigations (ERR_FAILED). repair.html is never cached.
+const precache = ['./', ...files.filter((f) => f !== 'index.html' && f !== 'repair.html')];
 const sw = (await readFile(join(root, 'sw.js'), 'utf8'))
   .replace(/const VERSION = '[^']*';/, `const VERSION = '${version}';`)
   .replace(/const PRECACHE = \[[^\]]*\];/, `const PRECACHE = ${JSON.stringify(precache)};`)
@@ -129,6 +132,18 @@ const sw = (await readFile(join(root, 'sw.js'), 'utf8'))
 if (!sw.includes(version)) throw new Error('sw.js VERSION placeholder not found');
 if (!sw.includes(`const CHANNEL = '${CHANNEL}';`)) throw new Error('sw.js CHANNEL placeholder not found');
 await writeFile(join(out, 'sw.js'), sw);
+// 1.4.0: the full build id (e.g. 1.4.0-beta-<hash>) in the page itself, so Profile › What's new
+// shows it without asking the network or the service worker (the hash covers the files above).
+const page = await readFile(join(out, 'index.html'), 'utf8');
+await writeFile(
+  join(out, 'index.html'),
+  page.replace(
+    '<meta charset="utf-8" />',
+    `<meta charset="utf-8" />\n    <meta name="vf-build" content="${version}" />`,
+  ),
+);
+if (!(await readFile(join(out, 'index.html'), 'utf8')).includes('name="vf-build"'))
+  throw new Error('index.html build id not written');
 
 // Size report
 const size = async (/** @type {string} */ f) => {

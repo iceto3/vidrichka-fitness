@@ -43,6 +43,10 @@
   width: 100%;
   text-align: left;
 }
+a.srow {
+  color: inherit;
+  text-decoration: none;
+}
 .srow + .srow {
   border-top: 1px solid var(--line);
 }

@@ -2431,6 +2431,11 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   assert.ok(Math.abs(sl.sleepH - (7 + 20 / 60)) < 0.01, `7 h 20 min saved (${sl.sleepH})`);
   assert.equal(sl.sleepQ, 4);
   assert.match(await page.locator('.dayview .sleepcard').innerText(), /7 (ч|h) 20 (мин|min)/);
+  // round 3: a night without bed/wake times has no "– → –" in Progress › Sleep
+  await go('progress/sleep');
+  await page.locator('.sbars').waitFor();
+  assert.doesNotMatch(await page.locator('.content').innerText(), /– → –/);
+  assert.ok((await page.locator('.bedwake').count()) >= 1, 'nights with times still show them');
   await go('day/2099-01-01');
   assert.equal(await page.locator('.dayview .stepscard').count(), 0, 'no cards for a future day');
   assert.equal(await layer.locator('.panel').count(), 0);
@@ -2444,15 +2449,26 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await go('profile');
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
+  // round 3: weight step in Bulgarian format
+  assert.match(await page.locator('[data-act="wstep"][data-v="2.5"]').innerText(), /^2,5$/);
+  // 1.4.0 round 3: the search goes through the Worker's /off-search (one request per search,
+  // debounced), never straight to OFF (whose search endpoints have no usable CORS)
+  /** @type {string[]} */
+  const offCalls = [];
+  const countOff = (/** @type {any} */ r) => /openfoodfacts\.org|\/off-search/.test(r.url()) && offCalls.push(r.url());
+  page.on('request', countOff);
   await page.unroute('**/*openfoodfacts.org/**');
   await page.route('**/*openfoodfacts.org/**', (r) => r.abort());
+  await page.route(/^https:\/\/voice\.test\/off-search/, (r) => r.abort());
   await go('food/add/lunch');
-  await page.locator('#fq').fill('банан');
+  await page.locator('#fq').pressSequentially('банан', { delay: 40 });
   assert.ok((await page.locator('#results .lrow').count()) > 0, 'local results show at once');
   await page.locator('#offres .offfail').waitFor({ timeout: 12000 });
   assert.equal(await page.locator('#offres .offbusy').count(), 0, 'the spinner is gone');
-  await page.unroute('**/*openfoodfacts.org/**');
-  await page.route('**/*openfoodfacts.org/**', (r) =>
+  assert.equal(offCalls.length, 1, `one request per search: ${offCalls.join(', ')}`);
+  assert.match(offCalls[0], /^https:\/\/voice\.test\/off-search\?q=%D0%B1%D0%B0%D0%BD%D0%B0%D0%BD&lang=bg$/);
+  await page.unroute(/^https:\/\/voice\.test\/off-search/);
+  await page.route(/^https:\/\/voice\.test\/off-search/, (r) =>
     r.fulfill({
       headers: { 'access-control-allow-origin': '*' },
       json: {
@@ -2479,9 +2495,14 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   assert.match(g, /Фибри –/, 'unknown fibre shows "–"');
   await page.keyboard.press('Escape');
   await settle();
+  assert.ok(!offCalls.some((u) => u.includes('openfoodfacts.org')), 'never straight to OFF');
+  page.off('request', countOff);
   await page.unroute('**/*openfoodfacts.org/**');
+  await page.unroute(/^https:\/\/voice\.test\/off-search/);
   await go('profile');
   await page.locator('.lang [data-v="en"]').click();
   await settle();
-  console.log('  ✔ 1.4.0 online search ends (local first, "not available" + retry), brand once, unknown nutrients "–"');
+  console.log(
+    '  ✔ 1.4.0 online search via the Worker (1 request), ends ("not available" + retry), brand once, unknown "–", step „2,5“',
+  );
 }

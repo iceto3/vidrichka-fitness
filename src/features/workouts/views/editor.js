@@ -4,7 +4,7 @@
  * @module features/workouts/views/editor
  */
 import { html, num } from '../../../ui/dom.js';
-import { L, t, weekdayName } from '../../../core/i18n.js';
+import { L, fmtNum, t, weekdayName } from '../../../core/i18n.js';
 import { get, put, uid } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
@@ -70,7 +70,7 @@ ${d.items.map(
 <button class="iconbtn flat sm" data-act="rm" data-i="${i}" aria-label="${t('common.remove')}">${ic('trash', 18)}</button></span></div>
 <div class="egrid mt8">${FIELDS.filter(([k]) => k !== 'weight' || exById(it.exId)?.weighted !== false).map(
     ([k, , , , lbl]) =>
-      html`<div><div class="xs b muted">${t(lbl)}</div>${stepper({ act: 'f', value: it[k], data: { i, k }, label: `${exName(it.exId)} ${t(lbl)}`, unit: k === 'weight' ? t('unit.kg') : k === 'rest' ? 's' : '' })}</div>`,
+      html`<div><div class="xs b muted">${t(lbl)}</div>${stepper({ act: 'f', value: k === 'weight' ? fmtNum(it[k], 2) : it[k], data: { i, k }, label: `${exName(it.exId)} ${t(lbl)}`, unit: k === 'weight' ? t('unit.kg') : k === 'rest' ? 's' : '' })}</div>`,
   )}</div></div>`,
 )}
 <button class="btn sec w100 mt12" data-act="add">${ic('plus', 18, 2.6)}${t('editor.addExercise')}</button>
@@ -90,7 +90,9 @@ ${src ? html`<div class="row gap10 mt20"><button class="btn sec f1" data-act="du
           [, st, min, max] = /** @type {any} */ (FIELDS.find((f) => f[0] === k));
         const v =
           ev.type === 'change'
-            ? parseFloat(/** @type {HTMLInputElement} */ (el).value.replace(',', '.')) || 0
+            ? parseFloat(
+                /** @type {HTMLInputElement} */ (el).value.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'),
+              ) || 0
             : it[k] + num(el, 'd') * st;
         it[k] = Math.min(max, Math.max(min, Math.round(v * 4) / 4));
       },

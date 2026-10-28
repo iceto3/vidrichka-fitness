@@ -9,6 +9,18 @@ import vm from 'node:vm';
 
 const BASE = 'https://app.test/vf/';
 
+/**
+ * A stored body; "REDIR:" marks a response that came through a redirect (what Cloudflare Pages
+ * gives for /index.html), which Chrome refuses for a navigation.
+ * @param {string} v
+ */
+function mkRes(v) {
+  const red = v.startsWith('REDIR:');
+  const r = new Response(red ? v.slice(6) : v);
+  if (red) Object.defineProperty(r, 'redirected', { value: true });
+  return r;
+}
+
 /** @param {{version?: string, net?: (url: string) => Promise<Response>, cached?: Record<string, Record<string,string>>, clients?: any[]}} o */
 function load(o = {}) {
   let src = readFileSync('sw.js', 'utf8');
@@ -20,8 +32,9 @@ function load(o = {}) {
     if (!store.has(name)) store.set(name, new Map());
     const m = /** @type {Map<string,string>} */ (store.get(name));
     return {
-      match: async (/** @type {any} */ r) => (m.has(key(r)) ? new Response(m.get(key(r))) : undefined),
-      put: async (/** @type {any} */ r, /** @type {Response} */ res) => void m.set(key(r), await res.text()),
+      match: async (/** @type {any} */ r) => (m.has(key(r)) ? mkRes(/** @type {string} */ (m.get(key(r)))) : undefined),
+      put: async (/** @type {any} */ r, /** @type {Response} */ res) =>
+        void m.set(key(r), (res.redirected ? 'REDIR:' : '') + (await res.text())),
       add: async (/** @type {string} */ u) => {
         const res = await fetchFn(new Request(new URL(u, BASE)));
         if (!res.ok) throw new TypeError('bad');
@@ -39,7 +52,7 @@ function load(o = {}) {
     keys: async () => [...store.keys()],
     delete: async (/** @type {string} */ n) => store.delete(n),
     match: async (/** @type {any} */ r) => {
-      for (const m of store.values()) if (m.has(key(r))) return new Response(m.get(key(r)));
+      for (const m of store.values()) if (m.has(key(r))) return mkRes(/** @type {string} */ (m.get(key(r))));
     },
   };
   const net = o.net ?? (async () => Promise.reject(new TypeError('Failed to fetch')));
@@ -59,7 +72,12 @@ function load(o = {}) {
     fetch: fetchFn,
     location: new URL(BASE),
     Response,
-    Request,
+    // like in a worker, a relative URL resolves against the worker's location
+    Request: class extends Request {
+      constructor(/** @type {any} */ u, /** @type {any} */ init) {
+        super(typeof u === 'string' ? new URL(u, BASE).href : u, init);
+      }
+    },
     URL,
     setTimeout,
     Promise,
@@ -101,14 +119,35 @@ test('build: cache miss + network error → a 504 response, never a rejected pro
   assert.equal(res?.status, 504);
 });
 
-test('build: navigation is network-first; offline it serves the cached shell', async () => {
-  const cached = { 'vf-1.4.0-x': { '/vf/index.html': 'cached shell' } };
+test('build: navigation is network-first; offline it serves the cached shell (./)', async () => {
+  const cached = { 'vf-1.4.0-x': { '/vf/': 'cached shell' } };
   const online = load({ version: '1.4.0-x', cached, net: ok('fresh shell') });
   assert.equal(await (await online.fetchEvt('./', 'navigate'))?.text(), 'fresh shell');
   const offline = load({ version: '1.4.0-x', cached });
   assert.equal(await (await offline.fetchEvt('./', 'navigate'))?.text(), 'cached shell');
+  assert.equal(await (await offline.fetchEvt('./?utm=1#/food', 'navigate'))?.text(), 'cached shell');
   const err500 = load({ version: '1.4.0-x', cached, net: async () => new Response('x', { status: 500 }) });
   assert.equal(await (await err500.fetchEvt('./', 'navigate'))?.text(), 'cached shell');
+});
+
+test('root cause (round 3): a redirected cached shell is never served as is (Chrome: ERR_FAILED)', async () => {
+  // an older worker's cache (any version) holding a redirected shell
+  const sw = load({ version: '1.4.0-x', cached: { 'vf-1.4.0-old': { '/vf/': 'REDIR:old shell' } } });
+  const res = await sw.fetchEvt('./', 'navigate');
+  assert.equal(await res?.text(), 'old shell');
+  assert.equal(res?.redirected, false, 'a clean copy, safe for a navigation');
+  // install stores clean copies even when the server redirects
+  const red = load({
+    version: '1.4.0-x',
+    net: async () => {
+      const r = new Response('shell', { status: 200 });
+      Object.defineProperty(r, 'redirected', { value: true });
+      return r;
+    },
+  });
+  await red.lifecycle('install');
+  assert.equal(red.store.get('vf-1.4.0-x')?.get('/vf/'), 'shell');
+  assert.ok([...(red.store.get('vf-1.4.0-x')?.values() ?? [])].every((v) => !v.startsWith('REDIR:')));
 });
 
 test('build: navigation with no network and no cache → recovery page (not ERR_FAILED)', async () => {
@@ -117,7 +156,7 @@ test('build: navigation with no network and no cache → recovery page (not ERR_
   assert.equal(res?.status, 503);
   const body = (await res?.text()) ?? '';
   assert.match(body, /Опитай пак/);
-  assert.match(body, /unregister/);
+  assert.match(body, /href="repair"/);
 });
 
 test('dev: network first, cache fallback, else 504', async () => {
@@ -132,27 +171,56 @@ test('cross-origin, non-GET and sw.js itself are left to the browser', async () 
   assert.equal(await sw.fetchEvt('sw.js'), null);
 });
 
-test('install: one failing file does not fail the install; no open window → skipWaiting', async () => {
-  const sw = load({
-    version: '1.4.0-x',
-    net: async (u) => (u.endsWith('index.html') ? new Response('i') : new Response('', { status: 404 })),
-  });
-  await sw.lifecycle('install');
-  assert.equal(sw.store.get('vf-1.4.0-x')?.get('/vf/index.html'), 'i');
-  assert.equal(sw.state.skipped, true);
-  const busy = load({ version: '1.4.0-x', net: ok('x'), clients: [{ id: 'w1' }] });
-  await busy.lifecycle('install');
-  assert.equal(busy.state.skipped, false, 'an open window keeps the update prompt');
+test('/repair and /repair.html are never intercepted (also as navigations)', async () => {
+  const sw = load({ version: '1.4.0-x', cached: { 'vf-1.4.0-x': { '/vf/': 'shell' } } });
+  for (const p of ['repair', 'repair.html', 'repair/', '/repair'])
+    assert.equal(await sw.fetchEvt(p, 'navigate'), null, p);
+  assert.notEqual(await sw.fetchEvt('repairs', 'navigate'), null, 'only that page');
 });
 
-test('activate: deletes only this app’s old versioned caches, keeps config, claims', async () => {
+test('install: one failing file does not fail it; index.html is not cached (only ./); always skipWaiting', async () => {
+  /** @type {string[]} */
+  const asked = [];
   const sw = load({
     version: '1.4.0-x',
-    cached: { 'vf-1.3.4-old': {}, 'vf-config': {}, 'vf-1.4.0-x': {}, 'other-app': {}, 'vfb-1.4.0-beta': {} },
+    net: async (u) => (asked.push(u), u.endsWith('/vf/') ? new Response('i') : new Response('', { status: 404 })),
+    clients: [{ id: 'w1' }],
+  });
+  await sw.lifecycle('install');
+  assert.equal(sw.store.get('vf-1.4.0-x')?.get('/vf/'), 'i');
+  assert.ok(!asked.some((u) => u.endsWith('index.html')), 'index.html (a 308 on Pages) is never fetched');
+  assert.equal(sw.state.skipped, true, 'takes over at once, even with a window open (the page shows the update bar)');
+});
+
+test('activate: deletes old versioned caches but the previous one, keeps config, claims', async () => {
+  const sw = load({
+    version: '1.4.0-x',
+    cached: {
+      'vf-1.3.4-old': {},
+      'vf-1.4.0-prev': {},
+      'vf-config': { '/vf/active': 'vf-1.4.0-prev' },
+      'vf-1.4.0-x': {},
+      'other-app': {},
+      'vfb-1.4.0-beta': {},
+    },
   });
   await sw.lifecycle('activate');
-  assert.deepEqual([...sw.store.keys()].sort(), ['other-app', 'vf-1.4.0-x', 'vf-config', 'vfb-1.4.0-beta']);
+  assert.deepEqual([...sw.store.keys()].sort(), [
+    'other-app',
+    'vf-1.4.0-prev',
+    'vf-1.4.0-x',
+    'vf-config',
+    'vfb-1.4.0-beta',
+  ]);
+  assert.equal(sw.store.get('vf-config')?.get('/vf/active'), 'vf-1.4.0-x');
   assert.equal(sw.state.claimed, true);
+  // the next update keeps x (now the previous one) and drops prev
+  const next = load({
+    version: '1.4.0-y',
+    cached: Object.fromEntries([...sw.store].map(([k, m]) => [k, Object.fromEntries(m)])),
+  });
+  await next.lifecycle('activate');
+  assert.deepEqual([...next.store.keys()].sort(), ['other-app', 'vf-1.4.0-x', 'vf-config', 'vfb-1.4.0-beta']);
 });
 
 test('index.html has the self-healing script; the build sets the beta prefix', () => {

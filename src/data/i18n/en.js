@@ -558,6 +558,8 @@ export default {
   'onboard.private': 'No account needed – everything stays on your phone.',
   'update.ready': 'A new version is ready.',
   'update.reload': 'Update',
+  'profile.repair': 'Repair the app',
+  'profile.repairSub': 'If it does not load or hangs – your data stays',
   // 1.1 — celebrations
   'cel.water': '+{ml} ml water',
   'cel.waterSub': 'Hydrated & happy · {n} of {goal} glasses',

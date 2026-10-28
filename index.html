@@ -66,12 +66,14 @@
       // 1.4.0 self-healing: if the app cannot start (a script or style failed to load, a lazy
       // chunk is missing, or nothing rendered within 20 s while a service worker controls the
       // page), unregister this app's worker, delete its versioned caches (the data in IndexedDB
-      // stays) and reload — at most once every 5 minutes, so it can never loop.
+      // stays) and reload — at most once every 5 minutes, so it can never loop, and never offline.
       (function () {
         var P = 'vf-';
         var KEY = P + 'healed-at';
         function heal(why) {
           try {
+            // offline nothing could be fetched again: clearing the caches would only break the app
+            if (navigator.onLine === false) return;
             if (document.documentElement.classList.contains('ready') && why !== 'chunk') return;
             var last = Number(localStorage.getItem(KEY) || 0);
             if (Date.now() - last < 5 * 60 * 1000) return;
