@@ -39,6 +39,21 @@ Then add a `badge.kg_50000` translation in both languages. The rewards engine aw
 4. Import the feature's `index.js` in `src/features/index.js`, and its CSS in `src/app.css`.
 5. Other features talk to it only through its `api.js` and bus events.
 
+## Add a day field (1.4.0)
+
+1. Store it in the day record and add it to `dayFromIndex` in `src/features/day/logic.js` (with a zero/empty default).
+2. Add a date-taking writer in `src/features/day/api.js` that starts with `assertEditable(date)` and validates the value.
+3. Render it in `src/features/day/views/cards.js` – the same card is used on Home (today) and in the calendar day view (any past day).
+4. If it is charted, add it to `dailyRows` in `src/features/progress/trends.js`. Unit-test the logic in `tests/unit/v140-day.test.js`.
+
+## Add a per-channel value (live / beta)
+
+Add it to **both** entries of `CHANNELS` in `src/core/channel.js` and read it from there. Never hard-code a server URL, storage name or cache name elsewhere.
+
+## Add a "What's new" note
+
+Add an entry at the top of `NOTES` in `src/features/whatsnew/notes.js` and its keys in `bg.js` and `en.js`. Use the `needs` flag (`'voice'`, `'push'`) for items that only work with a server.
+
 ## Change the data model
 
 - **New store:** append an upgrade step to `SCHEMA` in `src/core/db.js` and add the store name to `STORES`.
@@ -48,4 +63,5 @@ Then add a `badge.kg_50000` translation in both languages. The rewards engine aw
 
 1. Bump `version` in `package.json` and add a CHANGELOG entry.
 2. Run `npm run check` and `npm run test:e2e:dist`.
-3. Merge to `main`; the workflow deploys to GitHub Pages. The service worker version changes automatically, and users see "Update ready".
+3. Big versions: build on a branch, `npm run build:beta` and deploy `dist-beta/` to the Cloudflare Pages project `vidrichka-beta` (`npx wrangler pages deploy dist-beta --project-name vidrichka-beta --branch main`), with the `-beta` Workers (`wrangler.beta.toml` in `server/` and `voice/`). Test the beta first.
+4. Merge to `main`; the workflow deploys to GitHub Pages. The service worker version changes automatically, and users see "Update ready".

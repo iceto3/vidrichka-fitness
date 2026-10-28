@@ -42,7 +42,7 @@ export default ({ id, tab = 'progress' }) => {
           t('summary.volume'),
           html`${fmtVolume(s.volume).value} <small>${fmtVolume(s.volume).unit}</small>`,
         ],
-        ['flame', t('summary.kcal'), html`~${s.kcal} <small>kcal</small>`],
+        ['flame', t('summary.kcal'), html`~${s.kcal} <small>${t('unit.kcal')}</small>`],
         ['star', t('summary.xp'), html`<span class="gold">+${s.xp}</span>`],
       ];
       return html`<div class="content history">${topBar(planName(s), fmtDate(s.endedAt, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}

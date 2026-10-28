@@ -179,3 +179,37 @@
 .lh-t {
   line-height: 1.2;
 }
+
+/* 1.4.0: the otter answers a tap; the streak card explains itself */
+.otterbtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.otterbtn.hop svg {
+  animation: otterhop 0.5s ease;
+}
+@keyframes otterhop {
+  30% {
+    transform: translateY(-10px) rotate(-4deg);
+  }
+  60% {
+    transform: translateY(0) rotate(3deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .otterbtn.hop svg {
+    animation: none;
+  }
+}
+.streakbtn {
+  display: block;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.datanotice .lh {
+  display: block;
+}

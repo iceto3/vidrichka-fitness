@@ -327,3 +327,13 @@
   flex: 2;
   min-width: 0;
 }
+
+/* 1.4.0: over-goal cues on the macro bars */
+.macrook {
+  color: var(--ok, #2fae6b);
+  font-size: 12px;
+}
+.macroover {
+  color: var(--warm);
+  font-size: 12px;
+}

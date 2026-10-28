@@ -35,6 +35,7 @@ test('settings sent to the server: times and toggles only, accepted by the serve
     'checkinAm',
     'checkinPm',
     'loud',
+    'loudOn',
     'morning',
     'protein',
     'silent',

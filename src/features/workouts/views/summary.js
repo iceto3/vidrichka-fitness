@@ -22,7 +22,7 @@ const statTiles = (s) => [
   ['check', t('summary.sets'), html`${s.setsDone} <small>${t('summary.of', { n: s.setsPlanned })}</small>`],
   ['bolt', t('summary.reps'), html`${s.reps}`],
   ['dumbbell', t('summary.volume'), html`${fmtVolume(s.volume).value} <small>${fmtVolume(s.volume).unit}</small>`],
-  ['flame', t('summary.kcal'), html`~${s.kcal} <small>kcal</small>`],
+  ['flame', t('summary.kcal'), html`~${s.kcal} <small>${t('unit.kcal')}</small>`],
   ['star', t('summary.xp'), html`<span class="gold">+${s.xp}</span>`],
 ];
 

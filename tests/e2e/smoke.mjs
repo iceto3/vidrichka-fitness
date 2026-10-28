@@ -183,10 +183,11 @@ async function run(name, browser, P) {
   await layer.locator('input').first().fill('Maria');
   await page.getByRole('button', { name: "Let's go" }).click();
   await settle();
-  // 1.3.4: the one-time anonymous-data notice follows the welcome
-  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
-  assert.match(await layer.innerText(), /anonymously/i, 'data notice after onboarding');
-  await layer.locator('[data-close]').first().click();
+  // 1.3.4: the one-time anonymous-data notice follows the welcome (1.4.0: a Home card, no dialog)
+  await page.locator('#page .datanotice').waitFor({ timeout: 4000 });
+  assert.equal(await layer.locator('.datanotice').count(), 0, 'the notice never blocks');
+  assert.match(await page.locator('#page .datanotice').innerText(), /anonymously/i, 'data notice after onboarding');
+  await page.locator('#page [data-act="noticeOk"]').click();
   await settle();
   assert.match(await page.locator('h1').first().innerText(), /Maria/);
 
@@ -699,7 +700,7 @@ async function fixes(page, { go, settle, shot, clearCel, layer }) {
   await layer.locator('[data-act="save"]').click();
   await settle();
   assert.equal(await layer.locator('.ferr').count(), 0);
-  assert.match(await layer.locator('.fwarn').innerText(), /290 kcal/);
+  assert.match(await layer.locator('.fwarn').innerText(), /290 (kcal|ккал)/);
   assert.match(await layer.locator('[data-act="save"]').innerText(), /Save anyway/);
   await page.keyboard.press('Escape');
   await settle();
@@ -997,8 +998,7 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   await layer.locator('input').first().fill('Maria');
   await page.getByRole('button', { name: "Let's go" }).click();
   await settle();
-  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
-  await layer.locator('[data-close]').first().click();
+  await page.locator('#page [data-act="noticeOk"]').click({ timeout: 4000 });
   await settle();
   await clearCel();
   await go('progress/body');
@@ -1557,13 +1557,13 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.3\.4/);
+  assert.match(txt, /Какво ново в 1\.4\.0/);
   assert.match(txt, /Отмени/, 'the 1.3.2 pill item');
   assert.match(txt, /преименуваш/, 'the 1.3.2 rename item');
   assert.match(txt, /Запиши/, 'the 1.3.3 recording item');
   assert.doesNotMatch(txt, /What's new|Undo|Rename|Record/, 'no English');
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
-  assert.equal(await layer.locator('.whatsnew > div').count(), 11, 'the 1.3.4, 1.3.3 and 1.3.2 items');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 19, 'the 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items');
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
@@ -1867,10 +1867,10 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.3\.4/);
+  assert.match(txt, /Какво ново в 1\.4\.0/);
   assert.match(txt, /Запиши/);
   assert.match(txt, /Обичайният ти обяд/);
-  assert.equal(await layer.locator('.whatsnew > div').count(), 8, 'the 1.3.4 and 1.3.3 items');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 16, 'the 1.4.0, 1.3.4 and 1.3.3 items');
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
@@ -1972,26 +1972,28 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   let txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.3\.4/);
+  assert.match(txt, /Какво ново в 1\.4\.0/);
   assert.match(txt, /крачки/i);
   assert.match(txt, /Обратна връзка/);
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
-  assert.equal(await layer.locator('.whatsnew > div').count(), 6, 'the six 1.3.4 items');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 14, 'the eight 1.4.0 and six 1.3.4 items');
   await page.waitForTimeout(700);
   await shot('whats-new-134');
   await layer.locator('[data-close]').first().click();
-  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
-  txt = await layer.innerText();
-  assert.match(
-    txt,
-    /Изпращаме анонимно имената и стойностите на ръчно въведени храни, за да подобрим приложението\. Можеш да го изключиш в Профил\./,
-  );
-  await page.waitForTimeout(600);
-  await shot('data-notice');
-  await layer.locator('[data-close]').first().click();
+  // 1.4.0: the notice is a card on Home – it never blocks the app
   await settle();
+  assert.equal(await layer.locator('.datanotice').count(), 0, 'no blocking dialog');
+  await page.locator('#page .datanotice').waitFor({ timeout: 4000 });
+  txt = await page.locator('#page .datanotice').innerText();
+  assert.match(txt, /Името и стойностите на 100 г на храните, които въвеждаш ръчно, се изпращат анонимно/);
+  await page.locator('#page .datanotice').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(400);
+  await shot('data-notice');
+  await page.locator('#page [data-act="noticeOk"]').click();
+  await settle();
+  assert.equal(await page.locator('#page .datanotice').count(), 0, 'OK hides it');
   await reopen();
-  assert.equal(await layer.locator('.datanotice').count(), 0, 'the notice shows only once');
+  assert.equal(await page.locator('#page .datanotice').count(), 0, 'the notice shows only once');
   console.log("  ✔ 1.3.4 What's new + the one-time data notice");
 
   // 2) Manual food → POST /foods with only the allowed fields; nothing when switched off
@@ -2112,7 +2114,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   // 1.4.0: the sheet starts at the suggested 7,5 h, so +½ h gives 8
   assert.equal(await dayField('sleepH'), 8);
   assert.equal(await dayField('sleepQ'), 4);
-  await layer.locator('[data-close]').last().click();
+  assert.equal(await layer.locator('[data-act="clear"]').count(), 1, 'a saved entry can be deleted');
+  await layer.locator('[data-act="done"]').click();
   await settle();
   assert.match(await page.locator('.sleepcard').innerText(), /\b8\b/);
   await page.locator('.sleepcard').scrollIntoViewIfNeeded();

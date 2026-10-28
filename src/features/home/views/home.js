@@ -30,6 +30,9 @@ import { closeNotifications } from '../../daily/notify.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 import { dayRows } from '../../food/api.js';
 import { cardActions, mealsCard, sleepCard, stepsCard } from '../../day/views/cards.js';
+import { noticeActions, noticeCard } from '../../improve/notice.js';
+import { openSheet } from '../../../ui/sheet.js';
+import { otterLine } from '../otter.js';
 
 /**
  * The protein-breakfast bar (1.2): a live mm:ss countdown with "Ate it" / "Skipped".
@@ -123,6 +126,9 @@ function workoutCard() {
 export default () => {
   /** @type {number|undefined} */
   let timer;
+  /** 1.4.0: what the otter says after a tap (until the next render of another page). */
+  let saying = '';
+  let taps = 0;
   return {
     tab: 'home',
     render: () => {
@@ -158,13 +164,14 @@ export default () => {
 <div class="row between"><div><div class="muted small b">${fmtDate(now, { weekday: 'long', day: 'numeric', month: 'long' })}</div>
 <h1 class="h1 mt2">${t(greetKey(now.getHours()))}${set.userName ? `, ${set.userName}` : ''}</h1></div>
 <div class="row gap8">${voiceReady() ? html`<button class="btn sm sec voicebtn" data-act="voice">${ic('mic', 18, 2.4)}${t('voice.say')}</button>` : ''}<button class="iconbtn" data-go="profile/reminders" aria-label="${t('profile.reminders')}">${ic('bell', 21)}${set.reminders.enabled ? '' : raw('<i class="nub" aria-hidden="true"></i>')}</button></div></div>
-<div class="row gap8 mt8 otterrow"><div class="otter-wrap">${otter({ size: 112, pose: s.workedOutToday ? 'cheer' : 'wave', mood })}</div>
-<div class="bubble" role="status">${hl(t(msg.key, msg.vars))}</div></div>
+<div class="row gap8 mt8 otterrow"><button class="otter-wrap otterbtn" data-act="otter" aria-label="${t('home.otterTap')}">${otter({ size: 112, pose: s.workedOutToday ? 'cheer' : 'wave', mood })}</button>
+<div class="bubble" role="status">${saying ? saying : hl(t(msg.key, msg.vars))}</div></div>
+${noticeCard()}
 ${dailyCards()}
 ${a ? html`<button class="card resume row gap12" data-go="workout"><span class="live"><i></i></span><span class="f1 b">${t('home.resume', { plan: planName(a) })}</span>${ic('right', 18, 2.4)}</button>` : ''}
 <div class="row gap12 stretch mt4">
- <div class="card f1 pad14" role="group" aria-label="${t('home.weeklyStreak')}"><div class="row gap8"><div class="sq warm">${ic('flame', 20, 2.2)}</div>
-  <div><div class="xb big20">${t('home.weeks', { n: st.weeks })}</div><div class="muted xs b">${t('home.weeklyStreak')}${st.freezes ? html` · <span title="${t('home.freezeHint')}">❄️${st.freezes}</span>` : ''}</div></div></div>${weekDots()}</div>
+ <button class="card f1 pad14 left streakbtn" data-act="streakInfo" aria-label="${t('home.weeklyStreak')}: ${t('home.weeks', { n: st.weeks })}"><div class="row gap8"><div class="sq warm">${ic('flame', 20, 2.2)}</div>
+  <div><div class="xb big20">${t('home.weeks', { n: st.weeks })}</div><div class="muted xs b">${t('home.weeklyStreak')}${st.freezes ? html` · <span title="${t('home.freezeHint')}">❄️${st.freezes}</span>` : ''}</div></div></div>${weekDots()}</button>
  <div class="card f1 pad14 row gap10" role="group" aria-label="${t('home.weeklyGoal')}">${ring(66, 8, st.thisWeek / st.goal, { inner: html`<div class="xb big19">${st.thisWeek}<span class="muted fs12">/${st.goal}</span></div>` })}
   <div class="minw0"><div class="b fs135 lh-t">${t('home.weeklyGoal')}</div><div class="muted xs b mt6">${t('home.ofWorkouts', { n: st.thisWeek, goal: st.goal })}</div>
   <div class="chip ${left ? 'accent' : 'ok'} mt6 chip-sm">${left ? t('home.toGo', { n: left }) : t('home.goalMet')}</div></div></div>
@@ -195,6 +202,24 @@ ${
     },
     actions: {
       voice: () => (openVoice(), false),
+      ...noticeActions((path) => emit('nav', { path })),
+      otter: (el) => {
+        saying = otterLine(taps++);
+        el.classList.remove('hop');
+        void el.offsetWidth;
+        el.classList.add('hop');
+      },
+      streakInfo: () => {
+        const st = stats().streak;
+        openSheet({
+          kind: 'dialog',
+          render:
+            () => html`<div class="center"><span class="sq warm">${ic('flame', 22, 2.2)}</span><h2 class="h3 xb mt8">${t('home.streakTitle')}</h2></div>
+<p class="small b mt8 lh">${t('home.streakHow', { goal: st.goal })}</p><p class="small b mt8 lh muted">${t('home.freezeHint')}</p>
+<button class="btn w100 mt16" data-close>${t('common.ok')}</button>`,
+        });
+        return false;
+      },
       ...cardActions(() => dayKey()), // 1.4.0: the shared day cards (steps, sleep, meals) for today
       start: (el) => {
         startWorkout(el.dataset.id ?? '');

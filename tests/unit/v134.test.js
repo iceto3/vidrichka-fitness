@@ -83,7 +83,7 @@ test('tour: 1 item = full, 2–3 = quick stops (deduped), more = summary only', 
   assert.equal(placeOf(/** @type {any} */ ({ kind: 'steps', date: back(1) }), TODAY).route, 'progress/trends');
   assert.equal(placeOf(/** @type {any} */ ({ kind: 'sleep', date: TODAY }), TODAY).sel, '.sleepcard');
   assert.equal(placeOf(/** @type {any} */ ({ kind: 'weight', date: TODAY }), TODAY).route, 'progress/body');
-  assert.ok(stopMs('quick', false) >= 900 && stopMs('quick', false) <= 1100, '~1 s per stop');
+  assert.ok(stopMs('quick', false) >= 1500 && stopMs('quick', false) <= 1700, '~1.6 s per stop (1.4.0)');
   assert.ok(stopMs('full', true) < 500, 'reduced motion: short');
 });
 

@@ -167,6 +167,27 @@ export function syncPushSettings(delay = 1500) {
   );
 }
 
+/**
+ * 1.4.0: ask the server to send a test notification to this phone now.
+ * @param {string} title @param {string} body
+ * @returns {Promise<'sent'|'wait'|'gone'|'failed'>}
+ */
+export async function testPush(title, body) {
+  if (!pushOn()) return 'failed';
+  try {
+    const st = await api('/test', { id: state().id, title, body });
+    if (st === 204) return 'sent';
+    if (st === 429) return 'wait';
+    if (st === 404 || st === 410) {
+      reRegister();
+      return 'gone';
+    }
+    return 'failed';
+  } catch {
+    return 'failed';
+  }
+}
+
 /** Send queued events (oldest first); keep the ones that still fail. */
 export async function flushPush() {
   if (!pushOn()) return;

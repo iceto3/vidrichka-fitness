@@ -36,8 +36,36 @@
 }
 .heat {
   display: grid;
-  grid-template-columns: repeat(14, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 4px;
+  max-width: 320px;
+}
+.heat .hd {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.heat i.off {
+  background: none;
+}
+.heat i.today {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.heatlegend {
+  align-items: center;
+}
+.heatlegend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.badge .bhow {
+  display: block;
+  font-weight: 600;
+  margin-top: 3px;
 }
 .heat i {
   aspect-ratio: 1;

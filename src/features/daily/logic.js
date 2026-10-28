@@ -204,7 +204,7 @@ export function sleepStreak(rows, now) {
 
 /**
  * @typedef {object} DailyConfig Daily-rhythm settings (see core/settings DAILY).
- * @property {boolean} morning @property {string} wake @property {string} loud @property {boolean} protein
+ * @property {boolean} morning @property {string} wake @property {string} loud @property {boolean} [loudOn] @property {boolean} protein
  * @property {{time: string, on: boolean}[]} water
  * @property {{time: string, on: boolean}} checkinAm @property {{time: string, on: boolean}} checkinPm
  * @property {{time: string, on: boolean}} bedtime
@@ -232,15 +232,16 @@ export function planDay(day, cfg, rec = {}) {
       silent: true,
       skipIf: ['wake', 'ack'],
     });
-    add({
-      kind: 'loud',
-      group: 'morning',
-      at: loud,
-      until: loud + 4 * HOUR,
-      route: 'morning',
-      loud: true,
-      skipIf: ['wake', 'ack'],
-    });
+    if (cfg.loudOn !== false)
+      add({
+        kind: 'loud',
+        group: 'morning',
+        at: loud,
+        until: loud + 4 * HOUR,
+        route: 'morning',
+        loud: true,
+        skipIf: ['wake', 'ack'],
+      });
   }
   if (cfg.protein && rec?.proteinStart)
     PROTEIN_STEPS.forEach((m) =>

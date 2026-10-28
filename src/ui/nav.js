@@ -4,7 +4,7 @@
  */
 import { registry } from '../core/registry.js';
 import { t } from '../core/i18n.js';
-import { html } from './dom.js';
+import { html, raw } from './dom.js';
 import { ic } from './icons.js';
 
 /**
@@ -12,9 +12,9 @@ import { ic } from './icons.js';
  * @param {string} [active] Active tab id.
  */
 export const renderNav = (active) =>
-  html`<div class="nav" role="tablist">${registry.tabs.map(
-    (
-      tab,
-    ) => html`<button class="t${tab.id === active ? ' on' : ''}" role="tab" aria-selected="${String(tab.id === active)}"
-      data-go="${tab.path}"><span class="pill">${ic(tab.icon, 23, tab.id === active ? 2.2 : 1.9)}</span>${t(tab.label)}</button>`,
+  // 1.4.0: links to pages, not tabs of one panel – so aria-current instead of tab roles,
+  // and the icon is decorative (the visible text is the accessible name).
+  html`<div class="nav">${registry.tabs.map(
+    (tab) =>
+      html`<button class="t${tab.id === active ? ' on' : ''}" ${tab.id === active ? raw('aria-current="page"') : ''} data-go="${tab.path}"><span class="pill" aria-hidden="true">${ic(tab.icon, 23, tab.id === active ? 2.2 : 1.9)}</span><span class="tl">${t(tab.label)}</span></button>`,
   )}</div>`;

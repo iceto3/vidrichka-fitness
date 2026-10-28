@@ -11,6 +11,7 @@ export const DAILY = {
   morning: true, // silent nudge at `wake`, loud one at `loud` unless she already woke up
   wake: '07:30',
   loud: '08:15',
+  loudOn: true, // 1.4.0: the loud alarm after the silent nudge can be switched off
   protein: true, // +10/+20/+30 min reminders after waking
   water: [
     { time: '11:00', on: true },
