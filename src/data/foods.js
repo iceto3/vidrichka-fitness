@@ -27,15 +27,15 @@ export const FOOD_CATEGORIES = [
 /** @type {Record<string, (string|number)[][]>} */
 const ROWS = {
   meat: [
-    ['chicken_breast', 'Chicken breast', 'Пилешко филе', 165, 31, 0, 3.6, 0, 0.2, 150, '🍗'],
-    ['chicken_thigh', 'Chicken thigh', 'Пилешко бутче', 209, 26, 0, 8.6, 0, 0.2, 150, '🍗'],
-    ['turkey_breast', 'Turkey breast', 'Пуешко филе', 135, 30, 0, 1, 0, 0.2, 150, '🦃'],
-    ['beef_steak', 'Beef steak', 'Телешки стек', 217, 26, 0, 12, 0, 0.1, 180, '🥩'],
-    ['minced_beef', 'Minced beef (10% fat)', 'Телешка кайма (10% мазнини)', 176, 20, 0, 10, 0, 0.2, 125, '🥩'],
+    ['chicken_breast', 'Chicken breast (grilled)', 'Пилешко филе (на скара)', 165, 31, 0, 3.6, 0, 0.2, 150, '🍗'],
+    ['chicken_thigh', 'Chicken thigh (grilled)', 'Пилешко бутче (на скара)', 209, 26, 0, 8.6, 0, 0.2, 150, '🍗'],
+    ['turkey_breast', 'Turkey breast (grilled)', 'Пуешко филе (на скара)', 135, 30, 0, 1, 0, 0.2, 150, '🦃'],
+    ['beef_steak', 'Beef steak (grilled)', 'Телешки стек (на скара)', 217, 26, 0, 12, 0, 0.1, 180, '🥩'],
+    ['minced_beef', 'Beef mince 90/10 (raw)', 'Телешка кайма 90/10 (сурова)', 176, 20, 0, 10, 0, 0.2, 125, '🥩'],
     [
       'minced_mixed',
-      'Mixed mince 60/40 (pork/beef)',
-      'Смесена кайма 60/40 (свинско/телешко)',
+      'Mixed mince 60/40 (pork/beef, raw)',
+      'Кайма смес 60/40 (свинско/телешко, сурова)',
       244,
       17.6,
       0,
@@ -47,8 +47,8 @@ const ROWS = {
     ],
     [
       'minced_mixed_50',
-      'Mixed mince 50/50 (pork/beef)',
-      'Смесена кайма 50/50 (свинско/телешко)',
+      'Mixed mince 50/50 (pork/beef, raw)',
+      'Кайма смес 50/50 (свинско/телешко, сурова)',
       239,
       17.8,
       0,
@@ -60,8 +60,8 @@ const ROWS = {
     ],
     [
       'minced_mixed_75',
-      'Mixed mince 75/25 (pork/beef)',
-      'Смесена кайма 75/25 (свинско/телешко)',
+      'Mixed mince 75/25 (pork/beef, raw)',
+      'Кайма смес 75/25 (свинско/телешко, сурова)',
       251,
       17.3,
       0,
@@ -71,24 +71,44 @@ const ROWS = {
       125,
       '🥩',
     ],
-    ['pork_loin', 'Pork loin', 'Свинско филе', 143, 26, 0, 3.5, 0, 0.1, 150, '🥩'],
-    ['pork_chop', 'Pork chop', 'Свинска пържола', 231, 29.2, 0, 14, 0, 0.2, 150, '🥩'],
+    ['pork_loin', 'Pork loin (grilled)', 'Свинско филе (на скара)', 143, 26, 0, 3.5, 0, 0.1, 150, '🥩'],
+    ['pork_chop', 'Pork chop (grilled)', 'Свинска пържола (на скара)', 231, 29.2, 0, 14, 0, 0.2, 150, '🥩'],
     ['kebapche', 'Kebapche', 'Кебапче', 260, 16, 2, 21, 0, 1.6, 70, '🌭'],
     ['kyufte', 'Kyufte (meatball)', 'Кюфте', 255, 16, 6, 18, 0.5, 1.5, 70, '🧆'],
     ['ham', 'Ham', 'Шунка', 145, 21, 1.5, 6, 0, 2.3, 30, '🥓'],
     ['bacon', 'Bacon', 'Бекон', 541, 37, 1.4, 42, 0, 4.2, 20, '🥓'],
     ['lukanka', 'Lukanka (dry salami)', 'Луканка', 440, 25, 1, 37, 0, 3.8, 30, '🍖'],
     ['sausage', 'Sausage', 'Наденица', 300, 13, 2, 27, 0, 1.8, 100, '🌭'],
-    ['salmon', 'Salmon', 'Сьомга', 208, 20, 0, 13, 0, 0.1, 150, '🐟'],
+    ['salmon', 'Salmon (raw)', 'Сьомга (сурова)', 208, 20, 0, 13, 0, 0.1, 150, '🐟'],
     ['tuna_can', 'Tuna in water (canned)', 'Риба тон в собствен сос', 116, 26, 0, 1, 0, 0.8, 80, '🐟'],
-    ['cod', 'Cod', 'Треска', 82, 18, 0, 0.7, 0, 0.1, 150, '🐟'],
-    ['mackerel', 'Mackerel', 'Скумрия', 205, 19, 0, 14, 0, 0.2, 150, '🐟'],
-    ['trout', 'Trout', 'Пъстърва', 141, 20, 0, 6, 0, 0.1, 150, '🐟'],
-    ['sea_bass', 'Sea bass', 'Лаврак', 97, 18, 0, 2, 0, 0.2, 150, '🐟'],
+    ['cod', 'Cod (raw)', 'Треска (сурова)', 82, 18, 0, 0.7, 0, 0.1, 150, '🐟'],
+    ['mackerel', 'Mackerel (raw)', 'Скумрия (сурова)', 205, 19, 0, 14, 0, 0.2, 150, '🐟'],
+    ['trout', 'Trout (raw)', 'Пъстърва (сурова)', 141, 20, 0, 6, 0, 0.1, 150, '🐟'],
+    ['sea_bass', 'Sea bass (raw)', 'Лаврак (суров)', 97, 18, 0, 2, 0, 0.2, 150, '🐟'],
     ['shrimp', 'Shrimp', 'Скариди', 99, 24, 0.2, 0.3, 0, 0.3, 100, '🦐'],
     ['sardines', 'Sardines (canned)', 'Сардини (консерва)', 208, 25, 0, 11, 0, 0.8, 80, '🐟'],
-    ['chicken_wings', 'Chicken wings', 'Пилешки крилца', 203, 30, 0, 8, 0, 0.2, 150, '🍗'],
-    ['liver_chicken', 'Chicken liver', 'Пилешки дробчета', 119, 17, 0.7, 4.8, 0, 0.2, 100, '🍖'],
+    ['chicken_wings', 'Chicken wings (grilled)', 'Пилешки крилца (на скара)', 203, 30, 0, 8, 0, 0.2, 150, '🍗'],
+    ['liver_chicken', 'Chicken liver (raw)', 'Пилешки дробчета (сурови)', 119, 17, 0.7, 4.8, 0, 0.2, 100, '🍖'],
+    // 1.4.0 (tester round): raw meat (USDA FoodData Central SR Legacy, raw weight) and beef mince 80/20.
+    ['chicken_breast_raw', 'Chicken breast (raw)', 'Пилешко филе (сурово)', 120, 22.5, 0, 2.6, 0, 0.11, 150, '🍗'],
+    [
+      'chicken_thigh_raw',
+      'Chicken thigh, skinless (raw)',
+      'Пилешко бутче без кожа (сурово)',
+      121,
+      19.7,
+      0,
+      4.1,
+      0,
+      0.24,
+      150,
+      '🍗',
+    ],
+    ['turkey_breast_raw', 'Turkey breast (raw)', 'Пуешко филе (сурово)', 114, 23.7, 0.1, 1.5, 0, 0.3, 150, '🦃'],
+    ['pork_loin_raw', 'Pork loin (raw)', 'Свинско филе (сурово)', 120, 21, 0, 3.5, 0, 0.13, 150, '🥩'],
+    ['beef_raw', 'Lean beef (raw)', 'Телешко месо, постно (сурово)', 143, 21, 0, 6.5, 0, 0.15, 150, '🥩'],
+    ['minced_beef_80', 'Beef mince 80/20 (raw)', 'Телешка кайма 80/20 (сурова)', 254, 17.2, 0, 20, 0, 0.17, 125, '🥩'],
+    ['salmon_grilled', 'Salmon (grilled)', 'Сьомга (на скара)', 206, 22.1, 0, 12.4, 0, 0.15, 150, '🐟'],
     // 1.4.0 cooking variants (USDA / CIQUAL, cooked weight). The plain rows above are grilled/roasted.
     ['chicken_breast_boiled', 'Chicken breast (boiled)', 'Пилешко филе (варено)', 151, 29, 0, 3, 0, 0.18, 150, '🍗'],
     [
@@ -294,8 +314,8 @@ const ROWS = {
     ['ayran', 'Ayran', 'Айрян', 36, 1.7, 2.4, 2, 0, 0.3, 250, '🥛'],
     ['sirene', 'White brined cheese (sirene)', 'Сирене', 260, 15, 1, 21, 0, 2.8, 50, '🧀'],
     ['kashkaval', 'Kashkaval (yellow cheese)', 'Кашкавал', 360, 25, 1, 28, 0, 2.33, 30, '🧀'],
-    ['cottage_cheese', 'Curd cheese (izvara)', 'Извара', 98, 11, 3.4, 4.3, 0, 0.79, 150, '🧀'],
-    ['cottage_cheese_cream', 'Cottage cheese', 'Котидж сирене', 98, 11.1, 3.4, 4.3, 0, 0.9, 150, '🧀'], // 1.4.0 (USDA, creamed 4%)
+    ['cottage_cheese', 'Curd cheese (izvara)', 'Извара', 104, 14, 3, 4, 0, 0.1, 150, '🧀'], // BG whey izvara: Madjarov label 107/13.1/2.4/5, BB-Team 111/19.8/3.5/2, low salt
+    ['cottage_cheese_cream', 'Cottage cheese', 'Котидж сирене', 99, 12.5, 2.5, 4.3, 0, 0.7, 150, '🧀'], // 4–4.5 %: Arla 99/14/1.7/4, Landfrisch 103/12.5/3/4.5, USDA 98/11.1/3.4/4.3
     ['mozzarella', 'Mozzarella', 'Моцарела', 280, 22, 2.2, 20, 0, 1.2, 60, '🧀'],
     ['parmesan', 'Parmesan', 'Пармезан', 431, 38, 4, 29, 0, 1.6, 15, '🧀'],
     ['cream_cheese', 'Cream cheese', 'Крема сирене', 342, 6, 4, 34, 0, 0.8, 30, '🧀'],
@@ -416,6 +436,17 @@ export const FOODS = Object.entries(ROWS).flatMap(([cat, rows]) =>
     portion: Number(portion),
     emoji: String(emoji),
   })),
+);
+
+/**
+ * A short note shown with a food (i18n key), e.g. that mince fat varies by brand (1.4.0).
+ * @type {Record<string, string>}
+ */
+export const FOOD_NOTES = Object.fromEntries(
+  ['minced_beef', 'minced_beef_80', 'minced_mixed', 'minced_mixed_50', 'minced_mixed_75'].map((id) => [
+    id,
+    'food.noteMince',
+  ]),
 );
 
 /** Default quick-pick food ids until the user has history. */

@@ -5,8 +5,8 @@
  */
 import { shareFood } from '../../improve/share.js';
 import { confirmDataNotice } from '../../improve/notice.js';
-import { html } from '../../../ui/dom.js';
-import { t } from '../../../core/i18n.js';
+import { html, patch } from '../../../ui/dom.js';
+import { fmtNum, t } from '../../../core/i18n.js';
 import { uid } from '../../../core/store.js';
 import { closeSheet, openSheet } from '../../../ui/sheet.js';
 import { validateFood } from '../logic.js';
@@ -22,8 +22,13 @@ export function openManualForm(init, onSave) {
   const v = { name: init.name ?? '', kcal: '', p: '', c: '', f: '', fib: '', salt: '', portion: '100' };
   /** @type {Record<string, string>} */
   let errors = {};
-  /** @type {string|null} The kcal warning that was shown (a second Save confirms it). */
-  let warned = null;
+  /** 1.4.0: a live, non-blocking hint when the calories do not match the macros. */
+  const hint = () => {
+    const r = validateFood(v);
+    return r.warn && v.kcal.trim()
+      ? html`<p class="fwarn mt10">${t('manual.warnKcal', { est: fmtNum(r.est), kcal: fmtNum(r.values.kcal) })}</p>`
+      : '';
+  };
   const err = (/** @type {string} */ k) =>
     errors[k] ? html`<small class="ferr" id="e_${k}" role="alert">${t(errors[k])}</small>` : '';
   openSheet({
@@ -31,17 +36,21 @@ export function openManualForm(init, onSave) {
 <label class="field mt12"><span>${t('manual.name')}</span><input class="input${errors.name ? ' bad' : ''}" id="mname" data-input="v" data-k="name" value="${v.name}" autocomplete="off">${err('name')}</label>
 <div class="grid2 mt10">${FIELDS.map((k) => html`<label class="field"><span>${t(`manual.${k}`)}</span><input class="input${errors[k] ? ' bad' : ''}" id="m${k}" inputmode="decimal" data-input="v" data-k="${k}" value="${v[k]}"${k === 'fib' || k === 'salt' ? html` placeholder="${t('manual.optional')}"` : ''} aria-invalid="${String(!!errors[k])}">${err(k)}</label>`)}
 <label class="field"><span>${t('manual.portion')}</span><input class="input${errors.portion ? ' bad' : ''}" id="mportion" inputmode="numeric" data-input="v" data-k="portion" value="${v.portion}" aria-invalid="${String(!!errors.portion)}">${err('portion')}</label></div>
-${warned ? html`<p class="fwarn mt10" role="alert">${t(warned, { est: validateFood(v).est })}</p>` : ''}
-<button class="btn w100 mt16" data-act="save">${warned ? t('manual.saveAnyway') : t('common.save')}</button>`,
+<div id="kcalhint" aria-live="polite">${hint()}</div>
+<button class="btn w100 mt16" data-act="save">${t('common.save')}</button>`,
     actions: {
-      v: (el) => ((v[el.dataset.k ?? ''] = /** @type {HTMLInputElement} */ (el).value), false),
+      v: (el) => {
+        const k = el.dataset.k ?? '';
+        v[k] = /** @type {HTMLInputElement} */ (el).value;
+        if (['kcal', 'p', 'c', 'f'].includes(k)) patch('#kcalhint', hint());
+        return false;
+      },
       save: () => {
         const r = validateFood(v);
         errors = { ...r.errors };
         if (!v.name.trim()) errors.name = 'manual.errName';
         if (!errors.kcal && !r.values.kcal) errors.kcal = 'manual.errKcal';
-        if (Object.keys(errors).length) return void (warned = null); // re-render with inline errors
-        if (r.warn && warned !== r.warn) return void (warned = r.warn); // ask once, then "Save anyway"
+        if (Object.keys(errors).length) return; // re-render with inline errors (the kcal hint never blocks)
         const n = (/** @type {'kcal'|'p'|'c'|'f'|'portion'} */ k) => r.values[k];
         const food = {
           id: uid('custom'),

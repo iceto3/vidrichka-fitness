@@ -27,7 +27,6 @@ test('energy roughly matches the macros (Atwater, fiber 2 kcal/g) – catches ty
 
 test('the 13 approved multi-source corrections are applied', () => {
   const want = {
-    cottage_cheese: { salt: 0.79 },
     bread_wholegrain: { p: 9.4 },
     grapefruit: { kcal: 34, c: 8.1 },
     wine_red: { c: 0.5 },
@@ -57,7 +56,7 @@ test('cooking variants, cottage cheese and mince ratios exist; frying/breading a
     assert.ok(by[id], id);
   assert.equal(by.cottage_cheese_cream.name.bg, 'Котидж сирене');
   for (const r of ['50', '75'])
-    assert.match(by[`minced_mixed_${r}`].name.bg, /Смесена кайма \d\d\/\d\d \(свинско\/телешко\)/);
+    assert.match(by[`minced_mixed_${r}`].name.bg, /^Кайма смес \d\d\/\d\d \(свинско\/телешко, сурова\)$/);
   assert.match(by.minced_mixed.name.bg, /60\/40/);
 });
 

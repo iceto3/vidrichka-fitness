@@ -694,11 +694,13 @@ async function fixes(page, { go, settle, shot, clearCel, layer }) {
   await layer.locator('#mc').fill('30');
   await layer.locator('#mf').fill('10');
   await layer.locator('#mkcal').fill('50');
-  await layer.locator('[data-act="save"]').click();
   await settle();
-  assert.equal(await layer.locator('.ferr').count(), 0);
-  assert.match(await layer.locator('.fwarn').innerText(), /290 (kcal|ккал)/);
-  assert.match(await layer.locator('[data-act="save"]').innerText(), /Save anyway/);
+  // 1.4.0: a live, non-blocking hint while typing; the button stays a plain Save
+  assert.match(await layer.locator('#kcalhint .fwarn').innerText(), /290 kcal.*says 50/);
+  assert.match(await layer.locator('[data-act="save"]').innerText(), /^\s*Save\s*$/);
+  await layer.locator('#mkcal').fill('285');
+  await settle();
+  assert.equal(await layer.locator('#kcalhint .fwarn').count(), 0, 'close enough: no hint');
   await page.keyboard.press('Escape');
   await settle();
   // body weight
@@ -2426,4 +2428,45 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   console.log(
     '  ✔ 1.4.0 day history: past day opens, edits land on that date, water −/+, sleep screenshot 7 ч 20 мин, no future days',
   );
+
+  // Online food search never hangs on "Търся…": local results at once, then a clear
+  // "not available" + retry; a barcode-style product keeps one brand and shows "–" for
+  // what it does not list.
+  await page.unroute('**/*openfoodfacts.org/**');
+  await page.route('**/*openfoodfacts.org/**', (r) => r.abort());
+  await go('food/add/lunch');
+  await page.locator('#fq').fill('банан');
+  assert.ok((await page.locator('#results .lrow').count()) > 0, 'local results show at once');
+  await page.locator('#offres .offfail').waitFor({ timeout: 12000 });
+  assert.equal(await page.locator('#offres .offbusy').count(), 0, 'the spinner is gone');
+  await page.unroute('**/*openfoodfacts.org/**');
+  await page.route('**/*openfoodfacts.org/**', (r) =>
+    r.fulfill({
+      headers: { 'access-control-allow-origin': '*' },
+      json: {
+        count: 1,
+        products: [
+          {
+            code: '3017620422003',
+            product_name: 'Nutella банан',
+            brands: 'Nutella,Ferrero',
+            nutriments: { 'energy-kcal_100g': 539, proteins_100g: 6.3, fat_100g: 30.9 },
+          },
+        ],
+      },
+    }),
+  );
+  await page.locator('#offres [data-act="retryOff"]').click();
+  await page.locator('#offres .lrow').first().waitFor({ timeout: 12000 });
+  const offName = await page.locator('#offres .lrow').first().innerText();
+  assert.match(offName, /Nutella банан/);
+  assert.doesNotMatch(offName, /Nutella банан · Nutella/, 'brand not repeated');
+  await page.locator('#offres .lrow').first().click();
+  const g = await layer.locator('.panel').last().innerText();
+  assert.match(g, /В –/, 'unknown carbs show "–"');
+  assert.match(g, /Фибри –/, 'unknown fibre shows "–"');
+  await page.keyboard.press('Escape');
+  await settle();
+  await page.unroute('**/*openfoodfacts.org/**');
+  console.log('  ✔ 1.4.0 online search ends (local first, "not available" + retry), brand once, unknown nutrients "–"');
 }

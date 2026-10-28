@@ -3,6 +3,7 @@
  * kcal/macros, one-tap Done.
  * @module features/food/views/grams
  */
+import { FOOD_NOTES } from '../../../data/foods.js';
 import { html } from '../../../ui/dom.js';
 import { fmtNum, t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
@@ -13,19 +14,25 @@ import { known, portion } from '../logic.js';
 
 export const GRAM_STEP = 10;
 
-/** Macro line (P / C / F). @param {{p: number, c: number, f: number}} n */
-export const macroLine = (n) =>
-  html`<span class="row gap12 small b num"><span><span class="cp">●</span> ${t('food.p')} ${Math.round(n.p)} ${t('unit.g')}</span><span><span class="cc">●</span> ${t('food.c')} ${Math.round(n.c)} ${t('unit.g')}</span><span><span class="cf">●</span> ${t('food.f')} ${Math.round(n.f)} ${t('unit.g')}</span></span>`;
+/**
+ * Macro line (П / В / М). A macro the product does not list (`food.missing`, e.g. an Open Food
+ * Facts entry without carbs) shows "–" instead of a misleading 0.
+ * @param {{p: number, c: number, f: number}} n @param {{missing?: string[]}} [food]
+ */
+export const macroLine = (n, food) => {
+  const v = (/** @type {'p'|'c'|'f'} */ k) =>
+    food?.missing?.includes(k) ? '–' : `${fmtNum(Math.round(n[k]))} ${t('unit.g')}`;
+  return html`<span class="row gap12 small b num"><span><span class="cp">●</span> ${t('food.p')} ${v('p')}</span><span><span class="cc">●</span> ${t('food.c')} ${v('c')}</span><span><span class="cf">●</span> ${t('food.f')} ${v('f')}</span></span>`;
+};
 
 /**
- * Fiber / salt line – only the values that are known (empty when neither is).
+ * Fiber / salt line (1.4.0: always both; an unknown one shows "–", never 0).
  * @param {{fib?: number, salt?: number}} n
  */
 export const extraLine = (n) => {
-  const parts = [];
-  if (known(n.fib)) parts.push(`${t('food.fiber')} ${fmtNum(/** @type {number} */ (n.fib), 1)} ${t('unit.g')}`);
-  if (known(n.salt)) parts.push(`${t('food.salt')} ${fmtNum(/** @type {number} */ (n.salt), 1)} ${t('unit.g')}`);
-  return parts.length ? html`<div class="muted small b num px4 mt6 extra">${parts.join(' · ')}</div>` : '';
+  const g = (/** @type {number|undefined} */ v) =>
+    known(v) ? `${fmtNum(/** @type {number} */ (v), 1)} ${t('unit.g')}` : '–';
+  return html`<div class="muted small b num px4 mt6 extra">${t('food.fiber')} ${g(n.fib)} · ${t('food.salt')} ${g(n.salt)}</div>`;
 };
 
 /**
@@ -44,8 +51,9 @@ export function openGrams(food, onDone, initial) {
 <div class="f1"><h2 class="h2">${foodName(food)}</h2><div class="muted small b">${cat ? `${t(`foodcat.${cat.id}`)} · ` : ''}${t('food.per100', { n: Math.round(food.kcal) })}</div></div></div>
 <div class="mt14">${stepper({ act: 'g', value: g, unit: t('unit.g'), label: t('food.grams'), big: true, id: 'grams' })}</div>
 ${food.portion && food.portion !== g ? html`<div class="row center-j mt8"><button class="chip" data-act="portion">${t('food.portion', { n: food.portion })}</button></div>` : ''}
-<div class="row between mt14 px4"><div class="num kcalbig">${fmtNum(n.kcal)} <small>${t('unit.kcal')}</small></div>${macroLine(n)}</div>
+<div class="row between mt14 px4"><div class="num kcalbig">${fmtNum(n.kcal)} <small>${t('unit.kcal')}</small></div>${macroLine(n, food)}</div>
 ${extraLine(n)}
+${FOOD_NOTES[food.id] ? html`<p class="muted xs b px4 mt6 fnote">${t(FOOD_NOTES[food.id])}</p>` : ''}
 <button class="btn w100 mt14" data-act="done">${ic('check', 20, 3)}${t('workout.done')}</button>`;
     },
     actions: {

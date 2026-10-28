@@ -1,0 +1,218 @@
+change,id,category,name_bg,name_en,kcal,protein,carbs,fat,fiber,salt,portion_g,was
+changed,chicken_breast,meat,Пилешко филе (на скара),Chicken breast (grilled),165,31,0,3.6,0,0.2,150,bg: Пилешко филе → Пилешко филе (на скара); en: Chicken breast → Chicken breast (grilled); fib: undefined → 0; salt: undefined → 0.2
+changed,chicken_thigh,meat,Пилешко бутче (на скара),Chicken thigh (grilled),209,26,0,8.6,0,0.2,150,bg: Пилешко бутче → Пилешко бутче (на скара); en: Chicken thigh → Chicken thigh (grilled); f: 10.9 → 8.6; fib: undefined → 0; salt: undefined → 0.2
+changed,turkey_breast,meat,Пуешко филе (на скара),Turkey breast (grilled),135,30,0,1,0,0.2,150,bg: Пуешко филе → Пуешко филе (на скара); en: Turkey breast → Turkey breast (grilled); fib: undefined → 0; salt: undefined → 0.2
+changed,beef_steak,meat,Телешки стек (на скара),Beef steak (grilled),217,26,0,12,0,0.1,180,bg: Телешки стек → Телешки стек (на скара); en: Beef steak → Beef steak (grilled); fib: undefined → 0; salt: undefined → 0.1
+changed,minced_beef,meat,Телешка кайма 90/10 (сурова),Beef mince 90/10 (raw),176,20,0,10,0,0.2,125,bg: Телешка кайма (10% мазнини) → Телешка кайма 90/10 (сурова); en: Minced beef (10% fat) → Beef mince 90/10 (raw); fib: undefined → 0; salt: undefined → 0.2
+changed,minced_mixed,meat,"Кайма смес 60/40 (свинско/телешко, сурова)","Mixed mince 60/40 (pork/beef, raw)",244,17.6,0,18.7,0,0.2,125,"bg: Смесена кайма → Кайма смес 60/40 (свинско/телешко, сурова); en: Mixed minced meat → Mixed mince 60/40 (pork/beef, raw); kcal: 250 → 244; p: 17 → 17.6; f: 20 → 18.7; fib: undefined → 0; salt: undefined → 0.2"
+new,minced_mixed_50,meat,"Кайма смес 50/50 (свинско/телешко, сурова)","Mixed mince 50/50 (pork/beef, raw)",239,17.8,0,18.1,0,0.2,125,
+new,minced_mixed_75,meat,"Кайма смес 75/25 (свинско/телешко, сурова)","Mixed mince 75/25 (pork/beef, raw)",251,17.3,0,19.7,0,0.2,125,
+changed,pork_loin,meat,Свинско филе (на скара),Pork loin (grilled),143,26,0,3.5,0,0.1,150,bg: Свинско филе → Свинско филе (на скара); en: Pork loin → Pork loin (grilled); fib: undefined → 0; salt: undefined → 0.1
+changed,pork_chop,meat,Свинска пържола (на скара),Pork chop (grilled),231,29.2,0,14,0,0.2,150,bg: Свинска пържола → Свинска пържола (на скара); en: Pork chop → Pork chop (grilled); p: 24 → 29.2; fib: undefined → 0; salt: undefined → 0.2
+changed,kebapche,meat,Кебапче,Kebapche,260,16,2,21,0,1.6,70,fib: undefined → 0; salt: undefined → 1.6
+changed,kyufte,meat,Кюфте,Kyufte (meatball),255,16,6,18,0.5,1.5,70,fib: undefined → 0.5; salt: undefined → 1.5
+changed,ham,meat,Шунка,Ham,145,21,1.5,6,0,2.3,30,fib: undefined → 0; salt: undefined → 2.3
+changed,bacon,meat,Бекон,Bacon,541,37,1.4,42,0,4.2,20,fib: undefined → 0; salt: undefined → 4.2
+changed,lukanka,meat,Луканка,Lukanka (dry salami),440,25,1,37,0,3.8,30,fib: undefined → 0; salt: undefined → 3.8
+changed,sausage,meat,Наденица,Sausage,300,13,2,27,0,1.8,100,fib: undefined → 0; salt: undefined → 1.8
+changed,salmon,meat,Сьомга (сурова),Salmon (raw),208,20,0,13,0,0.1,150,bg: Сьомга → Сьомга (сурова); en: Salmon → Salmon (raw); fib: undefined → 0; salt: undefined → 0.1
+changed,tuna_can,meat,Риба тон в собствен сос,Tuna in water (canned),116,26,0,1,0,0.8,80,fib: undefined → 0; salt: undefined → 0.8
+changed,cod,meat,Треска (сурова),Cod (raw),82,18,0,0.7,0,0.1,150,bg: Треска → Треска (сурова); en: Cod → Cod (raw); fib: undefined → 0; salt: undefined → 0.1
+changed,mackerel,meat,Скумрия (сурова),Mackerel (raw),205,19,0,14,0,0.2,150,bg: Скумрия → Скумрия (сурова); en: Mackerel → Mackerel (raw); fib: undefined → 0; salt: undefined → 0.2
+changed,trout,meat,Пъстърва (сурова),Trout (raw),141,20,0,6,0,0.1,150,bg: Пъстърва → Пъстърва (сурова); en: Trout → Trout (raw); fib: undefined → 0; salt: undefined → 0.1
+changed,sea_bass,meat,Лаврак (суров),Sea bass (raw),97,18,0,2,0,0.2,150,bg: Лаврак → Лаврак (суров); en: Sea bass → Sea bass (raw); fib: undefined → 0; salt: undefined → 0.2
+changed,shrimp,meat,Скариди,Shrimp,99,24,0.2,0.3,0,0.3,100,fib: undefined → 0; salt: undefined → 0.3
+changed,sardines,meat,Сардини (консерва),Sardines (canned),208,25,0,11,0,0.8,80,fib: undefined → 0; salt: undefined → 0.8
+changed,chicken_wings,meat,Пилешки крилца (на скара),Chicken wings (grilled),203,30,0,8,0,0.2,150,bg: Пилешки крилца → Пилешки крилца (на скара); en: Chicken wings → Chicken wings (grilled); fib: undefined → 0; salt: undefined → 0.2
+changed,liver_chicken,meat,Пилешки дробчета (сурови),Chicken liver (raw),119,17,0.7,4.8,0,0.2,100,bg: Пилешки дробчета → Пилешки дробчета (сурови); en: Chicken liver → Chicken liver (raw); fib: undefined → 0; salt: undefined → 0.2
+new,chicken_breast_raw,meat,Пилешко филе (сурово),Chicken breast (raw),120,22.5,0,2.6,0,0.11,150,
+new,chicken_thigh_raw,meat,Пилешко бутче без кожа (сурово),"Chicken thigh, skinless (raw)",121,19.7,0,4.1,0,0.24,150,
+new,turkey_breast_raw,meat,Пуешко филе (сурово),Turkey breast (raw),114,23.7,0.1,1.5,0,0.3,150,
+new,pork_loin_raw,meat,Свинско филе (сурово),Pork loin (raw),120,21,0,3.5,0,0.13,150,
+new,beef_raw,meat,"Телешко месо, постно (сурово)",Lean beef (raw),143,21,0,6.5,0,0.15,150,
+new,minced_beef_80,meat,Телешка кайма 80/20 (сурова),Beef mince 80/20 (raw),254,17.2,0,20,0,0.17,125,
+new,salmon_grilled,meat,Сьомга (на скара),Salmon (grilled),206,22.1,0,12.4,0,0.15,150,
+new,chicken_breast_boiled,meat,Пилешко филе (варено),Chicken breast (boiled),151,29,0,3,0,0.18,150,
+new,chicken_breast_breaded,meat,Пилешко филе (панирано),"Chicken breast (breaded, fried)",235,22,12,11,0.6,0.9,150,
+new,chicken_breast_fried,meat,Пилешко филе (пържено),Chicken breast (pan-fried),187,33.4,0.5,4.7,0,0.2,150,
+new,chicken_thigh_boiled,meat,Пилешко бутче (варено),Chicken thigh (boiled),195,25,0,9.8,0,0.19,150,
+new,chicken_thigh_breaded,meat,Пилешко бутче (панирано),"Chicken thigh (breaded, fried)",277,21.6,9.1,16.5,0.3,0.7,150,
+new,chicken_thigh_fried,meat,Пилешко бутче (пържено),Chicken thigh (fried),218,28.2,1.2,10.3,0,0.24,150,
+new,turkey_breast_breaded,meat,Пуешко филе (панирано),"Turkey breast (breaded, fried)",220,19,13,10,0.6,0.9,150,
+new,turkey_breast_fried,meat,Пуешко филе (пържено),Turkey breast (pan-fried),175,29,0.5,6,0,0.2,150,
+new,pork_chop_boiled,meat,Свинско (варено),Pork (boiled),199,29,0,8.4,0,0.13,150,
+new,pork_chop_breaded,meat,Свинска пържола (панирана),"Pork chop (breaded, fried)",260,21,11,15,0.5,0.9,150,
+new,pork_chop_fried,meat,Свинска пържола (пържена),Pork chop (pan-fried),247,26.9,0,14.7,0,0.19,150,
+new,beef_boiled,meat,Телешко (варено),Beef (boiled),200,30,0,8.8,0,0.15,150,
+new,beef_breaded,meat,Телешки шницел (паниран),"Veal schnitzel (breaded, fried)",230,18,12,12,0.5,0.8,150,
+new,beef_fried,meat,Телешки стек (пържен),Beef steak (pan-fried),240,27,0,14.5,0,0.16,180,
+new,fish_white_boiled,meat,Бяла риба (варена),White fish (boiled),105,22.8,0,0.9,0,0.2,150,
+new,fish_breaded,meat,Панирана риба (хек/треска),"Breaded fish (hake/cod, fried)",200,17,9,10.5,0.5,0.8,150,
+new,fish_fried,meat,Бяла риба (пържена),White fish (fried),165,20,4,7.5,0.2,0.3,150,
+new,salmon_fried,meat,Сьомга (пържена),Salmon (pan-fried),230,22,0,15.5,0,0.15,150,
+new,mackerel_fried,meat,Скумрия (пържена),Mackerel (fried),235,21,3,16,0.1,0.25,150,
+new,trout_fried,meat,Пъстърва (пържена),Trout (fried),190,22,2.5,10,0.1,0.2,150,
+new,sprat_fried,meat,Цаца (пържена),Sprat (fried),290,18,8,21,0.3,0.6,150,
+changed,tomato,veg,Домат,Tomato,18,0.9,3.9,0.2,1.2,0,120,fib: undefined → 1.2; salt: undefined → 0
+changed,cucumber,veg,Краставица,Cucumber,15,0.7,3.6,0.1,0.5,0,150,fib: undefined → 0.5; salt: undefined → 0
+changed,pepper,veg,Чушка,Bell pepper,26,1,6,0.3,2.1,0,120,fib: undefined → 2.1; salt: undefined → 0
+changed,roasted_pepper,veg,Печена чушка,Roasted pepper,30,1,6,0.4,2,0,100,fib: undefined → 2; salt: undefined → 0
+changed,broccoli,veg,Броколи,Broccoli,34,2.8,7,0.4,2.6,0.1,150,fib: undefined → 2.6; salt: undefined → 0.1
+changed,spinach,veg,Спанак,Spinach,23,2.9,3.6,0.4,2.2,0.2,80,fib: undefined → 2.2; salt: undefined → 0.2
+changed,lettuce,veg,Маруля,Lettuce,15,1.4,2.9,0.2,1.3,0.1,60,fib: undefined → 1.3; salt: undefined → 0.1
+changed,iceberg,veg,Айсберг,Iceberg lettuce,14,0.9,3,0.1,1.2,0,60,fib: undefined → 1.2; salt: undefined → 0
+changed,cabbage,veg,Зеле,Cabbage,25,1.3,5.8,0.1,2.5,0,100,fib: undefined → 2.5; salt: undefined → 0
+changed,carrot,veg,Морков,Carrot,41,0.9,10,0.2,2.8,0.2,80,fib: undefined → 2.8; salt: undefined → 0.2
+changed,potato,veg,Картофи (варени),Potato (boiled),87,1.9,20,0.1,1.8,0,200,fib: undefined → 1.8; salt: undefined → 0
+changed,potato_baked,veg,Картофи на фурна,Potato (oven-baked),140,2.5,22,4.5,2.2,0.5,200,fib: undefined → 2.2; salt: undefined → 0.5
+changed,fries,veg,Пържени картофи,French fries,312,3.4,41,15,3.8,0.5,150,fib: undefined → 3.8; salt: undefined → 0.5
+changed,sweet_potato,veg,Сладък картоф,Sweet potato,86,1.6,20,0.1,3,0.1,200,fib: undefined → 3; salt: undefined → 0.1
+changed,onion,veg,Лук,Onion,40,1.1,9.3,0.1,1.7,0,60,fib: undefined → 1.7; salt: undefined → 0
+changed,garlic,veg,Чесън,Garlic,149,6.4,33,0.5,2.1,0,5,fib: undefined → 2.1; salt: undefined → 0
+changed,zucchini,veg,Тиквичка,Zucchini,17,1.2,3.1,0.3,1,0,150,fib: undefined → 1; salt: undefined → 0
+changed,eggplant,veg,Патладжан,Eggplant,25,1,6,0.2,3,0,150,fib: undefined → 3; salt: undefined → 0
+changed,mushrooms,veg,Гъби,Mushrooms,22,3.1,3.3,0.3,1,0,100,fib: undefined → 1; salt: undefined → 0
+changed,green_beans,veg,Зелен фасул,Green beans,31,1.8,7,0.2,2.7,0,150,fib: undefined → 2.7; salt: undefined → 0
+changed,peas,veg,Грах,Green peas,81,5.4,14,0.4,5.7,0,100,fib: undefined → 5.7; salt: undefined → 0
+changed,corn,veg,Царевица,Sweet corn,86,3.3,19,1.4,2,0,80,fib: undefined → 2; salt: undefined → 0
+changed,avocado,veg,Авокадо,Avocado,160,2,8.5,14.7,6.7,0,70,fib: undefined → 6.7; salt: undefined → 0
+changed,beetroot,veg,Цвекло,Beetroot,43,1.6,10,0.2,2.8,0.2,100,fib: undefined → 2.8; salt: undefined → 0.2
+changed,cauliflower,veg,Карфиол,Cauliflower,25,1.9,5,0.3,2,0.1,150,fib: undefined → 2; salt: undefined → 0.1
+changed,shopska,veg,Шопска салата,Shopska salad,75,3.2,3.5,5.5,1.2,0.8,250,fib: undefined → 1.2; salt: undefined → 0.8
+changed,lyutenitsa,veg,Лютеница,Lyutenitsa,90,1.8,11,4,2.5,1.2,40,fib: undefined → 2.5; salt: undefined → 1.2
+changed,beans_cooked,veg,Бял боб (варен),White beans (cooked),139,9.7,25,0.4,6.3,0,150,fib: undefined → 6.3; salt: undefined → 0
+changed,lentils,veg,Леща (варена),Lentils (cooked),116,9,20,0.4,7.9,0,150,fib: undefined → 7.9; salt: undefined → 0
+changed,chickpeas,veg,Нахут (варен),Chickpeas (cooked),164,8.9,27,2.6,7.6,0,120,fib: undefined → 7.6; salt: undefined → 0
+changed,olives,veg,Маслини,Olives,145,1,3.8,15,3.3,3.9,30,fib: undefined → 3.3; salt: undefined → 3.9
+changed,banana,fruit,Банан,Banana,89,1.1,23,0.3,2.6,0,120,fib: undefined → 2.6; salt: undefined → 0
+changed,apple,fruit,Ябълка,Apple,52,0.3,14,0.2,2.4,0,180,fib: undefined → 2.4; salt: undefined → 0
+changed,pear,fruit,Круша,Pear,57,0.4,15,0.1,3.1,0,180,fib: undefined → 3.1; salt: undefined → 0
+changed,orange,fruit,Портокал,Orange,47,0.9,12,0.1,2.4,0,160,fib: undefined → 2.4; salt: undefined → 0
+changed,mandarin,fruit,Мандарина,Mandarin,53,0.8,13,0.3,1.8,0,80,fib: undefined → 1.8; salt: undefined → 0
+changed,grapefruit,fruit,Грейпфрут,Grapefruit,34,0.8,8.1,0.1,1.6,0,200,kcal: 42 → 34; c: 11 → 8.1; fib: undefined → 1.6; salt: undefined → 0
+changed,lemon,fruit,Лимон,Lemon,29,1.1,9,0.3,2.8,0,30,fib: undefined → 2.8; salt: undefined → 0
+changed,strawberries,fruit,Ягоди,Strawberries,32,0.7,7.7,0.3,2,0,150,fib: undefined → 2; salt: undefined → 0
+changed,blueberries,fruit,Боровинки,Blueberries,57,0.7,14,0.3,2.4,0,100,fib: undefined → 2.4; salt: undefined → 0
+changed,raspberries,fruit,Малини,Raspberries,52,1.2,12,0.7,6.5,0,100,fib: undefined → 6.5; salt: undefined → 0
+changed,cherries,fruit,Череши,Cherries,63,1.1,16,0.2,2.1,0,150,fib: undefined → 2.1; salt: undefined → 0
+changed,grapes,fruit,Грозде,Grapes,69,0.7,18,0.2,0.9,0,150,fib: undefined → 0.9; salt: undefined → 0
+changed,watermelon,fruit,Диня,Watermelon,30,0.6,7.6,0.2,0.4,0,300,fib: undefined → 0.4; salt: undefined → 0
+changed,melon,fruit,Пъпеш,Melon,34,0.8,8,0.2,0.9,0,250,fib: undefined → 0.9; salt: undefined → 0
+changed,peach,fruit,Праскова,Peach,39,0.9,10,0.3,1.5,0,150,fib: undefined → 1.5; salt: undefined → 0
+changed,apricot,fruit,Кайсия,Apricot,48,1.4,11,0.4,2,0,40,fib: undefined → 2; salt: undefined → 0
+changed,plum,fruit,Слива,Plum,46,0.7,11,0.3,1.4,0,60,fib: undefined → 1.4; salt: undefined → 0
+changed,kiwi,fruit,Киви,Kiwi,61,1.1,15,0.5,3,0,75,fib: undefined → 3; salt: undefined → 0
+changed,pineapple,fruit,Ананас,Pineapple,50,0.5,13,0.1,1.4,0,150,fib: undefined → 1.4; salt: undefined → 0
+changed,mango,fruit,Манго,Mango,60,0.8,15,0.4,1.6,0,150,fib: undefined → 1.6; salt: undefined → 0
+changed,figs,fruit,Смокини,Figs,74,0.8,19,0.3,2.9,0,50,fib: undefined → 2.9; salt: undefined → 0
+changed,dates,fruit,Фурми,Dates (dried),282,2.5,75,0.4,8,0,25,fib: undefined → 8; salt: undefined → 0
+changed,raisins,fruit,Стафиди,Raisins,299,3.1,79,0.5,3.7,0,30,fib: undefined → 3.7; salt: undefined → 0
+changed,pomegranate,fruit,Нар,Pomegranate,83,1.7,19,1.2,4,0,100,fib: undefined → 4; salt: undefined → 0
+changed,almonds,nuts,Бадеми,Almonds,579,21,22,50,12.5,0,30,fib: undefined → 12.5; salt: undefined → 0
+changed,walnuts,nuts,Орехи,Walnuts,654,15,14,65,6.7,0,30,fib: undefined → 6.7; salt: undefined → 0
+changed,hazelnuts,nuts,Лешници,Hazelnuts,628,15,17,61,9.7,0,30,fib: undefined → 9.7; salt: undefined → 0
+changed,cashews,nuts,Кашу,Cashews,553,18,30,44,3.3,0,30,fib: undefined → 3.3; salt: undefined → 0
+changed,peanuts,nuts,Фъстъци,Peanuts,567,26,16,49,8.5,0,30,fib: undefined → 8.5; salt: undefined → 0
+changed,pistachios,nuts,Шам-фъстък,Pistachios,560,20,28,45,10.6,0,30,fib: undefined → 10.6; salt: undefined → 0
+changed,peanut_butter,nuts,Фъстъчено масло,Peanut butter,588,25,20,50,5,1.1,20,fib: undefined → 5; salt: undefined → 1.1
+changed,sunflower_seeds,nuts,Слънчогледови семки,Sunflower seeds,584,21,20,51,8.6,0,30,fib: undefined → 8.6; salt: undefined → 0
+changed,pumpkin_seeds,nuts,Тиквени семки,Pumpkin seeds,559,30,11,49,6,0,30,fib: undefined → 6; salt: undefined → 0
+changed,chia,nuts,Чиа,Chia seeds,486,17,42,31,34.4,0,15,fib: undefined → 34.4; salt: undefined → 0
+changed,flax,nuts,Ленено семе,Flaxseed,534,18,29,42,27.3,0.1,10,fib: undefined → 27.3; salt: undefined → 0.1
+changed,sesame,nuts,Сусам,Sesame seeds,573,18,23,50,11.8,0,10,fib: undefined → 11.8; salt: undefined → 0
+changed,tahini,nuts,Тахан,Tahini,595,17,21,54,9.3,0.3,20,fib: undefined → 9.3; salt: undefined → 0.3
+changed,mixed_nuts,nuts,Ядкова смес,Mixed nuts,607,20,21,54,7,0,30,fib: undefined → 7; salt: undefined → 0
+changed,yoghurt,dairy,Кисело мляко 2%,Yoghurt 2%,56,3.5,4.7,2,0,0.1,200,fib: undefined → 0; salt: undefined → 0.1
+changed,yoghurt_36,dairy,"Кисело мляко 3,6%",Yoghurt 3.6%,63,3.3,4,3.6,0,0.1,200,fib: undefined → 0; salt: undefined → 0.1
+changed,greek_yoghurt,dairy,Гръцки йогурт 2%,Greek yoghurt 2%,73,10,3.6,2,0,0.1,170,fib: undefined → 0; salt: undefined → 0.1
+changed,skyr,dairy,Скир,Skyr,63,11,4,0.2,0,0.1,150,fib: undefined → 0; salt: undefined → 0.1
+changed,strained_yoghurt,dairy,Цедено кисело мляко,Strained yoghurt,110,7,4,7,0,0.1,150,fib: undefined → 0; salt: undefined → 0.1
+changed,milk,dairy,"Прясно мляко 1,5%",Milk 1.5%,47,3.4,4.9,1.5,0,0.1,250,fib: undefined → 0; salt: undefined → 0.1
+changed,milk_3,dairy,Прясно мляко 3%,Milk 3%,60,3.3,4.8,3,0,0.1,250,fib: undefined → 0; salt: undefined → 0.1
+changed,ayran,dairy,Айрян,Ayran,36,1.7,2.4,2,0,0.3,250,fib: undefined → 0; salt: undefined → 0.3
+changed,sirene,dairy,Сирене,White brined cheese (sirene),260,15,1,21,0,2.8,50,fib: undefined → 0; salt: undefined → 2.8
+changed,kashkaval,dairy,Кашкавал,Kashkaval (yellow cheese),360,25,1,28,0,2.33,30,fib: undefined → 0; salt: undefined → 2.33
+changed,cottage_cheese,dairy,Извара,Curd cheese (izvara),104,14,3,4,0,0.1,150,en: Cottage cheese → Curd cheese (izvara); kcal: 98 → 104; p: 11 → 14; c: 3.4 → 3; f: 4.3 → 4; fib: undefined → 0; salt: undefined → 0.1
+new,cottage_cheese_cream,dairy,Котидж сирене,Cottage cheese,99,12.5,2.5,4.3,0,0.7,150,
+changed,mozzarella,dairy,Моцарела,Mozzarella,280,22,2.2,20,0,1.2,60,fib: undefined → 0; salt: undefined → 1.2
+changed,parmesan,dairy,Пармезан,Parmesan,431,38,4,29,0,1.6,15,fib: undefined → 0; salt: undefined → 1.6
+changed,cream_cheese,dairy,Крема сирене,Cream cheese,342,6,4,34,0,0.8,30,fib: undefined → 0; salt: undefined → 0.8
+changed,butter,dairy,Масло,Butter,717,0.9,0.1,81,0,0,10,fib: undefined → 0; salt: undefined → 0
+changed,sour_cream,dairy,Заквасена сметана,Sour cream,198,2.4,4.6,19,0,0.1,30,fib: undefined → 0; salt: undefined → 0.1
+changed,kefir,dairy,Кефир,Kefir,52,3.4,4.5,2,0,0.1,250,fib: undefined → 0; salt: undefined → 0.1
+changed,protein_pudding,dairy,Протеинов пудинг,Protein pudding,75,10,6,1.5,0.5,0.2,200,fib: undefined → 0.5; salt: undefined → 0.2
+changed,egg,eggs,Яйце,Egg (whole),143,12.6,0.7,9.5,0,0.4,55,fib: undefined → 0; salt: undefined → 0.4
+changed,egg_boiled,eggs,Варено яйце,Boiled egg,155,12.6,1.1,10.6,0,0.3,55,fib: undefined → 0; salt: undefined → 0.3
+changed,egg_fried,eggs,Пържено яйце,Fried egg,196,13.6,0.8,15,0,0.5,55,fib: undefined → 0; salt: undefined → 0.5
+changed,egg_white,eggs,Белтък,Egg white,52,11,0.7,0.2,0,0.4,33,fib: undefined → 0; salt: undefined → 0.4
+changed,omelette,eggs,Омлет,Omelette,154,11,0.6,12,0,0.4,150,fib: undefined → 0; salt: undefined → 0.4
+changed,scrambled,eggs,Бъркани яйца,Scrambled eggs,149,10,1.6,11,0,0.4,150,fib: undefined → 0; salt: undefined → 0.4
+changed,quail_eggs,eggs,Пъдпъдъчи яйца,Quail eggs,158,13,0.4,11,0,0.4,50,fib: undefined → 0; salt: undefined → 0.4
+changed,eggs_panagyurski,eggs,Яйца по панагюрски,Eggs Panagyurski style,170,9,4,13,0,0.8,250,fib: undefined → 0; salt: undefined → 0.8
+changed,oats,grains,Овесени ядки,Oats,379,13,68,6.5,10.1,0,50,fib: undefined → 10.1; salt: undefined → 0
+changed,rice,grains,Ориз (варен),Rice (cooked),130,2.7,28,0.3,0.4,0,180,fib: undefined → 0.4; salt: undefined → 0
+changed,rice_brown,grains,Кафяв ориз (варен),Brown rice (cooked),123,2.7,26,1,1.6,0,180,fib: undefined → 1.6; salt: undefined → 0
+changed,pasta,grains,Паста (варена),Pasta (cooked),158,5.8,31,0.9,1.8,0,200,fib: undefined → 1.8; salt: undefined → 0
+changed,bread_white,grains,Бял хляб,White bread,265,9,49,3.2,2.7,1.2,40,fib: undefined → 2.7; salt: undefined → 1.2
+changed,bread_wholegrain,grains,Пълнозърнест хляб,Wholegrain bread,247,9.4,41,3.4,6,1.1,40,p: 13 → 9.4; fib: undefined → 6; salt: undefined → 1.1
+changed,rye_bread,grains,Ръжен хляб,Rye bread,259,8.5,48,3.3,5.8,1.5,40,fib: undefined → 5.8; salt: undefined → 1.5
+changed,tortilla,grains,Тортила,Tortilla wrap,310,8,52,7.5,3,1.3,60,fib: undefined → 3; salt: undefined → 1.3
+changed,bulgur,grains,Булгур (варен),Bulgur (cooked),83,3.1,19,0.2,4.5,0,180,fib: undefined → 4.5; salt: undefined → 0
+changed,quinoa,grains,Киноа (варена),Quinoa (cooked),120,4.4,21,1.9,2.8,0,180,fib: undefined → 2.8; salt: undefined → 0
+changed,couscous,grains,Кус-кус (варен),Couscous (cooked),112,3.8,23,0.2,1.4,0,180,fib: undefined → 1.4; salt: undefined → 0
+changed,buckwheat,grains,Елда (варена),Buckwheat (cooked),92,3.4,20,0.6,2.7,0,180,fib: undefined → 2.7; salt: undefined → 0
+changed,granola,grains,Гранола,Granola,471,10,64,20,6,0.4,50,fib: undefined → 6; salt: undefined → 0.4
+changed,cornflakes,grains,Корнфлейкс,Corn flakes,357,7.5,84,0.4,3,1.1,40,fib: undefined → 3; salt: undefined → 1.1
+changed,rice_cakes,grains,Оризовки,Rice cakes,387,8,81,2.8,4.2,0.4,10,fib: undefined → 4.2; salt: undefined → 0.4
+changed,banitsa,grains,Баница,Banitsa,300,10,26,17,1,1.2,150,fib: undefined → 1; salt: undefined → 1.2
+changed,mekitsa,grains,Мекица,Mekitsa,330,7,40,16,1.5,0.8,80,fib: undefined → 1.5; salt: undefined → 0.8
+changed,pizza,grains,Пица,Pizza,266,11,33,10,2.3,1.12,250,fib: undefined → 2.3; salt: undefined → 1.12
+changed,croissant,grains,Кроасан,Croissant,406,8,46,21,2.6,1,60,fib: undefined → 2.6; salt: undefined → 1
+changed,pancake,grains,Палачинка,Pancake,227,6.4,28,9.7,0.9,0.4,60,fib: undefined → 0.9; salt: undefined → 0.4
+changed,muesli,grains,Мюсли,Muesli,362,10,66,6,7,0.1,50,fib: undefined → 7; salt: undefined → 0.1
+changed,bagel,grains,Геврек,Bagel,270,10,53,1.6,2.3,1.1,90,fib: undefined → 2.3; salt: undefined → 1.1
+changed,pita,grains,Пита,Pita bread,275,9,56,1.2,2.2,1.3,60,fib: undefined → 2.2; salt: undefined → 1.3
+changed,water,drinks,Вода,Water,0,0,0,0,0,0,250,fib: undefined → 0; salt: undefined → 0
+changed,coffee,drinks,Кафе (без захар),Coffee (black),2,0.1,0,0,0,0,60,fib: undefined → 0; salt: undefined → 0
+changed,cappuccino,drinks,Капучино,Cappuccino,28,2.2,3.6,1.9,0,0.1,200,kcal: 40 → 28; fib: undefined → 0; salt: undefined → 0.1
+changed,latte,drinks,Лате,Latte,50,3,4.6,2,0,0.1,250,fib: undefined → 0; salt: undefined → 0.1
+changed,tea,drinks,Чай (без захар),Tea (unsweetened),1,0,0.3,0,0,0,250,fib: undefined → 0; salt: undefined → 0
+changed,orange_juice,drinks,Портокалов сок,Orange juice,45,0.7,10,0.2,0.2,0,250,fib: undefined → 0.2; salt: undefined → 0
+changed,apple_juice,drinks,Ябълков сок,Apple juice,46,0.1,11,0.1,0.2,0,250,fib: undefined → 0.2; salt: undefined → 0
+changed,smoothie,drinks,Плодово смути,Fruit smoothie,60,1,14,0.3,1,0,300,fib: undefined → 1; salt: undefined → 0
+changed,protein_shake,drinks,Протеинов шейк (с вода),Protein shake (water),40,8,1.2,0.5,0,0.1,300,fib: undefined → 0; salt: undefined → 0.1
+changed,cola,drinks,Кола,Cola,42,0,10.6,0,0,0,330,fib: undefined → 0; salt: undefined → 0
+changed,cola_zero,drinks,Кола зиро,Cola zero,0.3,0,0,0,0,0,330,fib: undefined → 0; salt: undefined → 0
+changed,beer,drinks,Бира,Beer,43,0.5,3.6,0,0,0,500,fib: undefined → 0; salt: undefined → 0
+changed,wine_red,drinks,Червено вино,Red wine,85,0.1,0.5,0,0,0,150,c: 2.6 → 0.5; fib: undefined → 0; salt: undefined → 0
+changed,wine_white,drinks,Бяло вино,White wine,82,0.1,2.6,0,0,0,150,fib: undefined → 0; salt: undefined → 0
+changed,rakia,drinks,Ракия,Rakia,231,0,0,0,0,0,50,fib: undefined → 0; salt: undefined → 0
+changed,boza,drinks,Боза,Boza,69,1,13.8,0.5,0.5,0,250,kcal: 90 → 69; c: 20 → 13.8; fib: undefined → 0.5; salt: undefined → 0
+changed,kombucha,drinks,Комбуча,Kombucha,15,0,3.5,0,0,0,330,fib: undefined → 0; salt: undefined → 0
+changed,oat_milk,drinks,Овесена напитка,Oat drink,46,1,6.7,1.5,0.8,0.1,250,fib: undefined → 0.8; salt: undefined → 0.1
+changed,almond_milk,drinks,Бадемова напитка (без захар),Almond drink (unsweetened),15,0.5,0.3,1.1,0.2,0.1,250,fib: undefined → 0.2; salt: undefined → 0.1
+changed,energy_drink,drinks,Енергийна напитка,Energy drink,45,0,11,0,0,0.1,250,fib: undefined → 0; salt: undefined → 0.1
+changed,olive_oil,other,Зехтин,Olive oil,884,0,0,100,0,0,10,fib: undefined → 0; salt: undefined → 0
+changed,sunflower_oil,other,Слънчогледово олио,Sunflower oil,884,0,0,100,0,0,10,fib: undefined → 0; salt: undefined → 0
+changed,honey,other,Мед,Honey,304,0.3,82,0,0.2,0,20,fib: undefined → 0.2; salt: undefined → 0
+changed,jam,other,Сладко / конфитюр,Jam,250,0.4,62,0.1,1.1,0.1,20,fib: undefined → 1.1; salt: undefined → 0.1
+changed,sugar,other,Захар,Sugar,387,0,100,0,0,0,5,fib: undefined → 0; salt: undefined → 0
+changed,dark_chocolate,other,Черен шоколад 70%,Dark chocolate 70%,598,7.8,46,43,10.9,0,20,fib: undefined → 10.9; salt: undefined → 0
+changed,milk_chocolate,other,Млечен шоколад,Milk chocolate,535,7.7,59,30,3.4,0.2,25,fib: undefined → 3.4; salt: undefined → 0.2
+changed,protein_bar,other,Протеиново блокче,Protein bar,360,33,35,12,6,0.6,50,fib: undefined → 6; salt: undefined → 0.6
+changed,ice_cream,other,Сладолед,Ice cream,207,3.5,24,11,0.7,0.2,100,fib: undefined → 0.7; salt: undefined → 0.2
+changed,chips,other,Чипс,Potato chips,536,7,53,35,3.1,1.3,30,fib: undefined → 3.1; salt: undefined → 1.3
+changed,hummus,other,Хумус,Hummus,166,5.8,17.8,10,6,0.8,50,p: 8 → 5.8; c: 14 → 17.8; fib: undefined → 6; salt: undefined → 0.8
+changed,ketchup,other,Кетчуп,Ketchup,112,1.7,26,0.1,0.3,2.3,15,fib: undefined → 0.3; salt: undefined → 2.3
+changed,mayonnaise,other,Майонеза,Mayonnaise,680,1,0.6,75,0,1.6,15,fib: undefined → 0; salt: undefined → 1.6
+changed,tarator,other,Таратор,Tarator,60,2.5,3,4.5,0.4,0.5,300,fib: undefined → 0.4; salt: undefined → 0.5
+changed,bob_chorba,other,Боб чорба,Bean soup,95,5,12,3,4,0.8,300,fib: undefined → 4; salt: undefined → 0.8
+changed,chicken_soup,other,Пилешка супа,Chicken soup,45,3.5,4,1.5,0.3,0.7,300,fib: undefined → 0.3; salt: undefined → 0.7
+changed,musaka,other,Мусака,Moussaka,160,7,11,10,1.3,0.8,300,fib: undefined → 1.3; salt: undefined → 0.8
+changed,sarmi,other,Сарми,Sarmi (stuffed cabbage),150,7,11,9,1.5,1.2,250,fib: undefined → 1.5; salt: undefined → 1.2
+changed,burger,other,Бургер,Burger,254,13,31.3,8.4,1.8,1.2,220,c: 25 → 31.3; f: 11 → 8.4; fib: undefined → 1.8; salt: undefined → 1.2
+changed,sushi,other,Суши,Sushi roll,150,6,28,1.5,0.8,0.7,200,fib: undefined → 0.8; salt: undefined → 0.7
+changed,dyuner,other,Дюнер,Doner wrap,215,14.6,20,10,1.5,1.2,350,p: 11 → 14.6; fib: undefined → 1.5; salt: undefined → 1.2
+changed,cake,other,Торта,Cake,350,5,45,17,0.8,0.4,100,fib: undefined → 0.8; salt: undefined → 0.4
+changed,biscuits,other,Бисквити,Biscuits,480,6.5,70,19,2,0.7,30,fib: undefined → 2; salt: undefined → 0.7
+changed,popcorn,other,Пуканки,Popcorn,387,13,78,4.5,14.5,0,30,fib: undefined → 14.5; salt: undefined → 0

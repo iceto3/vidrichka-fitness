@@ -249,6 +249,8 @@ export default {
   'food.searchingOnline': 'Searching Open Food Facts…',
   'food.onlineResults': 'Open Food Facts',
   'food.offlineSearch': 'Online search unavailable right now – showing local foods.',
+  'food.retryOnline': 'Try again',
+  'food.noteMince': 'Mince fat differs by brand and blend – check the label if you have it.',
   'food.noOnline': 'No online results.',
   'food.scan': 'Scan barcode',
   'food.manual': 'Enter manually',
@@ -317,8 +319,7 @@ export default {
   'manual.errOver100': 'At most 100 g per 100 g of product.',
   'manual.errSum': 'Protein + carbs + fat can’t be more than 100 g per 100 g.',
   'manual.errPortion': 'At most 5000 g.',
-  'manual.warnKcal': 'These macros add up to about {est} kcal per 100 g. Check the calories, or save anyway.',
-  'manual.saveAnyway': 'Save anyway',
+  'manual.warnKcal': 'The macros come to about {est} kcal per 100 g, but the field says {kcal}. You can still save.',
   // progress
   'progress.title': 'Progress',
   'progress.lifts': 'Lifts',
@@ -886,7 +887,7 @@ export default {
   'whatsNew.fixes132':
     'Fixes: Food refreshes right after a change, “vs 4 weeks ago” compares with an entry at least 4 weeks old, and Progress › Body shows every photo session',
   'whatsNew.record':
-    'Dictate right in the app: tap “Record” in “Say it”, speak for up to 30 seconds and check the text before “Read it” – works on iPhone too',
+    'Dictate right in the app: in “Say what you had” tap “Record”, speak for up to 30 seconds and check the text before Vidrichka turns it into entries – works on iPhone too',
   'whatsNew.fixes133':
     'Fixes: “Undo” goes away when you switch tabs, the suggested combination name fits the meal, and the over-100 g message is shorter',
   // 1.3.4
@@ -991,7 +992,7 @@ export default {
   'day.food': 'Food that day',
   'day.workout': 'Workout',
   'day.workoutLine': '{ex} ex. · {sets} sets · {min} min · {vol} kg',
-  'day.noWorkout': 'No workout that day (0).',
+  'day.noWorkout': 'No workout that day.',
   'day.err.invalid': 'Invalid date.',
   'day.err.future': "Future days can't be filled in.",
   'day.err.tooOld': 'That day is too far back.',

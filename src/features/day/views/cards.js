@@ -94,6 +94,13 @@ export function openStepsSheet(date) {
   });
 }
 
+/**
+ * Fibre/salt of a day: 0 g on an empty day, "–" when food was logged but none of it lists the
+ * nutrient (e.g. a barcode product without fibre), else the sum of the rows that know it.
+ * @param {unknown} tot Day totals (null = nothing logged) @param {number|null|undefined} v
+ */
+const gramsOrDash = (tot, v) => (tot && v == null ? '–' : `${fmtNum(v ?? 0, 1)} ${t('unit.g')}`);
+
 /** Sleep card (the night before `date`). @param {string} date */
 export function sleepCard(date) {
   const s = readDay(date).sleep,
@@ -210,7 +217,7 @@ export function mealsCard(date) {
   const head = isToday(date) ? t('home.mealsToday') : t('day.food');
   return html`<section class="card mt12 meals homemeals" aria-label="${head}"><div class="row between mhead"><h2 class="h3 xb">${head}</h2><span class="b num small">${fmtNum(tot?.kcal ?? 0)} ${t('unit.kcal')}</span></div>
 <div class="row gap12 small b muted dayfoodsum"><span class="${p > s.proteinGoal ? 'okc' : ''}">${t('food.protein')} <span class="num">${fmtNum(p)}/${s.proteinGoal} ${t('unit.g')}</span>${p >= s.proteinGoal ? ' ✓' : ''}</span>
-<span>${t('food.fiber')} <span class="num">${fmtNum(tot?.fib ?? 0, 1)} ${t('unit.g')}</span></span><span>${t('food.salt')} <span class="num">${fmtNum(tot?.salt ?? 0, 1)} ${t('unit.g')}</span></span></div>
+<span>${t('food.fiber')} <span class="num">${gramsOrDash(tot, tot?.fib)}</span></span><span>${t('food.salt')} <span class="num">${gramsOrDash(tot, tot?.salt)}</span></span></div>
 ${MEALS.map(([m]) => {
   const items = rows.filter((r) => r.meal === m),
     [emo, bg] = MEAL_STYLE[m];

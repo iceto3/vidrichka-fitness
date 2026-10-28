@@ -24,16 +24,30 @@ import {
   searchLocal,
   view,
 } from '../api.js';
-import { signature, timesEaten, totals } from '../logic.js';
+import { known, signature, timesEaten, totals } from '../logic.js';
 import { openGrams } from './grams.js';
+import { SEARCH_TIMEOUT, offView, search, within } from '../off.js';
 import { deleteFoodRow } from './item.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 
 /** One food result row. @param {any} f */
+/**
+ * Second line of a food row: kcal / 100 g, then fibre and salt when the food lists them (1.4.0).
+ * @param {any} f
+ */
+export const foodSub = (f) =>
+  [
+    `${fmtNum(f.kcal)} ${t('unit.kcal')} / 100 ${t('unit.g')}`,
+    known(f.fib) ? `${t('food.fiberShort')} ${fmtNum(f.fib, 1)} ${t('unit.g')}` : '',
+    known(f.salt) ? `${t('food.saltShort')} ${fmtNum(f.salt, 1)} ${t('unit.g')}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
 const foodRow = (
   f,
 ) => html`<button class="lrow" data-act="pick" data-id="${f.id}"><span class="fic">${f.emoji ?? '🍽️'}</span>
-<span class="f1 left"><span class="b block">${foodName(f)}</span><span class="muted xs b">${fmtNum(f.kcal)} ${t('unit.kcal')} / 100 ${t('unit.g')}</span></span>${ic('plus', 18, 2.6, 'var(--accent-d)')}</button>`;
+<span class="f1 left"><span class="b block">${foodName(f)}</span><span class="muted xs b">${foodSub(f)}</span></span>${ic('plus', 18, 2.6, 'var(--accent-d)')}</button>`;
 
 /** @param {{meal: string}} p @returns {import('../../../core/registry.js').View} */
 export default ({ meal }) => {
@@ -43,6 +57,8 @@ export default ({ meal }) => {
   const basket = [];
   /** @type {Map<string, any>} */
   const online = new Map();
+  /** Online search state (1.4.0): rendered from here, so a re-render never restarts "Searching…". */
+  const off = { q: '', state: /** @type {'idle'|'busy'|'done'|'fail'} */ ('idle'), list: /** @type {any[]} */ ([]) };
   let q = '',
     picked = '',
     showRecent = false,
@@ -62,24 +78,40 @@ export default ({ meal }) => {
   const results = () => {
     const loc = searchLocal(q);
     return html`${loc.length ? html`<div class="card list mt10">${loc.map(foodRow)}</div>` : ''}
-<div id="offres" aria-live="polite">${q.length >= 3 ? html`<div class="muted small b mt10 center">${t('food.searchingOnline')}</div>` : ''}</div>
+<div id="offres" aria-live="polite">${offBlock()}</div>
 ${!loc.length && q ? html`<button class="btn sec w100 mt10" data-act="manual">${ic('edit', 18)}${t('food.manual')}</button>` : ''}`;
+  };
+
+  /** The online part under the local results: searching / list / nothing found / not available + retry. */
+  const offBlock = () => {
+    const v = offView(off, q);
+    if (v === 'busy')
+      return html`<div class="muted small b mt10 center offbusy"><span class="spin sm" aria-hidden="true"></span> ${t('food.searchingOnline')}</div>`;
+    if (v === 'fail')
+      return html`<div class="muted small b mt10 center offfail">${t('food.offlineSearch')} <button class="link" data-act="retryOff">${t('food.retryOnline')}</button></div>`;
+    if (v === 'none') return html`<div class="muted small b mt10 center">${t('food.noOnline')}</div>`;
+    if (v === 'list')
+      return html`<div class="xs xb muted caps mt12">${t('food.onlineResults')}</div><div class="card list mt6">${off.list.map(foodRow)}</div>`;
+    return '';
   };
 
   const searchOnline = async () => {
     const my = ++seq,
-      { search } = await import('../off.js');
-    const list = await search(q, getLang());
+      query = q.trim();
+    if (query.length < 3) return;
+    Object.assign(off, { q: query, state: 'busy', list: [] });
+    /** @type {any[]|null} */
+    let list = null;
+    try {
+      // hard cap: whatever the network does, the spinner ends
+      list = await within(search(query, getLang()), SEARCH_TIMEOUT + 1500, null);
+    } catch {
+      list = null;
+    }
     if (my !== seq) return;
     list?.forEach((f) => f && online.set(f.id, f));
-    patch(
-      '#offres',
-      list == null
-        ? html`<div class="muted small b mt10 center">${t('food.offlineSearch')}</div>`
-        : list.length
-          ? html`<div class="xs xb muted caps mt12">${t('food.onlineResults')}</div><div class="card list mt6">${list.map(foodRow)}</div>`
-          : html`<div class="muted small b mt10 center">${t('food.noOnline')}</div>`,
-    );
+    Object.assign(off, { state: list == null ? 'fail' : 'done', list: list ?? [] });
+    patch('#offres', offBlock());
   };
 
   /** Finish the meal: offer saving a repeated/multi-item meal. */
@@ -183,6 +215,7 @@ ${(() => {
         if (!q || q.length === 1) emit('ui:refresh');
         return false;
       },
+      retryOff: () => (void searchOnline(), patch('#offres', offBlock()), false),
       voice: () => (openVoice({ meal }), false),
       pick: (el) => (add(findFood(el.dataset.id ?? '')), false),
       cat: (el) => (openCategory(el.dataset.id ?? ''), false),

@@ -658,3 +658,25 @@ html[lang='bg'] .nav .t {
     transform: translateY(8px) scale(0.9);
   }
 }
+
+/* 1.4.0: a small spinner anywhere (online food search, screenshot reading) */
+.spin {
+  display: inline-block;
+  vertical-align: -3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2.5px solid currentColor;
+  border-right-color: transparent;
+  animation: vspin 0.8s linear infinite;
+}
+.spin.sm {
+  width: 13px;
+  height: 13px;
+  border-width: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation-duration: 2.4s;
+  }
+}
