@@ -10,9 +10,10 @@ import { settings } from '../../../core/settings.js';
 import { addDays, dayKey, parseDay } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { bar, ring } from '../../../ui/components.js';
-import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
+import { closeSheet, openSheet } from '../../../ui/sheet.js';
 import { trashList } from '../../../core/trash.js';
-import { dayRows, foodName, setWater, view, water } from '../api.js';
+import { dayRows, foodName, view } from '../api.js';
+import { cardActions, waterCard } from '../../day/views/cards.js';
 import { MEALS, MEAL_STYLE, known, mealFor, totals } from '../logic.js';
 
 export { MEAL_STYLE } from '../logic.js';
@@ -37,11 +38,11 @@ export function openMeal(meal, date) {
   openSheet({
     render: () => {
       const rows = dayRows(view.date).filter((r) => r.meal === meal);
-      return html`<div class="row between"><h2 class="h2">${t(`meal.${meal}`)}</h2><span class="b num">${fmtNum(totals(rows).kcal)} kcal</span></div>
+      return html`<div class="row between"><h2 class="h2">${t(`meal.${meal}`)}</h2><span class="b num">${fmtNum(totals(rows).kcal)} ${t('unit.kcal')}</span></div>
 <div class="list mt8 mealitems">${rows.map(
         (r) =>
           html`<div class="lrow"><button class="f1 row gap10 left itembtn" data-act="edit" data-id="${r.id}" aria-label="${t('food.editItem')}: ${foodName(r)}"><span class="fic">${r.emoji ?? '🍽️'}</span><span class="f1 minw0"><span class="b block">${foodName(r)}</span><span class="muted xs b">${r.time} · ${r.grams} ${t('unit.g')}${extras(r)}</span></span>
-<span class="b num small">${r.kcal}</span></button><button class="iconbtn flat sm" data-act="del" data-id="${r.id}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('trash', 18)}</button></div>`,
+<span class="b num small">${fmtNum(r.kcal)}</span></button><button class="iconbtn flat sm" data-act="del" data-id="${r.id}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('trash', 18)}</button></div>`,
       )}</div>
 <div class="row gap10 mt12"><button class="btn sec f1 savecombo" data-act="combo">${ic('star', 18, 2.2)}${t('food.saveCombo')}</button></div>
 <button class="btn w100 mt10" data-go="food/add/${meal}">${ic('plus', 20, 2.8)}${t('food.addTo', { meal: t(`meal.${meal}`) })}</button>`;
@@ -91,8 +92,7 @@ export default () => ({
     const s = settings(),
       rows = dayRows(view.date),
       tot = totals(rows),
-      today = dayKey(),
-      w = water(view.date);
+      today = dayKey();
     const isToday = view.date === today,
       d = parseDay(view.date);
     const macros = [
@@ -108,16 +108,22 @@ export default () => ({
 <button class="iconbtn flat sm" data-act="day" data-d="1" aria-label="${t('food.nextDay')}" ${isToday ? raw('disabled') : ''}>${ic('right', 18)}</button></div>
 <div class="card mt12 row gap16 kcalcard">${ring(132, 13, tot.kcal / s.kcalGoal, {
       color: leftK < 0 ? 'var(--warm)' : 'var(--accent)',
-      label: `${tot.kcal} / ${s.kcalGoal} kcal`,
-      inner: html`<div class="xs b muted caps">${t('food.eaten')}</div><div class="xb num big24">${fmtNum(tot.kcal)}</div><div class="small b muted num">/ ${fmtNum(s.kcalGoal)} kcal</div>`,
+      label: `${fmtNum(tot.kcal)} / ${fmtNum(s.kcalGoal)} ${t('unit.kcal')}`,
+      inner: html`<div class="xs b muted caps">${t('food.eaten')}</div><div class="xb num big24">${fmtNum(tot.kcal)}</div><div class="small b muted num">/ ${fmtNum(s.kcalGoal)} ${t('unit.kcal')}</div>`,
     })}
 <div class="f1"><div class="chip ${leftK < 0 ? 'warm' : 'accent'}">${leftK < 0 ? t('food.over', { n: fmtNum(-leftK) }) : t('food.left', { n: fmtNum(leftK) })}</div>
-${macros.map(([k, v, g, c], i) => html`<div class="macro ${i ? 'mt8' : 'mt10'}"><div class="row between small b"><span>${t(`food.${k}`)}</span><span class="muted num">${Math.round(Number(v))} / ${g} ${t('unit.g')}</span></div>${bar(Number(v) / Number(g), String(c))}</div>`)}
+${macros.map(([k, v, g, c], i) => {
+  // 1.4.0: past the goal – protein gets a ✓ (more is fine), carbs and fat show how much over.
+  const over = Number(v) - Number(g) >= 1;
+  const cue = !over
+    ? ''
+    : k === 'protein'
+      ? html` <span class="macrook">✓ ${t('food.goalHit')}</span>`
+      : html` <span class="macroover">+${fmtNum(Math.round(Number(v) - Number(g)))} ${t('unit.g')}</span>`;
+  return html`<div class="macro ${i ? 'mt8' : 'mt10'}${over ? ` over-${k}` : ''}"><div class="row between small b"><span>${t(`food.${k}`)}${cue}</span><span class="muted num">${fmtNum(Math.round(Number(v)))} / ${fmtNum(Number(g))} ${t('unit.g')}</span></div>${bar(Number(v) / Number(g), over && k === 'protein' ? 'var(--ok, #2fae6b)' : String(c))}</div>`;
+})}
 <div class="row gap12 mt10 small b fibsalt"><span>${t('food.fiber')} <span class="num muted">${tot.fibN ? `${fmtNum(tot.fib, 1)} ${t('unit.g')}` : '—'}</span></span><span>${t('food.salt')} <span class="num muted">${tot.saltN ? `${fmtNum(tot.salt, 1)} ${t('unit.g')}` : '—'}</span></span></div></div></div>
-<div class="card mt12 row gap10 water"><div class="mic blue sm">${ic('drop', 20, 2.2)}</div>
-<div class="f1"><div class="b">${t('food.water')}</div><div class="muted xs b">${t('food.glasses', { n: w, goal: s.waterGoal, l: fmtNum((w * s.glassMl) / 1000, 2) })}</div></div>
-<div class="row gap4 glasses" role="group" aria-label="${t('food.water')}">${Array.from({ length: Math.max(s.waterGoal, w) }, (_, k) => html`<button class="glass${k < w ? ' on' : ''}" data-act="water" data-n="${k < w && k === w - 1 ? k : k + 1}" aria-label="${t('food.setGlasses', { n: k + 1 })}"></button>`)}</div>
-<button class="iconbtn sm bluebtn" data-act="water" data-n="${w + 1}" aria-label="${t('food.addGlass')}">${ic('plus', 18, 2.6)}</button></div>
+${waterCard(view.date)}
 <div class="section-title"><h2 class="h3">${t('food.meals')}</h2><button class="link" data-go="food/meals">${t('food.regularMeals')}</button></div>
 <div class="card meals">${MEALS.map(([m]) => {
       const items = rows.filter((r) => r.meal === m),
@@ -125,7 +131,7 @@ ${macros.map(([k, v, g, c], i) => html`<div class="macro ${i ? 'mt8' : 'mt10'}">
       if (!items.length)
         return html`<button class="meal" data-go="food/add/${m}"><span class="mic muted-bg">${ic('plus', 20, 2.4)}</span><span class="f1"><span class="b muted block">${t(`meal.${m}`)}</span><span class="muted xs b">${t('food.nothing')}</span></span></button>`;
       return html`<button class="meal" data-act="meal" data-m="${m}"><span class="mic" style="background:${bg}">${emo}</span><span class="f1 minw0"><span class="row gap8"><span class="b">${t(`meal.${m}`)}</span><span class="muted xs b">${items[0].time}</span></span>
-<span class="muted small b ellip block">${items.map((r) => foodName(r)).join(', ')}</span></span><span class="b num nowrap">${fmtNum(totals(items).kcal)} <span class="muted xs">kcal</span></span></button>`;
+<span class="muted small b ellip block">${items.map((r) => foodName(r)).join(', ')}</span></span><span class="b num nowrap">${fmtNum(totals(items).kcal)} <span class="muted xs">${t('unit.kcal')}</span></span></button>`;
     })}</div>
 <button class="btn w100 mt12" data-go="food/add/${mealFor()}">${ic('plus', 20, 2.8)}${t('food.add')}</button>
 <div class="row center-j mt12"><button class="link trashlink" data-go="food/trash">${ic('trash', 16, 2.2)} ${t('trash.title')}${trashList().length ? ` (${trashList().length})` : ''}</button></div>
@@ -135,13 +141,7 @@ ${macros.map(([k, v, g, c], i) => html`<div class="macro ${i ? 'mt8' : 'mt10'}">
     day: (el) => void (view.date = dayKey(addDays(parseDay(view.date), Number(el.dataset.d)))),
     pick: (el) =>
       void (/** @type {HTMLInputElement} */ (el).value && (view.date = /** @type {HTMLInputElement} */ (el).value)),
-    water: (el) => {
-      const date = view.date,
-        before = water(date),
-        n = Number(el.dataset.n);
-      setWater(date, n);
-      if (n < before) toast(t('food.waterRemoved', { n: Math.max(0, n) }));
-    },
+    water: cardActions(() => view.date).water, // 1.4.0: shared water card (− / glasses / +)
     meal: (el) => (openMeal(el.dataset.m ?? 'snack'), false),
   },
 });

@@ -4,12 +4,13 @@
  * in Open Food Facts; typing the number or manual entry is always possible.
  * @module features/food/views/scan
  */
+import { emit } from '../../../core/bus.js';
 import { html } from '../../../ui/dom.js';
 import { getLang, t } from '../../../core/i18n.js';
 import { all } from '../../../core/store.js';
 import { ic } from '../../../ui/icons.js';
 import { closeSheet, openSheet } from '../../../ui/sheet.js';
-import { product } from '../off.js';
+import { product, reliable } from '../off.js';
 
 const ZXING_URL = 'assets/vendor/zxing.min.js';
 const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'];
@@ -78,14 +79,18 @@ async function makeDecoder() {
 /**
  * Open the scanner sheet.
  * @param {(food: any) => void} onFood
- * @param {() => void} onManual
+ * @param {(barcode?: string, name?: string) => void} onManual Manual entry; gets the barcode that
+ *   was not found (1.4.0) so the saved food remembers it and the next scan finds it at once,
+ *   and the product's name when it was found but had impossible values.
  */
 export function openScanner(onFood, onManual) {
   /** @type {MediaStream|null} */
   let stream = null;
   let stop = false,
     status = t('scan.starting'),
-    code = '';
+    code = '',
+    missing = '',
+    name = '';
   const setStatus = (/** @type {string} */ s) => {
     status = s;
     const el = document.getElementById('scanstatus');
@@ -94,10 +99,18 @@ export function openScanner(onFood, onManual) {
   const lookup = async (/** @type {string} */ c) => {
     code = c;
     setStatus(t('scan.looking', { code: c }));
-    const cached = all('foods').find((f) => f.barcode === c);
+    // a cached Open Food Facts copy must pass the same plausibility check (1.4.0); the user's
+    // own foods and corrected products are trusted
+    const cached = all('foods').find((f) => f.barcode === c && (f.source !== 'off' || f.fixed || reliable(f)));
     const r = cached ?? (await product(c, getLang()));
-    if (r && r !== 'notfound') return (closeSheet(), onFood(r));
-    setStatus(r === 'notfound' ? t('scan.notFound') : t('scan.offline'));
+    if (r && r !== 'notfound' && !('unreliable' in r)) return (closeSheet(), onFood(r));
+    // 1.4.0: impossible values (e.g. 5 kcal for Nutella) = not found: "enter it yourself"
+    const bad = !!r && r !== 'notfound' && 'unreliable' in r;
+    name = bad ? r.name : '';
+    status = bad ? t('food.noReliable') : r === 'notfound' ? t('scan.notFound') : t('scan.offline');
+    // not found (or no answer within 8 s): the manual form, with this barcode, becomes the main button
+    missing = c;
+    emit('ui:refresh');
   };
   openSheet({
     kind: 'full',
@@ -107,7 +120,7 @@ export function openScanner(onFood, onManual) {
 <p class="b small mt10 center" id="scanstatus" role="status">${status}</p>
 <form class="row gap8 mt12" data-act="noop"><input class="input f1" id="bcode" inputmode="numeric" pattern="[0-9]*" placeholder="${t('scan.typeCode')}" value="${code}" aria-label="${t('scan.typeCode')}">
 <button class="btn sm" type="button" data-act="lookup">${t('scan.lookup')}</button></form>
-<button class="btn sec w100 mt12" data-act="manual">${ic('edit', 18)}${t('food.manual')}</button>`,
+<button class="btn${missing ? '' : ' sec'} w100 mt12" data-act="manual">${ic('edit', 18)}${name ? t('food.enterSelf') : missing ? t('scan.addManual', { code: missing }) : t('food.manual')}</button>`,
     mount: async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('no camera');
@@ -142,7 +155,7 @@ export function openScanner(onFood, onManual) {
         if (c.length >= 6) lookup(c);
         return false;
       },
-      manual: () => (closeSheet(), onManual(), false),
+      manual: () => (closeSheet(), onManual(missing || undefined, name || undefined), false),
     },
   });
 }

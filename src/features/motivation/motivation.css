@@ -33,6 +33,9 @@
 .wr.c5 {
   background: linear-gradient(160deg, #1fb46b, #12804a);
 }
+.wr.c7 {
+  background: linear-gradient(160deg, #2f80ed, #1b5fc0);
+}
 .wr.c6 {
   background: linear-gradient(160deg, #13232c, #0c1418);
 }

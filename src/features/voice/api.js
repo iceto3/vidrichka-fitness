@@ -96,6 +96,32 @@ export async function transcribeAudio(audio) {
 }
 
 /**
+ * 1.4.0: read steps or sleep from a health-app screenshot (the voice server tries a free
+ * Workers AI vision model, then xAI). The image is sent once and never stored.
+ * @param {'steps'|'sleep'} kind @param {Blob} image JPEG ≤ 600 kB (see improve/images)
+ * @param {string} today Day key the phone considers today.
+ * @returns {Promise<{date: string|null, steps?: number, hours?: number, quality?: number|null}[]>}
+ * @throws {Error} message = 'offline' | 'rate-limit' | 'server'
+ */
+export async function readScreenshot(kind, image, today) {
+  let r;
+  try {
+    r = await fetch(`${voiceUrl()}/vision?kind=${kind}&today=${today}&lang=${getLang() === 'en' ? 'en' : 'bg'}`, {
+      method: 'POST',
+      headers: { 'Content-Type': image.type || 'image/jpeg' },
+      body: image,
+      signal: AbortSignal.timeout(40_000),
+    });
+  } catch {
+    throw new Error('offline');
+  }
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 429) throw new Error('rate-limit');
+  if (!r.ok || !Array.isArray(j.days)) throw new Error('server');
+  return j.days;
+}
+
+/**
  * Open the "Say it" sheet.
  * @param {{meal?: string}} [o] Opened from Food › Add (meal) or Home.
  */

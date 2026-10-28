@@ -62,6 +62,68 @@
       // Apply the saved/OS theme before first paint (avoids a white flash in dark mode).
       try { const m = (JSON.parse(localStorage.getItem('vf-theme') || '"auto"')); if (m === 'dark' || (m === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark'); } catch (e) {}
     </script>
+    <script id="heal">
+      // 1.4.0 self-healing: if the app cannot start (a script or style failed to load, a lazy
+      // chunk is missing, or nothing rendered within 20 s while a service worker controls the
+      // page), unregister this app's worker, delete its versioned caches (the data in IndexedDB
+      // stays) and reload — at most once every 5 minutes, so it can never loop, and never offline.
+      (function () {
+        var P = 'vf-';
+        var KEY = P + 'healed-at';
+        function heal(why) {
+          try {
+            // offline nothing could be fetched again: clearing the caches would only break the app
+            if (navigator.onLine === false) return;
+            if (document.documentElement.classList.contains('ready') && why !== 'chunk') return;
+            var last = Number(localStorage.getItem(KEY) || 0);
+            if (Date.now() - last < 5 * 60 * 1000) return;
+            localStorage.setItem(KEY, String(Date.now()));
+          } catch (e) {
+            return;
+          }
+          var sw = navigator.serviceWorker;
+          Promise.resolve(sw && sw.getRegistration())
+            .then(function (r) {
+              return r && r.unregister();
+            })
+            .then(function () {
+              return self.caches ? caches.keys() : [];
+            })
+            .then(function (keys) {
+              return Promise.all(
+                keys
+                  .filter(function (k) {
+                    return k.indexOf(P) === 0 && k !== P + 'config';
+                  })
+                  .map(function (k) {
+                    return caches.delete(k);
+                  }),
+              );
+            })
+            .catch(function () {})
+            .then(function () {
+              location.reload();
+            });
+        }
+        window.__vfHeal = heal;
+        addEventListener(
+          'error',
+          function (e) {
+            var t = e.target;
+            if (t && (t.tagName === 'SCRIPT' || (t.tagName === 'LINK' && t.rel === 'stylesheet'))) heal('load');
+          },
+          true,
+        );
+        addEventListener('unhandledrejection', function (e) {
+          var m = String((e.reason && e.reason.message) || e.reason || '');
+          if (/dynamically imported module|Importing a module script failed|error loading dynamically/i.test(m))
+            heal('chunk');
+        });
+        setTimeout(function () {
+          if (navigator.serviceWorker && navigator.serviceWorker.controller) heal('timeout');
+        }, 20000);
+      })();
+    </script>
     <script type="module" src="src/main.js"></script>
   </head>
   <body>

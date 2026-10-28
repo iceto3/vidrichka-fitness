@@ -1,0 +1,30 @@
+# BETA (1.4.0+) copy of the push Worker with its own D1 – only the beta app may call it.
+# Deploy: npx wrangler d1 migrations apply vidrichka-push-beta-db --remote -c wrangler.beta.toml
+#         npx wrangler deploy -c wrangler.beta.toml
+# Same VAPID key pair as live (the private key is piped in as a secret, never stored here).
+# Cloudflare Worker for Vidrichka push reminders. Secrets are NOT in this file:
+#   wrangler secret put VAPID_PRIVATE_KEY   (the private key as a JWK JSON string)
+name = "vidrichka-push-beta"
+main = "src/index.js"
+compatibility_date = "2026-05-01"
+workers_dev = true
+
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vidrichka-push-beta-db"
+# Created with `wrangler d1 create vidrichka-push-beta-db` (1.4.0 beta) – separate from live data.
+database_id = "1fed3fe3-7c2e-4be2-83c8-b3200d0d693e"
+migrations_dir = "migrations"
+
+[vars]
+VAPID_PUBLIC_KEY = "BO9JFEsnJLOmHpg2N_M9-ayXuGGZiPSJikbvjhPVEwtQjXtt3oLME6uWM3JBtmqywZrrrpB2QTC_v14cF-vqbuY"
+VAPID_SUBJECT = "https://vidrichka-beta.pages.dev/"
+ALLOWED_ORIGINS = "https://vidrichka-beta.pages.dev"
+MAX_DEVICES = "50"
+MAX_SENDS_PER_RUN = "20"
+
+[observability]
+enabled = true

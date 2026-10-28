@@ -14,6 +14,7 @@ import { ring, stepper } from '../../../ui/components.js';
 import { confirmDialog, toast } from '../../../ui/sheet.js';
 import { beep, keepAwake, notify, releaseAwake, unlockAudio, vibrate } from '../../../ui/feedback.js';
 import { exById, exName, exThumb, muscleTags, repsLabel } from '../../library/api.js';
+import { openTechnique } from '../../library/technique.js';
 import { activeWorkout, planName, sessions } from '../api.js';
 import { MAX_KG, activeSet, lastSets, suggest } from '../logic.js';
 import * as S from '../session.js';
@@ -38,7 +39,7 @@ function exCard(it, i, act) {
   return html`<section class="card ex mt12" aria-label="${exName(it.exId)}">
 <div class="row between top-al"><div class="row gap12"><div class="exicon">${exThumb(it.exId)}</div>
 <div><h2 class="h2">${exName(it.exId)}</h2><div class="row gap6 mt6 wrap">${ex ? muscleTags(ex, 2) : ''}</div></div></div>
-<button class="iconbtn flat" data-go="exercise/${it.exId}" aria-label="${t('workout.howTo')}">${ic('info', 20)}</button></div>
+<button class="iconbtn flat" data-act="howTo" data-id="${it.exId}" aria-label="${t('workout.howTo')}">${ic('info', 20)}</button></div>
 ${lastHint(it, weighted)}
 <div class="colh${cols}" aria-hidden="true"><div>${t('workout.set')}</div>${weighted ? html`<div>${t('workout.weight')}</div>` : ''}<div>${repsLabel(it.exId)}</div><div></div></div>
 ${it.sets.map((s, j) => {
@@ -127,6 +128,7 @@ ${w.rest ? restBar(w.rest) : ''}`;
     },
     unmount: () => (clearInterval(timer), releaseAwake()),
     actions: {
+      howTo: (el) => (openTechnique(el.dataset.id ?? ''), false), // 1.4.0: a sheet, the set stays
       w: (el, ev) => {
         const i = num(el, 'i'),
           j = num(el, 'j'),

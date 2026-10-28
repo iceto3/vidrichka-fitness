@@ -15,6 +15,8 @@ import './daily/index.js';
 import './voice/index.js';
 import './trash/index.js';
 import './steps/index.js';
+import './day/index.js';
+import './whatsnew/index.js';
 export { startTrash } from './trash/index.js';
 export { startMotivation } from './motivation/index.js';
 export { startCelebrations } from './celebrations/index.js';

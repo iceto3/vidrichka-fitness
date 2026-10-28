@@ -327,3 +327,26 @@
   flex: 2;
   min-width: 0;
 }
+
+/* 1.4.0: over-goal cues on the macro bars */
+.macrook {
+  color: var(--ok, #2fae6b);
+  font-size: 12px;
+}
+.macroover {
+  color: var(--warm);
+  font-size: 12px;
+}
+
+/* 1.4.0: a product's missing values (counted as 0) – notice + marked fields */
+.missnote {
+  border: 1.5px solid var(--warm);
+  padding: 10px 12px;
+}
+.input.missing {
+  border-color: var(--warm);
+  border-style: dashed;
+}
+.noreliable {
+  padding: 12px;
+}

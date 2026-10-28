@@ -10,6 +10,9 @@
  *   which switches it to cache-first and lets the update prompt detect new releases.
  *
  * Usage: `npm run build` (then `node tools/serve.mjs 8080 dist` to preview).
+ *        `npm run build:beta` (= `--beta`) builds the beta channel into `dist-beta/`: its own
+ *        IndexedDB/localStorage/cache names and servers (src/core/channel.js), a "БЕТА" marker,
+ *        `noindex`, and a VERSION like `1.4.0-beta-<hash>`.
  * @module tools/build
  */
 import { build } from 'esbuild';
@@ -20,7 +23,9 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const out = join(root, 'dist');
+const BETA = process.argv.includes('--beta');
+const CHANNEL = BETA ? 'beta' : 'live';
+const out = join(root, BETA ? 'dist-beta' : 'dist');
 const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 
 await rm(out, { recursive: true, force: true });
@@ -43,7 +48,10 @@ const js = await build({
   target: ['es2022', 'safari16.4', 'chrome109'],
   entryNames: '[name]-[hash]',
   chunkNames: 'c/[name]-[hash]',
-  define: { 'globalThis.__APP_VERSION__': JSON.stringify(pkg.version) },
+  define: {
+    'globalThis.__APP_VERSION__': JSON.stringify(pkg.version),
+    'globalThis.__APP_CHANNEL__': JSON.stringify(CHANNEL),
+  },
   legalComments: 'none',
 });
 
@@ -73,7 +81,10 @@ const latinFont = relative(
 await cp(join(root, 'assets/icons'), join(out, 'assets/icons'), { recursive: true });
 await cp(join(root, 'assets/vendor'), join(out, 'assets/vendor'), { recursive: true });
 await cp(join(root, 'assets/sounds'), join(out, 'assets/sounds'), { recursive: true }); // celebration sounds (precached)
-await cp(join(root, 'manifest.json'), join(out, 'manifest.json'));
+await cp(join(root, 'repair.html'), join(out, 'repair.html')); // 1.4.0: static self-repair page (/repair)
+const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8'));
+if (BETA) Object.assign(manifest, { name: 'Vidrichka Fitness БЕТА', short_name: 'Vidrichka β' });
+await writeFile(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
 let index = await readFile(join(root, 'index.html'), 'utf8');
 index = index
@@ -81,6 +92,15 @@ index = index
   .replace('src="src/main.js"', `src="${mainJs}"`)
   .replace('href="assets/fonts/PlusJakartaSans-latin.woff2"', `href="${latinFont}"`)
   .replace('</head>', `<link rel="modulepreload" href="${mainJs}">\n</head>`);
+if (BETA)
+  index = index
+    .replace("localStorage.getItem('vf-theme'", "localStorage.getItem('vfb-theme'")
+    .replace("var P = 'vf-';", "var P = 'vfb-';")
+    .replace(
+      '<title>Vidrichka Fitness</title>',
+      '<title>Vidrichka Fitness БЕТА</title>\n<meta name="robots" content="noindex">',
+    );
+if (!index.includes(`var P = '${BETA ? 'vfb-' : 'vf-'}';`)) throw new Error('index.html heal prefix not found');
 await writeFile(join(out, 'index.html'), index);
 await writeFile(join(out, '.nojekyll'), '');
 
@@ -101,13 +121,29 @@ async function walk(dir = out) {
 const files = (await walk()).filter((f) => !/splash-|vendor\/|\.nojekyll|build-report/.test(f)).sort();
 const hash = createHash('sha256');
 for (const f of files) hash.update(f).update(await readFile(join(out, f)));
-const version = `${pkg.version}-${hash.digest('hex').slice(0, 10)}`;
-const precache = ['./', ...files];
+const version = `${pkg.version}${BETA ? '-beta' : ''}-${hash.digest('hex').slice(0, 10)}`;
+// 1.4.0: the shell only under './' – on Cloudflare Pages /index.html is a 308 to /, and a
+// cached redirected response breaks navigations (ERR_FAILED). repair.html is never cached.
+const precache = ['./', ...files.filter((f) => f !== 'index.html' && f !== 'repair.html')];
 const sw = (await readFile(join(root, 'sw.js'), 'utf8'))
   .replace(/const VERSION = '[^']*';/, `const VERSION = '${version}';`)
-  .replace(/const PRECACHE = \[[^\]]*\];/, `const PRECACHE = ${JSON.stringify(precache)};`);
+  .replace(/const PRECACHE = \[[^\]]*\];/, `const PRECACHE = ${JSON.stringify(precache)};`)
+  .replace("const CHANNEL = 'live';", `const CHANNEL = '${CHANNEL}';`);
 if (!sw.includes(version)) throw new Error('sw.js VERSION placeholder not found');
+if (!sw.includes(`const CHANNEL = '${CHANNEL}';`)) throw new Error('sw.js CHANNEL placeholder not found');
 await writeFile(join(out, 'sw.js'), sw);
+// 1.4.0: the full build id (e.g. 1.4.0-beta-<hash>) in the page itself, so Profile › What's new
+// shows it without asking the network or the service worker (the hash covers the files above).
+const page = await readFile(join(out, 'index.html'), 'utf8');
+await writeFile(
+  join(out, 'index.html'),
+  page.replace(
+    '<meta charset="utf-8" />',
+    `<meta charset="utf-8" />\n    <meta name="vf-build" content="${version}" />`,
+  ),
+);
+if (!(await readFile(join(out, 'index.html'), 'utf8')).includes('name="vf-build"'))
+  throw new Error('index.html build id not written');
 
 // Size report
 const size = async (/** @type {string} */ f) => {
@@ -148,7 +184,7 @@ const report = {
   ),
 };
 await writeFile(join(out, 'build-report.json'), JSON.stringify(report, null, 2));
-console.log(`Built ${version} → dist/
+console.log(`Built ${version} → ${relative(root, out)}/
   JS initial: ${kb(init.raw)} (${kb(init.gz)} gzip) in ${initial.length} file(s)
   JS total:   ${kb(tot.raw)} (${kb(tot.gz)} gzip) in ${jsFiles.length} chunks
   CSS:        ${kb(c.raw)} (${kb(c.gz)} gzip)

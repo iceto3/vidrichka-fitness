@@ -123,11 +123,22 @@ export function setSleep(date, v) {
   /** @type {Record<string, any>} */
   const patch = {};
   if (v.hours != null && Number.isFinite(Number(v.hours)))
-    patch.sleepH = Math.round(Math.min(MAX_SLEEP_H, Math.max(0, Number(v.hours))) * 2) / 2;
+    patch.sleepH = Math.round(Math.min(MAX_SLEEP_H, Math.max(0, Number(v.hours))) * 60) / 60; // 1.4.0: to the minute
   if (v.q != null && Number.isFinite(Number(v.q))) patch.sleepQ = Math.min(5, Math.max(1, Math.round(Number(v.q))));
   if (!Object.keys(patch).length) return day(date);
   const rec = patchDay(date, patch);
   emit('sleep:logged', { date, ...patch });
+  emit('daily:changed');
+  return rec;
+}
+
+/**
+ * 1.4.0: delete a day's manual sleep entry (hours and quality). A bedtime/wake-up estimate,
+ * if any, shows again. @param {string} date
+ */
+export function clearSleep(date) {
+  const rec = patchDay(date, { sleepH: null, sleepQ: null });
+  emit('sleep:logged', { date, cleared: true });
   emit('daily:changed');
   return rec;
 }
@@ -139,10 +150,11 @@ export function sleepOf(date = dayKey()) {
 }
 
 /**
- * 1.3.4: mood or energy (1–5) for a day, e.g. said with "Кажи".
- * @param {string} date @param {'mood'|'energy'} field @param {number} v
+ * 1.3.4: mood or energy (1–5) for a day, e.g. said with "Кажи". 1.4.0: null clears it.
+ * @param {string} date @param {'mood'|'energy'} field @param {number|null} v
  */
 export function rateDay(date, field, v) {
+  if (v == null) return (patchDay(date, { [field]: null }), emit('daily:changed'), null); // 1.4.0: clear
   const n = Math.min(5, Math.max(1, Math.round(Number(v) || 3)));
   patchDay(date, { [field]: n });
   emit('daily:changed');

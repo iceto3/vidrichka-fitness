@@ -12,7 +12,6 @@ import { t, L, setLang, setGender, getGender, isGendered, byGender } from '../..
 
 /** Gendered keys found in the 1.2 audit of bg.js (the user is addressed with a participle/adjective). */
 const GENDERED = [
-  'voice.hintRec',
   'cel.waterSub',
   'cel.levelSub',
   'daily.loudSub',
@@ -21,7 +20,6 @@ const GENDERED = [
   'cel.photo2',
   'cel.photoSetSub',
   // 1.3 voice
-  'voice.hint',
   'whatsNew.voice',
   // 1.3.4 steps, insights, what's new
   'cel.stepsSub',
@@ -30,6 +28,9 @@ const GENDERED = [
   'insight.workoutMoodUp',
   'insight.stepsWaterUp',
   'whatsNew.homeMeals',
+  // 1.4.0: the dictation hints became neutral („какво изяде и изпи“); the otter's tap lines
+  'home.otter3',
+  'home.otter5',
 ];
 
 /** Every string variant of a dictionary value. @param {any} v @returns {string[]} */

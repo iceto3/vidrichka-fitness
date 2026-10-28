@@ -5,7 +5,7 @@
  * @module features/food/views/combo
  */
 import { html } from '../../../ui/dom.js';
-import { t } from '../../../core/i18n.js';
+import { fmtNum, t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
 import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
 import { deleteWithUndo } from '../../../ui/undo.js';
@@ -50,7 +50,7 @@ export function openSaveCombo({ rows, meal, title, body, cancel }) {
         () => html`<div class="dlg-otter" id="saveotter"></div><h2 class="h2 center mt8">${title ?? t('food.saveTitle')}</h2>
 <p class="muted b small mt6 center lh">${body ?? t('food.saveBody')}</p>
 ${nameField(name, err)}
-<div class="row gap8 mt10 wrap center-j">${rows.map((r) => html`<span class="chip">${foodName(r)} · ${r.grams} ${t('unit.g')}</span>`)}<span class="chip accent">${totals(rows).kcal} kcal</span></div>
+<div class="row gap8 mt10 wrap center-j">${rows.map((r) => html`<span class="chip">${foodName(r)} · ${r.grams} ${t('unit.g')}</span>`)}<span class="chip accent">${fmtNum(totals(rows).kcal)} ${t('unit.kcal')}</span></div>
 <div class="row gap10 mt16"><button class="btn sec f1" data-close>${cancel ?? t('food.notNow')}</button><button class="btn f1" data-act="save">${t('food.saveMeal')}</button></div>`,
       mount: async (el) => {
         selectName(el);
@@ -128,7 +128,7 @@ export function addCombo(id, meal) {
 export function deleteCombo(m) {
   deleteWithUndo('meal', [{ store: 'meals', row: m }], {
     label: m.name,
-    sub: `${totals(m.items).kcal} kcal`,
+    sub: `${fmtNum(totals(m.items).kcal)} ${t('unit.kcal')}`,
     emoji: '⭐',
   });
 }

@@ -4,6 +4,51 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] – 2026-10-28
+
+### Added
+
+- **Day history:** dates in **Прогрес › Календар** open that day (steps, sleep, mood/energy, water, food and the workouts with exercises, sets and volume; zeros when empty). Past days are editable; future days are not. One date-keyed data layer (`src/features/day/`) serves Home and the day view, and streaks, charts, insights and the recap are derived from the stored rows.
+- **Steps and sleep from a screenshot** (voice Worker `POST /vision`: Workers AI vision first, xAI as the fallback). Multi-day views give one row per day; nothing is saved before you confirm; the image is never stored.
+- **Barcode scanning** straight from the phone with the Open Food Facts API (BarcodeDetector on Android, the bundled ZXing fallback on iPhone), manual barcode entry and manual food when nothing is found.
+- **Weight trend chart**, a **monthly recap** reachable from the calendar (also for the month so far), and a **Какво ново** page in Profile with every release and the build hash.
+- **Foods:** fiber and salt for every built-in food, 13 multi-source corrections, boiled/grilled, breaded and fried meat and fish, cottage cheese, mixed mince 50/50, 60/40 and 75/25, and a **Ястия и други** tile.
+- **Water:** a **−** button on the left of the glasses (never below 0); the glass size is unchanged.
+- **Feedback:** a thank-you screen, a „3/3 снимки“ counter, 10 messages a day per phone; optional invisible Turnstile (off until a widget exists).
+- **Push:** a **Изпрати пробно известие** button (push server 1.2.0 `POST /test`) and a switch for the loud wake-up alarm (`loudOn`).
+- **Beta channel:** `npm run build:beta` builds a separate app (own IndexedDB, storage keys, caches, `-beta` Workers and a БЕТА marker).
+
+### Changed / fixed
+
+- The anonymous-food notice appears once, on the first food entered by hand and before anything is sent, with the Profile wording and a **Не изпращай** button (no dialog at start-up).
+- Sleep: night streak counts manual entries, 7,5 h default, labelled quality faces, delete an entry. Steps: **Задай общо** vs **Добави** explained.
+- Charts: empty-state text, Bulgarian weekday labels, the workouts title shows the number, the correlations banner says what will appear; heatmap weekday labels and legend; locked badges say how to earn them.
+- Home: tapping the otter answers, the streak card explains how weeks count, no backup card on day 1, no check-in right after onboarding, no wake-up prompt over a workout summary, „Готово за днес ✓“.
+- Food: online search gives up after 6 s (both endpoints in parallel), a protein over-goal cue, concrete portions instead of „малко“, „паста с пиле“ split into parts, „Храна“ everywhere, „ккал“ in Bulgarian.
+- Technique opens as a sheet inside the workout; the Profile footer clears the nav; accessible names on the nav and icon buttons; a longer post-voice tour.
+- **Tester round (beta 3):**
+  - Service worker – the real cause of `ERR_FAILED`: Cloudflare Pages answers `/index.html` with a 308 redirect to `/`, so the precached `index.html` was a _redirected_ response, which Chrome refuses for a page navigation (offline opens, cache fallbacks and every open under the older worker failed). The shell is now cached only as `./`, every cached/served response is a clean (non-redirected) copy, and an older cache's redirected entry is cleaned when read. A new worker takes over at once (`skipWaiting` + `clients.claim`), the open page shows the „Има нова версия · Обнови“ bar, and the previous version's files stay cached until the next update so an open old page keeps working. The repair script never runs offline.
+  - **/repair** is a real static page (`repair.html`) that the worker never intercepts: it unregisters the worker, clears the app's file caches (data stays) and reopens the app. Profile › **Поправи приложението** links to it.
+  - Offline: reload, new tabs and hash routes load the cached app; a slow network gets the cached app after 4 s.
+  - Profile › Какво ново shows the full build id again (e.g. `Билд: 1.4.0-beta-<hash>`, written into `index.html` by the build).
+  - Weight step „1 / 2,5 / 5“ in Bulgarian number format (also the template editor's weight).
+  - Online food search goes through the beta voice Worker's new `GET /off-search` (Open Food Facts' search endpoints have no usable CORS from a browser): one request per (debounced) search, answers cached a day at the edge and in memory, 20 per minute per IP. No more console CORS errors.
+  - Progress › Sleep › Нощи: no „– → –“ for nights without bed/wake times.
+  - Nutella (3017620422003): Open Food Facts reports `fiber_100g: 0`, so „Фибри 0 г“ is the product data, not a missing value (missing values show „–“).
+- **Tester round (beta 2):**
+  - Service worker: navigations are network-first with the cached app as the offline fallback, every request falls back to the network, it never answers `ERR_FAILED`; a new worker takes over at once when no tab is open and removes only this app's old caches. A small inline script in `index.html` repairs a stuck install (unregister, clear the app caches, reload; at most every 5 minutes), also when a lazy chunk fails to load.
+  - Sleep is stored to the minute (it was rounded to ½ h; the vision Worker asks for hours + minutes) and shown as „7 ч 20 мин“ everywhere; the screenshot sheet has hours/minutes fields, an optional 1–5 quality and a full-width date field.
+  - Barcode/online foods: the brand is not repeated („Nutella“, not „Nutella · Nutella“); a nutrient the product does not list shows „–“ (and a day without any fibre/salt data shows „–“ instead of 0). Online search runs both endpoints and takes the first answer, local results show at once, and the online part always ends with results, „няма“ or „не е достъпно“ + **Опитай пак**.
+  - Food added to a past day gets the meal's usual time (08:00 / 13:00 / 16:00 / 19:00). Manual food: a live hint when kcal differs from 4·П + 4·В + 9·М by more than 20 % and 30 kcal; saving is never blocked. Fibre and salt in the food list rows.
+  - Foods: separate извара (Bulgarian whey curd) and котидж values; raw chicken/turkey/pork/lean beef, beef mince 80/20 and grilled salmon; the plain cooked rows are labelled „(на скара)“, raw ones „(сурово/сурова)“, mince as „Кайма смес 60/40 (свинско/телешко, сурова)“ with a note that fat varies. `node tools/export-foods.mjs --since main` writes `docs/foods.csv` and `docs/foods-changes.csv` for the shared sheet.
+  - П/В/М and Bulgarian number formats („2 145“, „2,5“) everywhere; sleep chart dates; bigger fibre/salt charts; „Без тренировка този ден.“; the 1.3.3 note names the current „Кажи какво хапна“ screen.
+- **Final fixes (go-live):**
+  - Barcode / online products that do not list a value (kcal, protein, carbs, fat, fibre or salt) still count it as 0, but the grams sheet and the diary item now say so – „Липсва стойност за въглехидрати – брои се като 0. Попълни я.“ – with a **Попълни** button that opens the food form with the known values filled in, the missing fields marked and the first one focused. The corrected values are saved with that food (the next scan of the barcode uses them) and with its diary rows (`api.saveFoodFix`, `logic.applyFix`, `logic.missingValues`, `views/notice.js`).
+  - Open Food Facts products with impossible values (e.g. „Nutella 5 kcal / 100 g“) are filtered out, not shown: one reusable check, `logic.implausible()` – a negative value, kcal over 900, a value or П+В+М over 100 g, or kcal more than 30 % AND 30 kcal away from 4·П + 4·В + 9·М (+ 7 kcal/g alcohol; a missing macro may only explain extra kcal). When nothing reliable remains, search shows „Няма надежден резултат за тази храна. Въведи я сам.“ with a button to an empty food form (the searched name prefilled); a scanned implausible product is treated as not found the same way (its name prefilled).
+  - Confirmed: built-in извара salt 0,1 г / 100 г; every „(на скара)“ meat is a cooked-meat entry (category Месо и риба, cooked-weight values) – both unit-tested.
+  - Voice Worker live config: the `OFF_LIMITER` rate limit (20 / min per IP) for `/off-search`, as on beta.
+- Data version 5: fiber and salt back-filled on diary rows of built-in foods (add-only, tested).
+
 ## [1.3.4] – 2026-10-27
 
 ### Added

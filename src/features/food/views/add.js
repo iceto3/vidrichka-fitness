@@ -7,7 +7,7 @@
  * @module features/food/views/add
  */
 import { html, patch } from '../../../ui/dom.js';
-import { fmtDate, getLang, t } from '../../../core/i18n.js';
+import { fmtDate, fmtNum, getLang, t } from '../../../core/i18n.js';
 import { dayKey, parseDay } from '../../../core/dates.js';
 import { all } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
@@ -24,16 +24,30 @@ import {
   searchLocal,
   view,
 } from '../api.js';
-import { signature, timesEaten, totals } from '../logic.js';
+import { known, signature, timesEaten, totals } from '../logic.js';
 import { openGrams } from './grams.js';
+import { SEARCH_TIMEOUT, offView, search, within } from '../off.js';
 import { deleteFoodRow } from './item.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 
 /** One food result row. @param {any} f */
+/**
+ * Second line of a food row: kcal / 100 g, then fibre and salt when the food lists them (1.4.0).
+ * @param {any} f
+ */
+export const foodSub = (f) =>
+  [
+    `${fmtNum(f.kcal)} ${t('unit.kcal')} / 100 ${t('unit.g')}`,
+    known(f.fib) ? `${t('food.fiberShort')} ${fmtNum(f.fib, 1)} ${t('unit.g')}` : '',
+    known(f.salt) ? `${t('food.saltShort')} ${fmtNum(f.salt, 1)} ${t('unit.g')}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
 const foodRow = (
   f,
 ) => html`<button class="lrow" data-act="pick" data-id="${f.id}"><span class="fic">${f.emoji ?? '🍽️'}</span>
-<span class="f1 left"><span class="b block">${foodName(f)}</span><span class="muted xs b">${Math.round(f.kcal)} kcal / 100 g</span></span>${ic('plus', 18, 2.6, 'var(--accent-d)')}</button>`;
+<span class="f1 left"><span class="b block">${foodName(f)}</span><span class="muted xs b">${foodSub(f)}</span></span>${ic('plus', 18, 2.6, 'var(--accent-d)')}</button>`;
 
 /** @param {{meal: string}} p @returns {import('../../../core/registry.js').View} */
 export default ({ meal }) => {
@@ -43,6 +57,8 @@ export default ({ meal }) => {
   const basket = [];
   /** @type {Map<string, any>} */
   const online = new Map();
+  /** Online search state (1.4.0): rendered from here, so a re-render never restarts "Searching…". */
+  const off = { q: '', state: /** @type {'idle'|'busy'|'done'|'fail'} */ ('idle'), list: /** @type {any[]} */ ([]) };
   let q = '',
     picked = '',
     showRecent = false,
@@ -52,34 +68,52 @@ export default ({ meal }) => {
     FOODS.find((f) => f.id === id) ?? online.get(id) ?? all('foods').find((f) => f.id === id);
 
   const add = (/** @type {any} */ food) =>
-    openGrams(food, (g) => {
-      const row = logFood(food, g, meal);
+    openGrams(food, (g, used) => {
+      const row = logFood(used, g, meal);
       basket.push(row);
-      toast(t('food.added', { name: foodName(food), g }));
+      toast(t('food.added', { name: foodName(used), g }));
       emit('ui:refresh');
     });
 
   const results = () => {
     const loc = searchLocal(q);
     return html`${loc.length ? html`<div class="card list mt10">${loc.map(foodRow)}</div>` : ''}
-<div id="offres" aria-live="polite">${q.length >= 3 ? html`<div class="muted small b mt10 center">${t('food.searchingOnline')}</div>` : ''}</div>
-${!loc.length && q ? html`<button class="btn sec w100 mt10" data-act="manual">${ic('edit', 18)}${t('food.manual')}</button>` : ''}`;
+<div id="offres" aria-live="polite">${offBlock()}</div>
+${!loc.length && q && offView(off, q) !== 'none' ? html`<button class="btn sec w100 mt10" data-act="manual">${ic('edit', 18)}${t('food.manual')}</button>` : ''}`;
+  };
+
+  /** The online part under the local results: searching / list / nothing found / not available + retry. */
+  const offBlock = () => {
+    const v = offView(off, q);
+    if (v === 'busy')
+      return html`<div class="muted small b mt10 center offbusy"><span class="spin sm" aria-hidden="true"></span> ${t('food.searchingOnline')}</div>`;
+    if (v === 'fail')
+      return html`<div class="muted small b mt10 center offfail">${t('food.offlineSearch')} <button class="link" data-act="retryOff">${t('food.retryOnline')}</button></div>`;
+    // 1.4.0: nothing found, or only products with impossible values (filtered out) → enter it yourself
+    if (v === 'none')
+      return html`<div class="card mt10 center noreliable"><p class="b small">${t('food.noReliable')}</p><button class="btn sec w100 mt8" data-act="manual">${ic('edit', 18)}${t('food.enterSelf')}</button></div>`;
+    if (v === 'list')
+      return html`<div class="xs xb muted caps mt12">${t('food.onlineResults')}</div><div class="card list mt6">${off.list.map(foodRow)}</div>`;
+    return '';
   };
 
   const searchOnline = async () => {
     const my = ++seq,
-      { search } = await import('../off.js');
-    const list = await search(q, getLang());
+      query = q.trim();
+    if (query.length < 3) return;
+    Object.assign(off, { q: query, state: 'busy', list: [] });
+    /** @type {any[]|null} */
+    let list = null;
+    try {
+      // hard cap: whatever the network does, the spinner ends
+      list = await within(search(query, getLang()), SEARCH_TIMEOUT + 1500, null);
+    } catch {
+      list = null;
+    }
     if (my !== seq) return;
     list?.forEach((f) => f && online.set(f.id, f));
-    patch(
-      '#offres',
-      list == null
-        ? html`<div class="muted small b mt10 center">${t('food.offlineSearch')}</div>`
-        : list.length
-          ? html`<div class="xs xb muted caps mt12">${t('food.onlineResults')}</div><div class="card list mt6">${list.map(foodRow)}</div>`
-          : html`<div class="muted small b mt10 center">${t('food.noOnline')}</div>`,
-    );
+    Object.assign(off, { state: list == null ? 'fail' : 'done', list: list ?? [] });
+    patch('#results', results()); // the whole block: "enter it yourself" replaces the plain manual button
   };
 
   /** Finish the meal: offer saving a repeated/multi-item meal. */
@@ -134,7 +168,7 @@ ${basket.length ? html`<button class="btn sm" data-act="finish">${t('food.finish
 ${voiceReady() ? html`<button class="iconbtn flat sm" data-act="voice" aria-label="${t('voice.say')}">${ic('mic', 20, 2.2)}</button>` : ''}<button class="iconbtn flat sm acc-bg" data-act="scan" aria-label="${t('food.scan')}">${ic('scan', 20, 2.2)}</button></label>
 ${
   basket.length
-    ? html`<div class="card mt12 basket"><div class="row between"><span class="xs xb muted caps">${t('food.inMeal', { n: basket.length })}</span><span class="b num small">${totals(basket).kcal} kcal</span></div>
+    ? html`<div class="card mt12 basket"><div class="row between"><span class="xs xb muted caps">${t('food.inMeal', { n: basket.length })}</span><span class="b num small">${fmtNum(totals(basket).kcal)} ${t('unit.kcal')}</span></div>
 <div class="row gap6 wrap mt8">${basket.map((r, i) => html`<span class="chip">${r.emoji} ${foodName(r)} · ${r.grams} ${t('unit.g')}<button class="x" data-act="undo" data-i="${i}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('close', 14, 2.6)}</button></span>`)}</div></div>`
     : ''
 }
@@ -147,7 +181,7 @@ ${
 ${
   meals.length
     ? html`<div class="section-title"><h2 class="h3">${t('food.regularMeals')}</h2><button class="link" data-go="food/meals">${t('common.all')}</button></div>
-<div class="chips combos" role="group" aria-label="${t('food.regularMeals')}">${meals.map((m) => html`<button class="chip${picked === m.id ? ' on' : ''}" data-act="logMeal" data-id="${m.id}" aria-pressed="${String(picked === m.id)}">${picked === m.id ? '✓' : '⭐'} ${m.name} · ${totals(m.items).kcal}</button>`)}</div>
+<div class="chips combos" role="group" aria-label="${t('food.regularMeals')}">${meals.map((m) => html`<button class="chip${picked === m.id ? ' on' : ''}" data-act="logMeal" data-id="${m.id}" aria-pressed="${String(picked === m.id)}">${picked === m.id ? '✓' : '⭐'} ${m.name} · ${fmtNum(totals(m.items).kcal)}</button>`)}</div>
 ${(() => {
   const m = meals.find((x) => x.id === picked);
   return m
@@ -183,6 +217,7 @@ ${(() => {
         if (!q || q.length === 1) emit('ui:refresh');
         return false;
       },
+      retryOff: () => (void searchOnline(), patch('#offres', offBlock()), false),
       voice: () => (openVoice({ meal }), false),
       pick: (el) => (add(findFood(el.dataset.id ?? '')), false),
       cat: (el) => (openCategory(el.dataset.id ?? ''), false),
@@ -207,7 +242,7 @@ ${(() => {
         const { openScanner } = await import('./scan.js');
         openScanner(
           (food) => add(food),
-          () => openManual(),
+          (barcode, name) => openManual(barcode, name),
         );
         return false;
       },
@@ -215,9 +250,9 @@ ${(() => {
     },
   };
 
-  /** Manual entry form. @param {string} [barcode] */
-  async function openManual(barcode = '') {
+  /** Manual entry form. @param {string} [barcode] @param {string} [name] Prefill (1.4.0: a scanned product's name). */
+  async function openManual(barcode = '', name = '') {
     const { openManualForm } = await import('./manual.js');
-    openManualForm({ name: q, barcode }, (food) => add(food));
+    openManualForm({ name: name || q, barcode }, (food) => add(food));
   }
 };

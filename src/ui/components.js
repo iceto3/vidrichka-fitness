@@ -36,7 +36,7 @@ export const bar = (pct, color = 'var(--accent)', cls = '') =>
 /**
  * [-] value [+] stepper. Buttons fire `act` with data-d = ±1; the value is an editable input
  * firing `act` via change with the typed value.
- * @param {{act: string, value: string|number, unit?: string, data?: Record<string,any>, label: string, disabled?: boolean, id?: string, big?: boolean}} o
+ * @param {{act: string, value: string|number, unit?: string, data?: Record<string,any>, label: string, disabled?: boolean, id?: string, big?: boolean, wide?: boolean}} o
  */
 export function stepper(o) {
   const attrs = raw(
@@ -45,7 +45,7 @@ export function stepper(o) {
       .join(' '),
   );
   const dis = o.disabled ? raw('disabled') : '';
-  return html`<div class="step${o.big ? ' big' : ''}">
+  return html`<div class="step${o.big ? ' big' : ''}${o.wide ? ' wide' : ''}">
 <button class="sb" data-act="${o.act}" data-d="-1" ${attrs} ${dis} aria-label="${o.label} −">${ic('minus', o.big ? 24 : 16, 2.6)}</button>
 <label class="sv num"><input id="${o.id ?? ''}" type="text" inputmode="decimal" value="${o.value}" data-change="${o.act}" ${attrs} ${dis} aria-label="${o.label}"/>${o.unit ? html`<small>${o.unit}</small>` : ''}</label>
 <button class="sb" data-act="${o.act}" data-d="1" ${attrs} ${dis} aria-label="${o.label} +">${ic('plus', o.big ? 24 : 16, 2.6)}</button></div>`;

@@ -4,7 +4,7 @@
  * @module features/workouts/views/summary
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, fmtKg, fmtVolume, t } from '../../../core/i18n.js';
+import { fmtDate, fmtKg, fmtNum, fmtVolume, t } from '../../../core/i18n.js';
 import { get } from '../../../core/store.js';
 import { durationMin } from '../../../core/dates.js';
 import { settings } from '../../../core/settings.js';
@@ -22,7 +22,7 @@ const statTiles = (s) => [
   ['check', t('summary.sets'), html`${s.setsDone} <small>${t('summary.of', { n: s.setsPlanned })}</small>`],
   ['bolt', t('summary.reps'), html`${s.reps}`],
   ['dumbbell', t('summary.volume'), html`${fmtVolume(s.volume).value} <small>${fmtVolume(s.volume).unit}</small>`],
-  ['flame', t('summary.kcal'), html`~${s.kcal} <small>kcal</small>`],
+  ['flame', t('summary.kcal'), html`~${fmtNum(s.kcal)} <small>${t('unit.kcal')}</small>`],
   ['star', t('summary.xp'), html`<span class="gold">+${s.xp}</span>`],
 ];
 
@@ -64,7 +64,7 @@ ${s.partial ? html`<p class="muted xs b mt12 center partialnote">${t('summary.pa
           [t('summary.sets'), s.partial ? `${s.setsDone}/${s.setsPlanned}` : String(s.setsDone)],
           [t('summary.reps'), String(s.reps)],
           [t('summary.volume'), fmtVolume(s.volume).text],
-          [t('summary.kcal'), `~${s.kcal}`],
+          [t('summary.kcal'), `~${fmtNum(s.kcal)}`],
           ['XP', `+${s.xp}`],
         ],
         highlight: s.prs[0]

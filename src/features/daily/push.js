@@ -13,6 +13,7 @@
  */
 import { kv, setKv } from '../../core/store.js';
 import { on } from '../../core/bus.js';
+import { PREFIX } from '../../core/channel.js';
 import { dailySettings } from '../../core/settings.js';
 import { isIOS, isStandalone } from '../profile/install.js';
 import { slotText, syncDaily } from './notify.js';
@@ -21,7 +22,7 @@ import { EVENT_OF, b64urlBytes, enqueue, newDeviceId, serverSettings, serverText
 
 export { PUSH_URL, VAPID_KEY, pushUrl };
 
-const CONFIG = 'vf-config',
+const CONFIG = `${PREFIX}config`, // the service worker's config cache (per channel, see sw.js)
   QUEUE = 'push-queue';
 
 /** @returns {{on: boolean, id: string, endpoint: string, dirty?: boolean}} */
@@ -164,6 +165,27 @@ export function syncPushSettings(delay = 1500) {
       }
     }, delay)
   );
+}
+
+/**
+ * 1.4.0: ask the server to send a test notification to this phone now.
+ * @param {string} title @param {string} body
+ * @returns {Promise<'sent'|'wait'|'gone'|'failed'>}
+ */
+export async function testPush(title, body) {
+  if (!pushOn()) return 'failed';
+  try {
+    const st = await api('/test', { id: state().id, title, body });
+    if (st === 204) return 'sent';
+    if (st === 429) return 'wait';
+    if (st === 404 || st === 410) {
+      reRegister();
+      return 'gone';
+    }
+    return 'failed';
+  } catch {
+    return 'failed';
+  }
 }
 
 /** Send queued events (oldest first); keep the ones that still fail. */

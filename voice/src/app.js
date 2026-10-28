@@ -9,7 +9,12 @@
  *   POST /transcribe?lang=bg|en  body: the recorded audio (Content-Type audio/*, ≤ 1 MB, ≤ 35 s)
  *                → 200 {text, duration} | 413/415/400 bad input | 403 origin | 429 limit | 502/503
  *                (Workers AI Whisper, 6 per minute per IP)
- *   GET  /health → {ok, version, configured, transcribe}
+ *   POST /vision?kind=steps|sleep&today=YYYY-MM-DD&lang=bg|en  body: a screenshot (image/jpeg|png|webp,
+ *                ≤ 600 kB) → 200 {days: [{date, steps} | {date, hours, quality}], via}
+ *                (1.4.0: Workers AI vision first, xAI fallback; 4 per minute per IP; never stored)
+ *   GET  /off-search?q=…&lang=bg|en → 200 {products: [...]} (1.4.0: Open Food Facts text search
+ *                proxied for the app – OFF's search has no usable CORS; cached, 20 per minute per IP)
+ *   GET  /health → {ok, version, configured, transcribe, vision, offSearch}
  * Privacy: the text is forwarded to xAI and never logged or stored here; audio is only
  * transcribed in memory by Workers AI and never stored or logged.
  * Cost guards: Origin check, text length cap, max_tokens cap, per-IP rate limit
@@ -19,8 +24,10 @@
 import { chatBody } from './prompt.js';
 import { Invalid, checkRequest, normalize } from './parse.js';
 import { readAudio, transcribe } from './transcribe.js';
+import { readScreenshot, readVision } from './vision.js';
+import { CACHE_TTL, cacheKey, memo, offSearch, readQuery } from './off.js';
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.4.0';
 export const XAI_URL = 'https://api.x.ai/v1/chat/completions';
 const MAX_BODY = 4096;
 
@@ -32,7 +39,10 @@ const MAX_BODY = 4096;
  * @property {string} [MAX_TEXT] @property {string} [MAX_TOKENS]
  * @property {{limit: (o: {key: string}) => Promise<{success: boolean}>}} [LIMITER] rate limiting binding
  * @property {{limit: (o: {key: string}) => Promise<{success: boolean}>}} [STT_LIMITER] for /transcribe
- * @property {{run: (model: string, input: any) => Promise<any>}} [AI] Workers AI binding (Whisper)
+ * @property {{limit: (o: {key: string}) => Promise<{success: boolean}>}} [VISION_LIMITER] for /vision
+ * @property {{limit: (o: {key: string}) => Promise<{success: boolean}>}} [OFF_LIMITER] for /off-search
+ * @property {string} [XAI_VISION_MODEL] xAI model for /vision (default: XAI_MODEL)
+ * @property {{run: (model: string, input: any) => Promise<any>}} [AI] Workers AI binding (Whisper, vision)
  */
 
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
@@ -86,6 +96,103 @@ export function isolateLimiter(perIp = 8, global = 60) {
 }
 const fallback = isolateLimiter();
 const sttFallback = isolateLimiter(6, 60);
+const visionFallback = isolateLimiter(4, 30);
+const offFallback = isolateLimiter(20, 120);
+const offMemo = memo();
+
+/**
+ * GET /off-search (origin already checked): edge cache → isolate memo → OFF.
+ * @param {Request} req @param {Env} env @param {Record<string, string>} h
+ * @param {{fetch?: typeof fetch, offLimit?: (key: string) => boolean, cache?: Cache|null, memo?: ReturnType<typeof memo>}} deps
+ */
+async function handleOffSearch(req, env, h, deps) {
+  const url = new URL(req.url);
+  let s;
+  try {
+    s = readQuery(url);
+  } catch (e) {
+    if (e instanceof Invalid) return reply(e.status, { error: e.message }, h);
+    throw e;
+  }
+  const ok = (/** @type {string} */ body, /** @type {string} */ hit) =>
+    new Response(body, {
+      status: 200,
+      headers: {
+        ...h,
+        'Content-Type': 'application/json',
+        'Cache-Control': `public, max-age=${CACHE_TTL}`,
+        'X-Cache': hit,
+      },
+    });
+  const key = cacheKey(url.origin, s),
+    mk = key.url;
+  const cache =
+    deps.cache !== undefined ? deps.cache : typeof caches !== 'undefined' ? /** @type {any} */ (caches).default : null;
+  const mem = deps.memo ?? offMemo;
+  const seen = mem.get(mk);
+  if (seen) return ok(seen, 'memo');
+  const hit = cache ? await cache.match(key).catch(() => null) : null;
+  if (hit) {
+    const body = await hit.text();
+    mem.set(mk, body);
+    return ok(body, 'edge');
+  }
+  const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+  const lim = deps.offLimit ?? offFallback;
+  const allowed = env.OFF_LIMITER
+    ? (await env.OFF_LIMITER.limit({ key: ip }).catch(() => ({ success: true }))).success && lim(ip)
+    : lim(ip);
+  if (!allowed) return reply(429, { error: 'rate-limit' }, { ...h, 'Retry-After': '60' });
+  let products;
+  try {
+    products = await offSearch(s, deps.fetch ?? fetch);
+  } catch (e) {
+    const busy = /** @type {Error} */ (e).message === 'upstream-busy';
+    console.log('off', busy ? 'busy' : 'upstream'); // never the query
+    return reply(busy ? 429 : 502, { error: busy ? 'upstream-busy' : 'upstream' }, h);
+  }
+  const body = JSON.stringify({ products });
+  mem.set(mk, body);
+  if (cache)
+    await cache
+      .put(
+        key,
+        new Response(body, {
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${CACHE_TTL}` },
+        }),
+      )
+      .catch(() => {});
+  return ok(body, 'miss');
+}
+
+/**
+ * POST /vision (origin already checked). The image is read, sent to the model(s) and
+ * dropped; only the re-checked numbers are returned.
+ * @param {Request} req @param {Env} env @param {Record<string, string>} h
+ * @param {{fetch?: typeof fetch, visionLimit?: (key: string) => boolean}} deps
+ */
+async function handleVision(req, env, h, deps) {
+  if (!env.AI && !env.XAI_API_KEY) return reply(503, { error: 'not-configured' }, h);
+  const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+  const lim = deps.visionLimit ?? visionFallback;
+  const allowed = env.VISION_LIMITER
+    ? (await env.VISION_LIMITER.limit({ key: ip }).catch(() => ({ success: true }))).success && lim(ip)
+    : lim(ip);
+  if (!allowed) return reply(429, { error: 'rate-limit' }, { ...h, 'Retry-After': '60' });
+  let q;
+  try {
+    q = await readVision(req);
+  } catch (e) {
+    if (e instanceof Invalid) return reply(e.status, { error: e.message }, h);
+    throw e;
+  }
+  try {
+    return reply(200, await readScreenshot(q, env, deps.fetch ?? fetch), h);
+  } catch (e) {
+    const busy = /** @type {Error} */ (e).message === 'upstream-busy';
+    return reply(busy ? 429 : 502, { error: busy ? 'upstream-busy' : 'upstream' }, h);
+  }
+}
 
 /**
  * POST /transcribe (origin already checked).
@@ -122,7 +229,7 @@ async function handleTranscribe(req, env, h, deps) {
  * Handle one request.
  * @param {Request} req
  * @param {Env} env
- * @param {{fetch?: typeof fetch, limit?: (key: string) => boolean, sttLimit?: (key: string) => boolean}} [deps] For tests.
+ * @param {{fetch?: typeof fetch, limit?: (key: string) => boolean, sttLimit?: (key: string) => boolean, visionLimit?: (key: string) => boolean, offLimit?: (key: string) => boolean, cache?: Cache|null, memo?: ReturnType<typeof memo>}} [deps] For tests.
  */
 export async function handle(req, env, deps = {}) {
   const url = new URL(req.url),
@@ -131,11 +238,28 @@ export async function handle(req, env, deps = {}) {
     h = cors(ok ? origin : null);
   if (req.method === 'OPTIONS') return reply(ok ? 204 : 403, null, h);
   if (url.pathname === '/health' && req.method === 'GET')
-    return reply(200, { ok: true, version: VERSION, configured: !!env.XAI_API_KEY, transcribe: !!env.AI }, h);
-  if (url.pathname !== '/parse' && url.pathname !== '/transcribe') return reply(404, { error: 'not-found' }, h);
+    return reply(
+      200,
+      {
+        ok: true,
+        version: VERSION,
+        configured: !!env.XAI_API_KEY,
+        transcribe: !!env.AI,
+        vision: !!(env.AI || env.XAI_API_KEY),
+        offSearch: true,
+      },
+      h,
+    );
+  if (url.pathname === '/off-search') {
+    if (req.method !== 'GET') return reply(405, { error: 'method' }, { ...h, Allow: 'GET' });
+    if (!ok) return reply(403, { error: 'origin' }, h);
+    return handleOffSearch(req, env, h, deps);
+  }
+  if (!['/parse', '/transcribe', '/vision'].includes(url.pathname)) return reply(404, { error: 'not-found' }, h);
   if (req.method !== 'POST') return reply(405, { error: 'method' }, { ...h, Allow: 'POST' });
   if (!ok) return reply(403, { error: 'origin' }, h);
   if (url.pathname === '/transcribe') return handleTranscribe(req, env, h, deps);
+  if (url.pathname === '/vision') return handleVision(req, env, h, deps);
   if (!env.XAI_API_KEY) return reply(503, { error: 'not-configured' }, h);
 
   const ip = req.headers.get('CF-Connecting-IP') || 'unknown';

@@ -58,7 +58,8 @@ export function planTour(items, today) {
 }
 
 /** How long one stop takes (ms). @param {Tour['mode']} mode @param {boolean} reduce */
-export const stopMs = (mode, reduce) => (reduce ? 350 : mode === 'full' ? 1400 : 1000);
+// 1.4.0: longer (was 1.4 s / 1 s) – testers missed where things landed.
+export const stopMs = (mode, reduce) => (reduce ? 350 : mode === 'full' ? 2200 : 1600);
 
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));

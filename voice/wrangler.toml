@@ -29,5 +29,17 @@ name = "STT_LIMITER"
 namespace_id = "4712"
 simple = { limit = 6, period = 60 }
 
+# 1.4.0: 4 screenshot reads (/vision) per minute per IP.
+[[ratelimits]]
+name = "VISION_LIMITER"
+namespace_id = "4713"
+simple = { limit = 4, period = 60 }
+
+# 1.4.0 (additive): 20 Open Food Facts searches (/off-search) per minute per IP.
+[[ratelimits]]
+name = "OFF_LIMITER"
+namespace_id = "4714"
+simple = { limit = 20, period = 60 }
+
 [observability]
 enabled = true

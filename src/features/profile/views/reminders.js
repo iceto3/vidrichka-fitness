@@ -11,9 +11,11 @@ import { timeInput, toggle, topBar } from '../../../ui/components.js';
 import { notify } from '../../../ui/feedback.js';
 import { requestPermission, scheduleReminders, support } from '../reminders.js';
 import { installApp, isIOS } from '../install.js';
-import { disablePush, enablePush, pushOn, pushSupport } from '../../daily/push.js';
+import { disablePush, enablePush, pushOn, pushSupport, testPush } from '../../daily/push.js';
 
 let busy = false;
+/** 1.4.0: a test push is on its way. */
+let testing = false;
 
 /** Push card: status, on/off button and the platform hints. */
 function pushCard() {
@@ -36,6 +38,7 @@ function pushCard() {
 ${hint ? html`<p class="small b muted mt10 lh">${t(hint)}</p>` : ''}
 ${p.iosNeedsInstall ? html`<button class="btn sec w100 mt10" data-act="install">${t('install.cta')}</button>` : ''}
 ${can || on ? html`<button class="btn ${on ? 'sec' : ''} w100 mt10" data-act="push" ${busy ? 'disabled' : ''}>${t(busy ? 'push.working' : on ? 'push.turnOff' : 'push.turnOn')}</button>` : ''}
+${on ? html`<button class="btn sec w100 mt8" data-act="pushTest" ${testing ? 'disabled' : ''}>${t(testing ? 'push.testing' : 'push.test')}</button>` : ''}
 ${ios ? html`<p class="muted xs b mt10 lh">${t('push.iosSound')}</p>` : ''}</div>`;
 }
 
@@ -46,7 +49,7 @@ ${ios ? html`<p class="muted xs b mt10 lh">${t('push.iosSound')}</p>` : ''}</div
  */
 const drow = (k, label, time, on, sub = '') =>
   html`<div class="row between gap8 drow mt10"><div class="f1 minw0"><div class="b small">${label}</div>${sub ? html`<div class="muted xs b">${sub}</div>` : ''}</div>
-${timeInput({ value: time, act: 'dtime', k, label, disabled: !on, cls: 'tinput' })}${k === 'loud' ? html`<span class="tgph"></span>` : toggle(on, 'dtog', label, { k })}</div>`;
+${timeInput({ value: time, act: 'dtime', k, label, disabled: !on, cls: 'tinput' })}${toggle(on, 'dtog', label, { k })}</div>`;
 
 /** @returns {import('../../../core/registry.js').View} */
 export default () => {
@@ -90,7 +93,7 @@ ${pushSupport().configured ? pushCard() : ''}
 <div class="section-title"><h2 class="h3">${t('daily.settingsTitle')}</h2></div>
 <div class="card dailyset">
 ${drow('wake', t('daily.wake'), d.wake, d.morning, t('daily.wakeSub'))}
-${d.morning ? drow('loud', t('daily.loud'), d.loud, true, t('daily.loudSub')) : ''}
+${d.morning ? drow('loud', t('daily.loud'), d.loud, d.loudOn !== false, t('daily.loudSub')) : ''}
 <div class="row between gap8 drow mt10"><div class="f1"><div class="b small">${t('daily.protein')}</div><div class="muted xs b">${t('daily.proteinSub')}</div></div>${toggle(d.protein, 'dtog', t('daily.protein'), { k: 'protein' })}</div>
 ${d.water.map((w, i) => drow(`water.${i}`, t('daily.water', { n: i + 1 }), w.time, w.on))}
 ${drow('checkinAm', t('daily.checkinAm'), d.checkinAm.time, d.checkinAm.on, t('daily.checkinAmSub'))}
@@ -130,6 +133,7 @@ ${s.notif && s.permission === 'granted' ? html`<button class="btn sec w100 mt10"
         const k = el.dataset.k ?? '';
         if ('Notification' in window && Notification.permission === 'default') await requestPermission();
         if (k === 'wake') setDaily('morning', (c) => !c);
+        else if (k === 'loud') setDaily('loudOn', (c) => c === false);
         else if (k === 'protein') setDaily('protein', (c) => !c);
         else setDaily(k, (c) => ({ ...c, on: !c.on }));
       },
@@ -158,6 +162,14 @@ ${s.notif && s.permission === 'granted' ? html`<button class="btn sec w100 mt10"
           busy = false;
         }
         scheduleReminders();
+      },
+      pushTest: async () => {
+        if (testing) return false;
+        testing = true;
+        emit('ui:refresh');
+        const r = await testPush(t('push.testTitle'), t('push.testBody'));
+        testing = false;
+        emit('toast', { key: `push.test.${r}` });
       },
       test: () => void notify(t('reminder.title'), t('reminder.body'), 'test'),
     },

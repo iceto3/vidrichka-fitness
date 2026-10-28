@@ -36,7 +36,7 @@ async function decode(file) {
 
 /**
  * @param {Blob} file An image from the gallery.
- * @returns {Promise<{mime: string, b64: string, url: string, bytes: number}>} `url` = local preview.
+ * @returns {Promise<{mime: string, b64: string, url: string, bytes: number, blob: Blob}>} `url` = local preview.
  * @throws {Error} 'image' when it can't be read or squeezed under the limit.
  */
 export async function prepareImage(file) {
@@ -59,7 +59,7 @@ export async function prepareImage(file) {
       const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', q));
       if (blob && /** @type {Blob} */ (blob).size <= MAX_IMG_BYTES) {
         const b = /** @type {Blob} */ (blob);
-        return { mime: 'image/jpeg', b64: await toB64(b), url: URL.createObjectURL(b), bytes: b.size };
+        return { mime: 'image/jpeg', b64: await toB64(b), url: URL.createObjectURL(b), bytes: b.size, blob: b };
       }
     }
   }

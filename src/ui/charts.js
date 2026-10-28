@@ -23,12 +23,15 @@ const n1 = (/** @type {number} */ v) => Math.round(v * 10) / 10;
 /** Labels for the first, middle and last points. @param {Pt[]} pts @param {(x: string, i: number) => string} [label] */
 function xLabels(pts, label) {
   if (!label || !pts.length) return '';
-  const idx = [...new Set([0, Math.floor((pts.length - 1) / 2), pts.length - 1])];
+  // 1.4.0: a week shows every day (Mon…Sun); longer ranges the first, middle and last.
+  const idx =
+    pts.length <= 8 ? pts.map((_, i) => i) : [...new Set([0, Math.floor((pts.length - 1) / 2), pts.length - 1])];
   const step = W / pts.length;
   return idx
     .map((i) => {
       const x = n1(step * i + step / 2);
-      const anchor = i === 0 && pts.length > 2 ? 'start' : i === pts.length - 1 && pts.length > 2 ? 'end' : 'middle';
+      const edge = pts.length > 2 && pts.length > 8;
+      const anchor = i === 0 && edge ? 'start' : i === pts.length - 1 && edge ? 'end' : 'middle';
       const xx = anchor === 'start' ? n1(step * i) : anchor === 'end' ? n1(step * (i + 1)) : x;
       return `<text x="${xx}" y="${H - 3}" text-anchor="${anchor}" class="chx">${esc(label(pts[i].x, i))}</text>`;
     })
@@ -69,16 +72,18 @@ export function barChart(pts, o) {
 
 /**
  * Lines on a fixed scale (e.g. mood and energy 1–5); gaps where a value is missing.
- * @param {{pts: Pt[], color: string}[]} lines @param {{min: number, max: number, aria: string, label?: (x: string, i: number) => string}} o
+ * @param {{pts: Pt[], color: string}[]} lines @param {{min: number, max: number, aria: string, label?: (x: string, i: number) => string, gridStep?: number}} o
+ *   `gridStep` (1.4.0): value between grid lines (default 1, e.g. the 1–5 mood scale).
  */
 export function lineChart(lines, o) {
   const ch = H - PAD_B - PAD_T;
   const len = Math.max(1, ...lines.map((l) => l.pts.length));
   const step = W / len;
   const yOf = (/** @type {number} */ v) => n1(PAD_T + ch - ((v - o.min) / (o.max - o.min)) * ch);
+  const gs = o.gridStep ?? 1;
   const grid = Array.from(
-    { length: o.max - o.min + 1 },
-    (_, i) => `<line x1="0" x2="${W}" y1="${yOf(o.min + i)}" y2="${yOf(o.min + i)}" class="chgrid"/>`,
+    { length: Math.floor((o.max - o.min) / gs) + 1 },
+    (_, i) => `<line x1="0" x2="${W}" y1="${yOf(o.min + i * gs)}" y2="${yOf(o.min + i * gs)}" class="chgrid"/>`,
   ).join('');
   const paths = lines
     .map((l) => {

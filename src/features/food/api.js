@@ -8,7 +8,7 @@ import { emit } from '../../core/bus.js';
 import { L } from '../../core/i18n.js';
 import { dayKey, hhmm } from '../../core/dates.js';
 import { FOODS, FOOD_CATEGORIES, QUICK_PICKS } from '../../data/foods.js';
-import { known, portion, scaleRow } from './logic.js';
+import { known, mealTs, portion, scaleRow } from './logic.js';
 
 export { FOODS, FOOD_CATEGORIES, QUICK_PICKS };
 
@@ -54,7 +54,7 @@ export function logFood(food, grams, meal, date = view.date) {
   if (food.source && !local.has(food.id)) put('foods', food);
   const use = kv('foodUse', {});
   setKv('foodUse', { ...use, [food.id]: { n: (use[food.id]?.n ?? 0) + 1, ts: Date.now(), cat: food.cat } });
-  const ts = date === dayKey() ? Date.now() : new Date(`${date}T12:00`).getTime();
+  const ts = mealTs(date, meal, dayKey());
   const row = put('food', {
     id: uid('f'),
     date,
@@ -66,9 +66,37 @@ export function logFood(food, grams, meal, date = view.date) {
     emoji: food.emoji,
     grams,
     ...portion(food, grams),
+    ...(food.missing?.length ? { missing: food.missing } : {}),
   });
   emit('food:logged', { meal, emoji: row.emoji ?? '🍽️' });
   return row;
+}
+
+/**
+ * A diary row recomputed from its food's (corrected) per-100 g values at the row's grams
+ * (1.4.0). Values the food still lacks stay in `missing`; unknown fiber/salt are dropped.
+ * Pure. @param {any} row @param {any} food
+ */
+export function rowFromFood(row, food) {
+  const out = { ...row, name: food.name, ...portion(food, row.grams) };
+  if (!known(food.fib)) delete out.fib;
+  if (!known(food.salt)) delete out.salt;
+  if (food.missing?.length) out.missing = food.missing;
+  else delete out.missing;
+  return out;
+}
+
+/**
+ * 1.4.0: save the user's corrected values with the food (so the next scan of the barcode
+ * uses them) and update the diary rows of that food that still had missing values, plus
+ * `rowId` (the row being edited). Returns the updated rows.
+ * @param {any} food Corrected food (logic.applyFix). @param {string} [rowId]
+ */
+export function saveFoodFix(food, rowId) {
+  put('foods', food);
+  return all('food')
+    .filter((r) => r.foodId === food.id && (r.id === rowId || r.missing?.length))
+    .map((r) => put('food', rowFromFood(r, food)));
 }
 
 /**
@@ -165,7 +193,7 @@ export const saveMeal = (name, rows) =>
 export function logSavedMeal(id, meal) {
   const m = get('meals', id);
   if (!m) return null;
-  const ts = view.date === dayKey() ? Date.now() : new Date(`${view.date}T12:00`).getTime();
+  const ts = mealTs(view.date, meal, dayKey());
   const rows = m.items.map((/** @type {any} */ it, /** @type {number} */ i) =>
     put('food', { ...it, id: uid('f'), date: view.date, meal, ts: ts + i, time: hhmm(new Date(ts)) }),
   );

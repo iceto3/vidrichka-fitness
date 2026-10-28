@@ -35,3 +35,42 @@
     transition: none;
   }
 }
+
+/* 1.4.0 screenshot import: one stacked card per day so the date field is never squashed */
+.shotrow .chk {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+.shotrow .shotdate input {
+  height: 46px;
+  font-size: 16px; /* ≥ 16 px: iOS does not zoom into the field */
+  min-width: 0;
+}
+.shotrow .shotval .input {
+  width: 72px;
+  height: 46px;
+  flex: none;
+  text-align: center;
+  font-size: 16px;
+}
+.shotrow .shotval label,
+.shotrow label.shotval {
+  align-items: center;
+}
+.shotrow .shotval .input[data-change='val'] {
+  width: 120px;
+}
+.scale.sm {
+  margin-top: 6px;
+  gap: 6px;
+}
+.scale.sm button {
+  min-height: 44px;
+  font-size: 22px;
+  border-radius: 12px;
+}
+/* the sleep stepper shows "7 ч 20 мин" */
+.step.wide {
+  min-width: 190px;
+}

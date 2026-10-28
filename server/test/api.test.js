@@ -177,3 +177,49 @@ test('per-run send cap: the rest goes out next minute', async () => {
   assert.deepEqual([b.due, b.sent], [1, 1]);
   assert.equal(n, 3);
 });
+
+test('1.4.0 /test: one push to this device now, 2 per minute, unknown device 404, gone device dropped', async () => {
+  const { resetLimits } = await import('../src/app.js');
+  resetLimits();
+  const s = memoryStore();
+  /** @type {Request[]} */
+  const sent = [];
+  let status = 201;
+  const send = async (r) => (sent.push(r), new Response(null, { status }));
+  const call = (body) =>
+    handle(
+      new Request('https://push.example/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain', Origin: APP },
+        body: JSON.stringify(body),
+      }),
+      ENV,
+      s,
+      Date.now(),
+      send,
+    );
+  assert.equal((await call({ id: ID })).status, 404);
+  assert.equal((await post(s, '/subscribe', sub())).status, 204);
+  assert.equal((await call({ id: ID, title: 'Пробно', body: 'Работи!' })).status, 204);
+  assert.equal(sent.length, 1);
+  assert.equal(new URL(sent[0].url).host, 'fcm.googleapis.com');
+  assert.equal(sent[0].headers.get('Topic'), 'vf-test');
+  assert.equal((await call({ id: ID })).status, 204);
+  assert.equal((await call({ id: ID })).status, 429, '2 per minute');
+  resetLimits();
+  status = 410;
+  assert.equal((await call({ id: ID })).status, 410);
+  assert.equal(s.devices.size, 0, 'a gone subscription is removed');
+});
+
+test('1.4.0 loudOn=false: no loud alarm, the silent nudge stays', async () => {
+  const { dueNow } = await import('../src/schedule.js');
+  const { settings } = await import('../src/validate.js');
+  const off = settings({ ...SETTINGS, loudOn: false });
+  assert.equal(off.loudOn, false);
+  assert.equal(settings(SETTINGS).loudOn, true, 'default on');
+  const kinds = (st, at) => dueNow({ tz: TZ, settings: st, now: sofia(at), flags: {}, sent: {} }).map((x) => x.kind);
+  assert.ok(kinds(settings(SETTINGS), '2026-10-28T08:20').includes('loud'));
+  assert.ok(!kinds(off, '2026-10-28T08:20').includes('loud'));
+  assert.ok(kinds(off, '2026-10-28T07:35').includes('wake'));
+});

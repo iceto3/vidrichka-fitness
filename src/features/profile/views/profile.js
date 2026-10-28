@@ -6,7 +6,7 @@
  */
 import { html, raw } from '../../../ui/dom.js';
 import { LANGUAGES } from '../../../data/i18n/index.js';
-import { fmtDate, fmtHM, getLang, t, weekdayName } from '../../../core/i18n.js';
+import { fmtDate, fmtHM, fmtNum, getLang, t, weekdayName } from '../../../core/i18n.js';
 import { dailySettings, settings, setSettings } from '../../../core/settings.js';
 import { kv } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
@@ -20,6 +20,7 @@ import { badges, level, recordGoal, stats } from '../../motivation/api.js';
 import { canInstall, installApp, isIOS } from '../install.js';
 import { dailyOnCount } from '../../daily/api.js';
 import { APP_VERSION } from '../../../core/version.js';
+import { IS_BETA } from '../../../core/channel.js';
 import { GOAL_MAX, GOAL_MIN, GOAL_STEP } from '../../steps/logic.js';
 
 /** The Reminders row's summary: workout days (or off) plus the daily-rhythm reminders that are on. @param {{enabled: boolean, days: number[]}} r */
@@ -116,7 +117,7 @@ export default () => ({
 <button class="avatar" data-act="names" aria-label="${t('profile.names')}">${otter({ size: 104, pose: 'dumbbell' })}</button>
 <div class="f1"><button class="h2 plain" data-act="names">${s.userName || t('profile.addName')} ${ic('edit', 15, 2.2, 'var(--muted)')}</button>
 <div class="muted small b">${t('profile.with', { otter: otterName(), date: fmtDate(since, { month: 'short', year: 'numeric' }) })}</div>
-<div class="row gap8 mt8"><div class="lvl xs30">${lv.level}</div><div class="f1"><div class="row between xs b"><span>${t('home.level', { n: lv.level })}</span><span class="muted num">${lv.into}/${lv.need} XP</span></div>
+<div class="row gap8 mt8"><div class="lvl xs30">${lv.level}</div><div class="f1"><div class="row between xs b"><span>${t('home.level', { n: lv.level })}</span><span class="muted num">${fmtNum(lv.into)}/${fmtNum(lv.need)} XP</span></div>
 <div class="bar mt6 h7">${raw(`<i style="width:${lv.pct * 100}%;background:var(--gold)"></i>`)}</div></div></div></div></div>
 <button class="row gap8 mt12 outfitrow" data-act="outfit">${ic('shirt', 18, 2.2, 'var(--accent-d)')}<span class="small b f1 left">${t('profile.outfit')}: <span class="acc">${t(`outfit.${s.outfit}`)}</span></span><span class="link">${t('common.change')}</span></button>
 <div class="row mt12 center pstats"><div class="f1"><div class="xb num fs18">${st.totalWorkouts}</div><div class="muted xs b">${t('profile.workouts')}</div></div><i class="vsep"></i>
@@ -152,7 +153,7 @@ ${srow(
 <button class="srow" data-go="profile/reminders"><span class="sic orange">${ic('bell', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.reminders')}</span><span class="muted xs b">${remindersSummary(r)}</span></span>${r.enabled ? html`<span class="b num acc">${fmtHM(r.time)}</span>` : ''}${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${srow('target', 'teal', t('profile.weeklyGoal'), t('profile.weeklyGoalSub'), stepper({ act: 'goal', value: s.weeklyGoal, label: t('profile.weeklyGoal') }))}
 ${srow('steps', 'orange', t('steps.goal'), t('steps.goalSub'), stepper({ act: 'sgoal', value: s.stepGoal, label: t('steps.goal') }), 'id="stepgoal"')}
-<button class="srow" data-act="nutrition"><span class="sic green">${ic('food', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.nutrition')}</span><span class="muted xs b">${s.kcalGoal} kcal · P ${s.proteinGoal} · C ${s.carbsGoal} · F ${s.fatGoal} · ${t('profile.waterN', { n: s.waterGoal })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
+<button class="srow" data-act="nutrition"><span class="sic green">${ic('food', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.nutrition')}</span><span class="muted xs b">${fmtNum(s.kcalGoal)} ${t('unit.kcal')} · ${t('food.p')} ${s.proteinGoal} · ${t('food.c')} ${s.carbsGoal} · ${t('food.f')} ${s.fatGoal} · ${t('profile.waterN', { n: s.waterGoal })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 ${srow('timer', 'blue', t('profile.restAlert'), canVibrate() ? t('profile.restAlertSub') : t('profile.noVibrate'), html`<div class="row gap8"><span class="muted">${ic('volume', 17, 2.2)}</span>${toggle(s.restSound, 'tg', t('profile.sound'), { k: 'restSound' })}${canVibrate() ? html`<span class="muted">${ic('vibrate', 17, 2.2)}</span>${toggle(s.restVibrate, 'tg', t('profile.vibration'), { k: 'restVibrate' })}` : ''}</div>`)}
 ${srow('gift', 'gold', t('profile.celebrationSounds'), t('profile.celebrationSoundsSub'), toggle(s.celebrationSounds, 'tg', t('profile.celebrationSounds'), { k: 'celebrationSounds' }))}
 ${srow(
@@ -161,7 +162,7 @@ ${srow(
   t('profile.weightStep'),
   t('profile.weightStepSub'),
   seg(
-    [1, 2.5, 5].map((v) => ({ value: String(v), label: `${v}` })),
+    [1, 2.5, 5].map((v) => ({ value: String(v), label: fmtNum(v, 1) })), // 1.4.0: „2,5“ in Bulgarian
     String(s.weightStep),
     'wstep',
     'mini',
@@ -180,10 +181,13 @@ ${srow(
 ${srow('chart', 'blue', t('profile.shareFoods'), t('profile.shareFoodsSub'), toggle(s.shareFoods, 'tg', t('profile.shareFoods'), { k: 'shareFoods' }), 'id="sharefoods"')}
 <button class="srow" data-act="partner"><span class="sic gold">${ic('users', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.partner')}</span><span class="muted xs b">${s.partnerName ? t('profile.partnerWith', { name: s.partnerName }) : t('profile.partnerSub')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
 <button class="srow" data-act="feedback" id="feedbackrow"><span class="sic violet">${ic('message', 19, 2.2)}</span><span class="t left"><span class="st block">${t('feedback.title')}</span><span class="muted xs b">${t('feedback.rowSub')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
+<button class="srow" data-go="whatsnew" id="whatsnewrow"><span class="sic teal">${ic('star', 19, 2.2)}</span><span class="t left"><span class="st block">${t('whatsNew.page')}</span><span class="muted xs b">${t('whatsNew.rowSub', { v: APP_VERSION })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
+<a class="srow" href="repair" id="repairrow"><span class="sic gray">${ic('repair', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.repair')}</span><span class="muted xs b">${t('profile.repairSub')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</a>
 ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic teal">${ic('download', 19, 2.2)}</span><span class="t left"><span class="st block">${t('install.cta')}</span><span class="muted xs b">${isIOS() ? t('install.iosShort') : t('install.cardBody')}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>` : ''}
 </div>
 <button class="btn sec danger-t w100 mt16" data-act="reset">${ic('trash', 18)}${t('profile.reset')}</button>
-<p class="muted xs b center mt12">Vidrichka Fitness v${APP_VERSION} · ${t('profile.local')}</p>
+<button class="linkbtn xs center w100 mt12 pfooter" data-go="whatsnew">Vidrichka Fitness v${APP_VERSION}${IS_BETA ? ' · БЕТА' : ''} · ${t('profile.local')}</button>
+<div class="pfspace" aria-hidden="true"></div>
 </div>`;
   },
   actions: {
@@ -282,5 +286,12 @@ ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic t
       emit('nav', { path: 'home', replace: true });
       emit('app:reset'); // 1.2.1: the welcome shows at once, not only after a reload
     },
+  },
+  mount: (el) => {
+    // 1.4.0: #/profile?sharefoods (from the Home data notice) jumps to the sharing switch.
+    if (!/[?&]sharefoods/.test(location.hash)) return;
+    const row = el.querySelector('#sharefoods');
+    row?.scrollIntoView({ block: 'center' });
+    row?.classList.add('flash');
   },
 });

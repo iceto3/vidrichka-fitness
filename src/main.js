@@ -5,6 +5,8 @@
  */
 import { kv, load, setKv } from './core/store.js';
 import { WHATS_NEW } from './core/version.js';
+import { newSince } from './features/whatsnew/notes.js';
+import { IS_BETA } from './core/channel.js';
 import { settings, setSettings } from './core/settings.js';
 import { detectLang, getGender, getLang, setGender, setLang, t } from './core/i18n.js';
 import { applyTheme, watchTheme } from './core/theme.js';
@@ -21,7 +23,6 @@ import { otter } from './features/mascot/api.js';
 import { stats } from './features/motivation/api.js';
 import { pushUrl } from './features/daily/push-config.js';
 import { voiceUrl } from './features/voice/config.js';
-import { dataNotice } from './features/improve/notice.js';
 import './features/profile/install.js'; // catch beforeinstallprompt early
 
 const $id = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -78,7 +79,6 @@ ${genderRow()}
     },
     onClose: () => {
       if (!settings().onboarded) setSettings({ onboarded: true });
-      setTimeout(dataNotice, 250); // 1.3.4: anonymous food sharing is on by default – say so once
     },
   });
 }
@@ -99,69 +99,13 @@ const genderRow = () =>
 function whatsNew(next = () => {}) {
   const seen = /** @type {string} */ (kv('seenWhatsNew', ''));
   if (seen === WHATS_NEW) return next();
-  // Coming from 1.3.3: only the 1.3.4 items; from 1.3.2 also the 1.3.3 ones; from 1.3.1 also the 1.3.2 ones; from 1.3.0 also the 1.3.1 ones; from 1.2.1 also
-  // the 1.3 ones; from 1.2.0 ("1.2") also the 1.2.1 ones; from older, the 1.2 items and the
-  // gender choice too. Voice items only once the voice server is set. (The 1.3.1 Undo item is
-  // replaced by the 1.3.2 pill.) Shown in the app language, which is loaded before this runs.
-  const had133 = /^1\.3\.[3-9]/.test(seen);
-  const had132 = /^1\.3\.[2-9]/.test(seen);
-  const had131 = /^1\.3\.[1-9]/.test(seen);
-  const had13 = seen.startsWith('1.3');
-  const had12 = had13 || seen === '1.2' || seen.startsWith('1.2.');
-  const had121 = had13 || /^1\.2\.[1-9]/.test(seen);
-  const push = !had12 && !!pushUrl(); // push items only once the server is deployed
-  const voice = !!voiceUrl();
-  const items = /** @type {[string, string][]} */ ([
-    ['food', 'whatsNew.homeMeals'],
-    ...(voice ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.voiceTour']]) : []),
-    ['steps', 'whatsNew.steps'],
-    ['moon', 'whatsNew.sleep134'],
-    ['chart', 'whatsNew.trends'],
-    ['message', 'whatsNew.feedback'],
-    ...(had133
-      ? []
-      : /** @type {[string, string][]} */ ([
-          ...(voice ? [['mic', 'whatsNew.record']] : []),
-          ['check', 'whatsNew.fixes133'],
-        ])),
-    ...(had132
-      ? []
-      : /** @type {[string, string][]} */ ([
-          ['undo', 'whatsNew.undoPill'],
-          ['star', 'whatsNew.comboRename'],
-          ['check', 'whatsNew.fixes132'],
-        ])),
-    ...(had131
-      ? []
-      : /** @type {[string, string][]} */ ([
-          ...(voice ? [['mic', 'whatsNew.voiceMeal']] : []),
-          ['food', 'whatsNew.fiberSalt'],
-          ['edit', 'whatsNew.mealEdit'],
-          ['star', 'whatsNew.combos'],
-        ])),
-    ...(voice && !had13 ? /** @type {[string, string][]} */ ([['mic', 'whatsNew.voice']]) : []),
-    ...(had121
-      ? []
-      : /** @type {[string, string][]} */ ([
-          ['camera', 'whatsNew.photos'],
-          ['calendar', 'whatsNew.photoMonth'],
-          ['check', 'whatsNew.fixes121'],
-        ])),
-    ...(had12
-      ? []
-      : /** @type {[string, string][]} */ ([
-          ...(push
-            ? [
-                ['bell', 'whatsNew.push'],
-                ['sun', 'whatsNew.pushIos'],
-                ['check', 'whatsNew.pushStop'],
-              ]
-            : []),
-          ['clock', 'whatsNew.proteinBar'],
-          ['food', 'whatsNew.breakfast'],
-          ['drop', 'whatsNew.micro'],
-        ])),
-  ]);
+  // 1.4.0: the items of every release newer than the one last seen (features/whatsnew/notes);
+  // voice/push items only once those servers are set. Shown in the app language.
+  const {
+    items,
+    gender: askGender,
+    push,
+  } = newSince(seen, { voice: !!voiceUrl(), push: !!pushUrl() }, undefined, WHATS_NEW);
   if (!items.length) return next(); // nothing visible is new yet (e.g. voice not deployed): ask again next version
   setKv('seenWhatsNew', WHATS_NEW);
   openSheet({
@@ -170,7 +114,8 @@ function whatsNew(next = () => {}) {
     render:
       () => html`<div class="center">${otter({ size: 110, pose: 'cheer' })}<h1 class="h2 mt8">${t('whatsNew.title', { v: WHATS_NEW })}</h1></div>
 <div class="col gap10 mt12 whatsnew">${items.map(([i, k]) => html`<div class="row gap10"><span class="sq acc">${ic(i, 18, 2.3)}</span><span class="f1 b small">${t(k)}</span></div>`)}</div>
-${had12 ? '' : html`<div class="card mt12"><p class="small b">${t('whatsNew.gender')}</p>${genderRow()}</div>`}
+<p class="muted xs b mt10 center">${t('whatsNew.findLater')}</p>
+${askGender ? html`<div class="card mt12"><p class="small b">${t('whatsNew.gender')}</p>${genderRow()}</div>` : ''}
 ${
   push
     ? html`<p class="muted xs b mt12">${t('whatsNew.pushHow')}</p>
@@ -184,44 +129,57 @@ ${
   });
 }
 
-/** Register the service worker and offer updates. */
+/**
+ * Register the service worker and offer updates. 1.4.0: a new worker takes over at once
+ * (skipWaiting + clients.claim in sw.js); a page that was already controlled then shows the
+ * "update ready" bar and reloads when tapped (never by itself – a workout may be in progress).
+ * A worker still waiting (from an older sw.js) is offered the same way and told to SKIP_WAITING.
+ */
 function startServiceWorker() {
   if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
-  // Reload only when an *existing* controller is replaced (user accepted an update),
-  // not when the very first worker claims the page.
-  const hadController = !!navigator.serviceWorker.controller;
-  let reloading = false;
-  navigator.serviceWorker.addEventListener(
-    'controllerchange',
-    () => hadController && !reloading && ((reloading = true), location.reload()),
-  );
-  navigator.serviceWorker
-    .register('./sw.js')
+  const sw = navigator.serviceWorker;
+  const hadController = !!sw.controller;
+  let accepted = false;
+  let shown = false;
+  /** @param {ServiceWorker | null} [waiting] */
+  const offer = (waiting) => {
+    if (shown) return;
+    shown = true;
+    const bar = document.createElement('div');
+    bar.className = 'update-bar';
+    bar.id = 'updatebar';
+    bar.setAttribute('role', 'status');
+    bar.innerHTML = String(
+      html`<span>${t('update.ready')}</span><button class="btn sm">${t('update.reload')}</button>`,
+    );
+    bar.querySelector('button')?.addEventListener('click', () => {
+      accepted = true;
+      if (waiting && waiting.state === 'installed') waiting.postMessage({ type: 'SKIP_WAITING' });
+      else location.reload();
+    });
+    document.body.append(bar);
+  };
+  sw.addEventListener('controllerchange', () => {
+    if (!hadController) return; // the very first worker claiming the page is not an update
+    if (accepted) location.reload();
+    else offer();
+  });
+  sw.register('./sw.js')
     .then((reg) => {
       if (!reg) return;
-      let offered = false;
-      const offer = (/** @type {ServiceWorker} */ w) => {
-        if (offered) return;
-        offered = true;
-        const bar = document.createElement('div');
-        bar.className = 'update-bar';
-        bar.setAttribute('role', 'status');
-        bar.innerHTML = String(
-          html`<span>${t('update.ready')}</span><button class="btn sm">${t('update.reload')}</button>`,
-        );
-        bar.querySelector('button')?.addEventListener('click', () => w.postMessage({ type: 'SKIP_WAITING' }));
-        document.body.append(bar);
-      };
-      /** Offer a worker once it has installed (1.3.4: also one already installing at load). */
-      const watch = (/** @type {ServiceWorker | null} */ w) =>
+      /** @param {ServiceWorker | null} w */
+      const watch = (w) =>
         w?.addEventListener(
           'statechange',
-          () => w.state === 'installed' && navigator.serviceWorker.controller && offer(w),
+          () => w.state === 'installed' && reg.waiting === w && sw.controller && offer(w),
         );
-      if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+      if (reg.waiting && sw.controller) offer(reg.waiting);
       watch(reg.installing);
       reg.addEventListener('updatefound', () => watch(reg.installing));
-      setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+      // look for a new version every hour and whenever the app comes back to the foreground
+      const check = () => navigator.onLine && reg.update().catch(() => {});
+      setInterval(check, 60 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check());
     })
     .catch((e) => console.warn('[sw] registration failed', e));
 }
@@ -236,7 +194,20 @@ async function startReminders() {
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check());
 }
 
+/** 1.4.0: a beta build says so on every screen (it has its own data, see core/channel.js). */
+function betaMarker() {
+  if (!IS_BETA) return;
+  document.documentElement.classList.add('beta');
+  const m = document.createElement('div');
+  m.className = 'betamark';
+  m.setAttribute('role', 'note');
+  m.setAttribute('aria-label', 'Бета версия – отделни данни');
+  m.textContent = 'БЕТА';
+  document.body.append(m);
+}
+
 async function start() {
+  betaMarker();
   const { persistent } = await load();
   await applySettings();
   watchTheme();
@@ -289,7 +260,7 @@ async function start() {
   if (!persistent) emit('toast', { key: 'common.noStorage' });
   if (new URLSearchParams(location.search).has('cheer')) (await import('./features/partner/api.js')).handleCheer();
   else if (!settings().onboarded) (setKv('seenWhatsNew', WHATS_NEW), onboarding());
-  else whatsNew(dataNotice);
+  else whatsNew();
   startServiceWorker();
   startDaily();
   startReminders();

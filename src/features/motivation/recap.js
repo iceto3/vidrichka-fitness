@@ -6,7 +6,8 @@ import { dayKey, monthKey, totalMin } from '../../core/dates.js';
 
 /**
  * @param {string} month `YYYY-MM`
- * @param {{sessions: any[], food: any[], measurements: any[], badges: Record<string, number>}} d
+ * @param {{sessions: any[], food: any[], measurements: any[], badges: Record<string, number>, days?: any[]}} d
+ *   `days` (1.4.0, optional): the daily rows, for steps, sleep and mood.
  */
 export function monthRecap(month, d) {
   const ss = d.sessions.filter((s) => monthKey(new Date(s.endedAt)) === month);
@@ -39,8 +40,37 @@ export function monthRecap(month, d) {
     foodDays: foodDays.size,
     avgKcal: foodDays.size ? Math.round(kcal / foodDays.size) : 0,
     weightDelta: w.length >= 2 ? Math.round((w[w.length - 1].weight - w[0].weight) * 10) / 10 : null,
+    ...lifeRecap(month, d.days ?? [], d.food),
     badges: Object.entries(d.badges)
       .filter(([, ts]) => monthKey(new Date(ts)) === month)
       .map(([id]) => id),
+  };
+}
+
+/** Average of numbers (1 decimal), null if none. @param {number[]} xs */
+const avg = (xs) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null);
+
+/**
+ * 1.4.0 recap of daily life: steps, sleep, mood and water in the month.
+ * @param {string} month @param {any[]} days daily rows (`id` = day key) @param {any[]} food
+ */
+export function lifeRecap(month, days, food) {
+  const rows = days.filter((r) => typeof r.id === 'string' && r.id.startsWith(month));
+  const steps = rows.map((r) => r.steps).filter((n) => typeof n === 'number' && n > 0);
+  const sleep = rows.map((r) => r.sleepH).filter((n) => typeof n === 'number' && n > 0);
+  const mood = rows.map((r) => r.mood).filter((n) => typeof n === 'number');
+  const water = food
+    .filter((f) => f.type === 'water' && f.date?.startsWith(month) && f.glasses > 0)
+    .map((f) => f.glasses);
+  return {
+    stepDays: steps.length,
+    stepsTotal: steps.reduce((a, b) => a + b, 0),
+    avgSteps: steps.length ? Math.round(steps.reduce((a, b) => a + b, 0) / steps.length) : 0,
+    bestSteps: steps.length ? Math.max(...steps) : 0,
+    sleepNights: sleep.length,
+    avgSleep: avg(sleep),
+    avgMood: avg(mood),
+    waterDays: water.length,
+    avgWater: avg(water),
   };
 }

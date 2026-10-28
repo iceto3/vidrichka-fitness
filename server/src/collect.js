@@ -130,3 +130,27 @@ export function allow(state, key, max, windowMs, now) {
   w.n++;
   return true;
 }
+
+/** Cloudflare Turnstile server check (1.4.0). */
+export const SITEVERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+
+/**
+ * Is this Turnstile token valid? Used for /feedback only when the Worker has a
+ * TURNSTILE_SECRET (otherwise feedback works as in 1.3.4). The token is never stored.
+ * @param {any} token @param {string} secret @param {string|null} ip
+ * @param {(r: Request) => Promise<Response>} [send]
+ */
+export async function turnstileOk(token, secret, ip, send = (r) => fetch(r)) {
+  if (typeof token !== 'string' || !token || token.length > 2048) return false;
+  const form = new FormData();
+  form.append('secret', secret);
+  form.append('response', token);
+  if (ip) form.append('remoteip', ip);
+  try {
+    const r = await send(new Request(SITEVERIFY, { method: 'POST', body: form }));
+    const j = /** @type {any} */ (await r.json());
+    return j?.success === true;
+  } catch {
+    return false;
+  }
+}

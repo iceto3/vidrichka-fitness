@@ -81,6 +81,7 @@ export function settings(s) {
     morning: bool(s.morning, true),
     wake: time(s.wake, '07:30'),
     loud: time(s.loud, '08:15'),
+    loudOn: bool(s.loudOn, true), // 1.4.0: the loud wake-up alarm can be switched off
     protein: bool(s.protein, true),
     water: (s.water ?? []).map((/** @type {any} */ w) => tt(w, '12:00', false)),
     checkinAm: tt(s.checkinAm, '11:00', false),

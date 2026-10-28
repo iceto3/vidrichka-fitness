@@ -5,7 +5,9 @@
  * @module core/db
  */
 
-export const DB_NAME = 'vidrichka-fitness';
+import { DB_NAME } from './channel.js';
+
+export { DB_NAME };
 
 /** All object stores (each keyed by `id`). */
 export const STORES = /** @type {const} */ ([

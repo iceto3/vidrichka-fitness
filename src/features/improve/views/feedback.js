@@ -13,12 +13,14 @@ import { checkVoice, sttReady, transcribeAudio } from '../../voice/api.js';
 import { MAX_REC_MS, canRecord, clock, startRecording } from '../../voice/recorder.js';
 import { MAX_FB_TEXT, MAX_IMAGES } from '../logic.js';
 import { prepareImage } from '../images.js';
-import { sendFeedback } from '../api.js';
+import { feedbackLeft, sendFeedback } from '../api.js';
+import { FB_PER_DAY } from '../logic.js';
 
 export function openFeedback() {
   let text = '',
     err = '',
     busy = false,
+    sent = false,
     closed = false,
     elapsed = 0,
     adding = 0;
@@ -64,8 +66,11 @@ export function openFeedback() {
       recording?.cancel();
       images.forEach((i) => URL.revokeObjectURL(i.url));
     },
-    render:
-      () => html`<div class="fbsheet"><div class="row gap10"><span class="sq acc">${ic('message', 20, 2.2)}</span><h2 class="h2 f1">${t('feedback.title')}</h2></div>
+    render: () =>
+      sent
+        ? html`<div class="fbsheet fbthanks center" role="status"><div class="fbheart" aria-hidden="true">💚</div><h2 class="h2 mt8">${t('feedback.thanksTitle')}</h2>
+<p class="muted small b mt6 lh">${t('feedback.thanksBody')}</p><button class="btn w100 mt16" data-act="close">${t('common.done')}</button></div>`
+        : html`<div class="fbsheet"><div class="row gap10"><span class="sq acc">${ic('message', 20, 2.2)}</span><h2 class="h2 f1">${t('feedback.title')}</h2></div>
 <p class="muted small b mt6 lh">${t(canRec() ? 'feedback.hintRec' : 'feedback.hint')}</p>
 <label class="field vbox mt12"><textarea id="fbtext" class="bare" rows="5" maxlength="${MAX_FB_TEXT}" data-input="text" placeholder="${t('feedback.ph')}" aria-label="${t('feedback.title')}" ${busy || recState !== 'idle' ? 'disabled' : ''}>${text}</textarea></label>
 ${
@@ -75,28 +80,29 @@ ${
 }
 <div class="row between mt6"><span class="muted xs b">${t('feedback.privacy')}</span><span class="muted xs b num" id="fbcount">${text.length}/${MAX_FB_TEXT}</span></div>
 <div class="fbimgs row gap8 mt10">${images.map(
-        (im, i) =>
-          html`<div class="fbimg"><img src="${im.url}" alt="${t('feedback.shot', { n: i + 1 })}"><button class="fbx" data-act="rm" data-i="${i}" aria-label="${t('feedback.remove', { n: i + 1 })}">${ic('close', 14, 3)}</button></div>`,
-      )}${adding ? html`<div class="fbimg busy"><span class="spin" aria-hidden="true"></span></div>` : ''}${
-        images.length + adding < MAX_IMAGES
-          ? html`<label class="fbadd" tabindex="0">${ic('image', 20, 2.2)}<span class="xs b">${t('feedback.addShot')}</span><input type="file" accept="image/*" multiple data-change="pick" class="sr-only" ${busy ? 'disabled' : ''}></label>`
-          : ''
-      }</div>
-<p class="muted xs b mt6">${t('feedback.shotsHint', { n: MAX_IMAGES })}</p>
+            (im, i) =>
+              html`<div class="fbimg"><img src="${im.url}" alt="${t('feedback.shot', { n: i + 1 })}"><button class="fbx" data-act="rm" data-i="${i}" aria-label="${t('feedback.remove', { n: i + 1 })}">${ic('close', 14, 3)}</button></div>`,
+          )}${adding ? html`<div class="fbimg busy"><span class="spin" aria-hidden="true"></span></div>` : ''}${
+            images.length + adding < MAX_IMAGES
+              ? html`<label class="fbadd" tabindex="0">${ic('image', 20, 2.2)}<span class="xs b">${t('feedback.addShot')}</span><input type="file" accept="image/*" multiple data-change="pick" class="sr-only" ${busy ? 'disabled' : ''}></label>`
+              : ''
+          }</div>
+<p class="row between mt6"><span class="muted xs b">${t('feedback.shotsHint', { n: MAX_IMAGES })}</span><span class="muted xs b num fbshots" aria-live="polite">${t('feedback.shotsCount', { n: images.length + adding, max: MAX_IMAGES })}</span></p>
+${feedbackLeft() < FB_PER_DAY ? html`<p class="muted xs b mt4">${t('feedback.leftToday', { n: feedbackLeft() })}</p>` : ''}
 ${err ? html`<p class="verr small b mt8" role="alert">${err}</p>` : ''}
 <div class="row gap10 mt14">${
-        canRec()
-          ? html`<button class="btn sec f1${recState === 'rec' ? ' rec' : ''}" data-act="record" aria-pressed="${String(recState === 'rec')}" ${recState === 'stt' || busy ? 'disabled' : ''}>${
-              recState === 'stt'
-                ? html`<span class="spin" aria-hidden="true"></span>${t('voice.transcribing')}`
-                : html`${ic('mic', 18, 2.4)}${recState === 'rec' ? t('voice.stop') : t('voice.record')}`
-            }</button>`
-          : ''
-      }<button class="btn f1" data-act="send" ${busy || recState !== 'idle' || adding || !text.trim() ? 'disabled' : ''}>${
-        busy
-          ? html`<span class="spin" aria-hidden="true"></span>${t('feedback.sending')}`
-          : html`${ic('check', 18, 3)}${t('feedback.send')}`
-      }</button></div></div>`,
+            canRec()
+              ? html`<button class="btn sec f1${recState === 'rec' ? ' rec' : ''}" data-act="record" aria-pressed="${String(recState === 'rec')}" ${recState === 'stt' || busy ? 'disabled' : ''}>${
+                  recState === 'stt'
+                    ? html`<span class="spin" aria-hidden="true"></span>${t('voice.transcribing')}`
+                    : html`${ic('mic', 18, 2.4)}${recState === 'rec' ? t('voice.stop') : t('voice.record')}`
+                }</button>`
+              : ''
+          }<button class="btn f1" data-act="send" ${busy || recState !== 'idle' || adding || !text.trim() ? 'disabled' : ''}>${
+            busy
+              ? html`<span class="spin" aria-hidden="true"></span>${t('feedback.sending')}`
+              : html`${ic('check', 18, 3)}${t('feedback.send')}`
+          }</button></div></div>`,
     actions: {
       text: (el) => {
         text = /** @type {HTMLTextAreaElement} */ (el).value.slice(0, MAX_FB_TEXT);
@@ -148,6 +154,7 @@ ${err ? html`<p class="verr small b mt8" role="alert">${err}</p>` : ''}
         }
         return false;
       },
+      close: () => void closeSheet(),
       rm: (el) => {
         const [im] = images.splice(Number(el.dataset.i), 1);
         if (im) URL.revokeObjectURL(im.url);
@@ -159,8 +166,9 @@ ${err ? html`<p class="verr small b mt8" role="alert">${err}</p>` : ''}
         emit('ui:refresh');
         try {
           await sendFeedback(text, images);
-          closeSheet();
-          emit('toast', { key: 'feedback.thanks' });
+          busy = false;
+          sent = true;
+          emit('ui:refresh');
         } catch (e) {
           busy = false;
           err = t(`feedback.err.${/** @type {Error} */ (e).message}`);

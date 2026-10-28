@@ -5,8 +5,8 @@
  * appear once there are at least 14 days of data and 5+ days in each group).
  * @module features/progress/trends
  */
-import { addDays, dayKey, parseDay, weekKey } from '../../core/dates.js';
-import { nights } from '../daily/logic.js';
+import { addDays, parseDay, weekKey } from '../../core/dates.js';
+import { dayFromIndex, indexData, lastDays } from '../day/logic.js';
 
 /** Range id → days shown. 3 months are drawn per week. */
 export const RANGES = /** @type {const} */ ({ week: 7, month: 30, '3m': 91 });
@@ -27,37 +27,22 @@ export const MIN_GROUP = 5;
  * @returns {DayRow[]}
  */
 export function dailyRows(data, n, today) {
-  const by = new Map(data.days.map((r) => [r.id, r]));
-  const sleep = new Map(nights(data.days, n, today).map((x) => [x.day, x.hours]));
-  /** @type {Map<string, any[]>} */
-  const food = new Map();
-  /** @type {Map<string, number>} */
-  const water = new Map();
-  for (const r of data.food) {
-    if (r.type === 'water') water.set(r.date, r.glasses ?? 0);
-    else food.set(r.date, [...(food.get(r.date) ?? []), r]);
-  }
-  const trained = new Set(data.sessions.filter((s) => !s.partial).map((s) => dayKey(s.endedAt)));
-  const sum = (/** @type {any[]} */ rows, /** @type {string} */ k) => {
-    const v = rows.filter((r) => typeof r[k] === 'number');
-    return v.length ? Math.round(v.reduce((a, r) => a + r[k], 0) * 10) / 10 : null;
-  };
-  return Array.from({ length: n }, (_, i) => {
-    const day = dayKey(addDays(parseDay(today), i - n + 1)),
-      r = by.get(day) ?? {},
-      rows = food.get(day) ?? [];
+  // 1.4.0: built from the shared day model (features/day/logic), like the day view.
+  const ix = indexData(data);
+  return lastDays(n, today).map((day) => {
+    const d = dayFromIndex(ix, day);
     return {
       day,
-      steps: typeof r.steps === 'number' && r.steps > 0 ? r.steps : null,
-      sleep: sleep.get(day) ?? null,
-      mood: r.mood ?? null,
-      energy: r.energy ?? null,
-      water: water.has(day) ? /** @type {number} */ (water.get(day)) : null,
-      kcal: rows.length ? Math.round(sum(rows, 'kcal') ?? 0) : null,
-      protein: rows.length ? sum(rows, 'p') : null,
-      fib: rows.length ? sum(rows, 'fib') : null,
-      salt: rows.length ? sum(rows, 'salt') : null,
-      workout: trained.has(day),
+      steps: d.steps,
+      sleep: d.sleep.hours,
+      mood: d.mood,
+      energy: d.energy,
+      water: d.water,
+      kcal: d.totals ? d.totals.kcal : null,
+      protein: d.totals ? d.totals.p : null,
+      fib: d.totals ? d.totals.fib : null,
+      salt: d.totals ? d.totals.salt : null,
+      workout: d.workouts.some((w) => !w.partial),
     };
   });
 }
@@ -197,3 +182,41 @@ export function insights(rows, o) {
     .sort((x, y) => y.score - x.score)
     .slice(0, 2);
 }
+
+/**
+ * 1.4.0 weight trend: the day's weight (latest entry of the day) for the `n` days ending
+ * `today`, or weekly means for long ranges. Days without a weigh-in are null (the line
+ * skips them).
+ * @param {any[]} measurements @param {number} n @param {string} today @param {boolean} weekly
+ */
+export function weightSeries(measurements, n, today, weekly) {
+  /** @type {Map<string, {w: number, ts: number}>} */
+  const by = new Map();
+  for (const m of measurements) {
+    if (typeof m.weight !== 'number' || !(m.weight > 0) || typeof m.date !== 'string') continue;
+    const ts = Number(m.ts ?? m.createdAt ?? 0),
+      cur = by.get(m.date);
+    if (!cur || ts >= cur.ts) by.set(m.date, { w: m.weight, ts });
+  }
+  const rows = lastDays(n, today).map((day) => ({ day, weight: by.get(day)?.w ?? null }));
+  return series(/** @type {any} */ (rows), /** @type {any} */ ('weight'), weekly);
+}
+
+/**
+ * A readable y-range for a weight line: whole kg around the data with grid every 1/2/5 kg.
+ * @param {{y: number|null}[]} pts @returns {{min: number, max: number, step: number}|null}
+ */
+export function weightRange(pts) {
+  const ys = /** @type {number[]} */ (pts.map((p) => p.y).filter((y) => y != null));
+  if (!ys.length) return null;
+  const lo = Math.min(...ys),
+    hi = Math.max(...ys),
+    span = hi - lo;
+  const step = span > 12 ? 5 : span > 5 ? 2 : 1;
+  const min = Math.floor((lo - step / 2) / step) * step,
+    max = Math.max(min + 2 * step, Math.ceil((hi + step / 2) / step) * step);
+  return { min, max, step };
+}
+
+/** Does a series have no value at all? @param {{y: number|null}[]} pts */
+export const isEmpty = (pts) => pts.every((p) => p.y == null || p.y === 0);

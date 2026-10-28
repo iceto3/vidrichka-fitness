@@ -11,7 +11,7 @@
  * @module features/voice/views/voice
  */
 import { html } from '../../../ui/dom.js';
-import { fmtDate, fmtNum, getLang, t } from '../../../core/i18n.js';
+import { fmtDate, fmtDuration, fmtNum, getLang, t } from '../../../core/i18n.js';
 import { settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
@@ -321,7 +321,7 @@ function otherText(e) {
   if (e.type === 'steps') return t(e.total ? 'voice.stepsTotal' : 'voice.stepsAdded', { n: fmtNum(e.value) });
   if (e.type === 'sleep')
     return [
-      e.value != null ? t('voice.sleepH', { n: fmtNum(e.value, 1) }) : t('voice.sleep'),
+      e.value != null ? t('voice.sleepH', { n: fmtDuration(e.value) }) : t('voice.sleep'),
       e.quality ? FACES[e.quality - 1] : '',
     ]
       .filter(Boolean)

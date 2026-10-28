@@ -10,7 +10,11 @@ Every addition is a small, local change. After editing, run `npm run check`.
 
 ## Add a food or food category
 
-Add rows to `ROWS` in `src/data/foods.js` (per 100 g: `kcal, p, c, f`, plus `name: {en,bg}`). Categories live in `FOOD_CATEGORIES`.
+Add rows to `ROWS` in `src/data/foods.js` (per 100 g: `kcal, p, c, f`, plus `name: {en,bg}`). Categories live in `FOOD_CATEGORIES`. Cooked variants say how in the name („(на скара)“, „(варено)“, „(сурово)“) and use cooked-weight values. Every built-in food must pass `implausible()` (unit test in `tests/unit/v140-final.test.js`).
+
+## Change what counts as an impossible product (Open Food Facts)
+
+Change only `implausible()` in `src/features/food/logic.js` (and its tests in `tests/unit/v140-final.test.js`); search, barcode lookup and the cached-product check all use it through `off.js › reliable()`. A new nutrient a product can lack goes into `NUTRIENTS` plus a `nutrient.<key>` translation; the missing-value notice and the fill-in form pick it up.
 
 ## Add a translation key or language
 
@@ -39,6 +43,21 @@ Then add a `badge.kg_50000` translation in both languages. The rewards engine aw
 4. Import the feature's `index.js` in `src/features/index.js`, and its CSS in `src/app.css`.
 5. Other features talk to it only through its `api.js` and bus events.
 
+## Add a day field (1.4.0)
+
+1. Store it in the day record and add it to `dayFromIndex` in `src/features/day/logic.js` (with a zero/empty default).
+2. Add a date-taking writer in `src/features/day/api.js` that starts with `assertEditable(date)` and validates the value.
+3. Render it in `src/features/day/views/cards.js` – the same card is used on Home (today) and in the calendar day view (any past day).
+4. If it is charted, add it to `dailyRows` in `src/features/progress/trends.js`. Unit-test the logic in `tests/unit/v140-day.test.js`.
+
+## Add a per-channel value (live / beta)
+
+Add it to **both** entries of `CHANNELS` in `src/core/channel.js` and read it from there. Never hard-code a server URL, storage name or cache name elsewhere.
+
+## Add a "What's new" note
+
+Add an entry at the top of `NOTES` in `src/features/whatsnew/notes.js` and its keys in `bg.js` and `en.js`. Use the `needs` flag (`'voice'`, `'push'`) for items that only work with a server.
+
 ## Change the data model
 
 - **New store:** append an upgrade step to `SCHEMA` in `src/core/db.js` and add the store name to `STORES`.
@@ -48,4 +67,5 @@ Then add a `badge.kg_50000` translation in both languages. The rewards engine aw
 
 1. Bump `version` in `package.json` and add a CHANGELOG entry.
 2. Run `npm run check` and `npm run test:e2e:dist`.
-3. Merge to `main`; the workflow deploys to GitHub Pages. The service worker version changes automatically, and users see "Update ready".
+3. Big versions: build on a branch and run `npm run deploy:beta` (builds `dist-beta/` and deploys it to the Cloudflare Pages project `vidrichka-beta`, https://vidrichka-beta.pages.dev), with the `-beta` Workers (`wrangler.beta.toml` in `server/` and `voice/`). Test the beta first.
+4. Merge to `main`; the workflow deploys to GitHub Pages. The service worker version changes automatically, and users see "Update ready".

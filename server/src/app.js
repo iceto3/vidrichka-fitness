@@ -20,10 +20,10 @@ import { pushRequest, vapidSigner } from './webpush.js';
 import * as v from './validate.js';
 import * as c from './collect.js';
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 
 /** 1.3.4 collection limits: per-isolate windows (no sender key) and hard totals. */
-const LIMITS = { foodsPerMin: 30, feedbackPerMin: 5, feedbackPerDay: 200, maxFoods: 20000 };
+const LIMITS = { foodsPerMin: 30, feedbackPerMin: 5, feedbackPerDay: 200, maxFoods: 20000, testsPerMin: 2 };
 /** @type {Map<string, {start: number, n: number}>} */
 const windows = new Map();
 /** Forget the rate windows (tests). */
@@ -36,6 +36,8 @@ export const resetLimits = () => windows.clear();
  * @property {string} VAPID_SUBJECT @property {string} ALLOWED_ORIGINS comma-separated
  * @property {string} [ALLOW_LOCALHOST] "false" disables http://localhost origins
  * @property {string} [MAX_DEVICES] @property {string} [MAX_SENDS_PER_RUN]
+ * @property {string} [TURNSTILE_SECRET] 1.4.0, optional secret: when set, /feedback needs a
+ *   valid Cloudflare Turnstile token (`turnstile` in the body); when unset nothing changes.
  */
 
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
@@ -93,8 +95,9 @@ export function eventDay(tz, at, type) {
 /**
  * Route one HTTP request.
  * @param {Request} req @param {Env} env @param {import('./store.js').Store} store @param {number} [now]
+ * @param {(r: Request) => Promise<Response>} [send] outbound fetch (Turnstile check; tests stub it)
  */
-export async function handle(req, env, store, now = Date.now()) {
+export async function handle(req, env, store, now = Date.now(), send = (r) => fetch(r)) {
   const url = new URL(req.url),
     origin = req.headers.get('Origin'),
     ok = originAllowed(env, origin),
@@ -129,8 +132,14 @@ export async function handle(req, env, store, now = Date.now()) {
       return reply(204, null, h);
     }
     if (url.pathname === '/feedback') {
-      const f = c.feedback(await c.body(req, c.MAX_FEEDBACK_BODY));
+      const raw = await c.body(req, c.MAX_FEEDBACK_BODY);
+      const f = c.feedback(raw);
       if (!c.allow(windows, 'feedback', LIMITS.feedbackPerMin, 60e3, now)) return reply(429, { error: 'rate' }, h);
+      if (
+        env.TURNSTILE_SECRET &&
+        !(await c.turnstileOk(raw?.turnstile, env.TURNSTILE_SECRET, req.headers.get('CF-Connecting-IP'), send))
+      )
+        return reply(403, { error: 'turnstile' }, h);
       if ((await store.countFeedback(now - 864e5)) >= LIMITS.feedbackPerDay) return reply(429, { error: 'rate' }, h);
       const id = await store.addFeedback(f, now);
       return reply(201, { ok: true, id }, h);
@@ -171,6 +180,39 @@ export async function handle(req, env, store, now = Date.now()) {
         const at = Math.min(now, Math.max(now - 36 * 3600e3, e.at ?? now));
         if (flag) await store.setFlag(id, eventDay(dev.tz, at, e.type), flag, at);
         return reply(204, null, h);
+      }
+      case '/test': {
+        // 1.4.0: "Send a test notification" from the push card – right now, to this device only.
+        const dev = await store.getDevice(id);
+        if (!dev) return reply(404, null, h);
+        if (!c.allow(windows, `test:${id}`, LIMITS.testsPerMin, 60e3, now)) return reply(429, { error: 'rate' }, h);
+        const text = (/** @type {unknown} */ x, /** @type {number} */ n, /** @type {string} */ d) =>
+          typeof x === 'string' && x.trim() ? x.trim().slice(0, n) : d;
+        const sign = vapidSigner({
+          publicKey: env.VAPID_PUBLIC_KEY,
+          privateJwk: JSON.parse(env.VAPID_PRIVATE_KEY),
+          subject: env.VAPID_SUBJECT,
+        });
+        const msg = {
+          v: 1,
+          title: text(b.title, 80, 'Vidrichka 🦦'),
+          body: text(b.body, 200, 'Test notification – it works!'),
+          tag: 'vf-test',
+          route: 'home',
+          silent: false,
+          loud: false,
+          actions: [],
+          day: '',
+          kind: 'test',
+          group: 'test',
+          at: now,
+        };
+        const res = await send(await pushRequest(dev, msg, sign, { topic: 'vf-test', urgency: 'high', ttl: 300 }));
+        if (res.status === 404 || res.status === 410) {
+          await store.deleteDevices([id]);
+          return reply(410, { error: 'gone' }, h);
+        }
+        return reply(res.ok ? 204 : 502, res.ok ? null : { error: 'push' }, h);
       }
       case '/unsubscribe':
         await store.deleteDevices([id]);

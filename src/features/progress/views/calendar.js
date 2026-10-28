@@ -4,7 +4,8 @@
  */
 import { html } from '../../../ui/dom.js';
 import { fmtDate, fmtVolume, t, weekdayName } from '../../../core/i18n.js';
-import { dayKey, durationMin, monthKey, totalMin, weekdayMon } from '../../../core/dates.js';
+import { dayKey, durationMin, monthKey, parseDay, totalMin, weekdayMon } from '../../../core/dates.js';
+import { hasData, readDays } from '../../day/api.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { empty } from '../../../ui/components.js';
@@ -26,21 +27,34 @@ export default () => ({
     const byDay = new Set(full.map((s) => dayKey(s.endedAt))),
       partDay = new Set(list.filter((s) => s.partial).map((s) => dayKey(s.endedAt)));
     const today = dayKey(),
-      isNow = mk === monthKey();
+      isNow = mk === monthKey(),
+      keys = Array.from({ length: days }, (_, i) => dayKey(new Date(state.y, state.m, i + 1))),
+      filled = new Set(
+        readDays(keys.filter((k) => k <= today))
+          .filter(hasData)
+          .map((d) => d.date),
+      );
     return html`<div class="card mt12 cal">
 <div class="row between"><button class="iconbtn flat sm" data-act="mon" data-d="-1" aria-label="${t('calendar.prev')}">${ic('left', 18)}</button>
 <h2 class="h3 xb">${fmtDate(first, { month: 'long', year: 'numeric' })}</h2>
 <button class="iconbtn flat sm" data-act="mon" data-d="1" aria-label="${t('calendar.next')}" ${isNow ? 'disabled' : ''}>${ic('right', 18)}</button></div>
 <div class="calgrid mt8">${[0, 1, 2, 3, 4, 5, 6].map((i) => html`<span class="xs b muted">${weekdayName(i, 'narrow')}</span>`)}
 ${Array.from({ length: weekdayMon(first) }, () => html`<span></span>`)}
-${Array.from({ length: days }, (_, i) => {
-  const k = dayKey(new Date(state.y, state.m, i + 1));
-  return html`<span class="cd${byDay.has(k) ? ' on' : partDay.has(k) ? ' part' : ''}${k === today ? ' today' : ''}">${i + 1}</span>`;
-})}</div></div>
+${keys.map((k, i) => {
+  const cls = `cd${byDay.has(k) ? ' on' : partDay.has(k) ? ' part' : ''}${k === today ? ' today' : ''}${filled.has(k) ? ' has' : ''}`;
+  // 1.4.0: past days and today open the day view; future days are not tappable.
+  return k > today
+    ? html`<span class="${cls} future" aria-disabled="true">${i + 1}</span>`
+    : html`<button class="${cls}" data-go="day/${k}" aria-label="${fmtDate(parseDay(k), { weekday: 'long', day: 'numeric', month: 'long' })}">${i + 1}</button>`;
+})}</div><p class="muted xs b mt8 center">${t('calendar.tapDay')}</p></div>
 <div class="grid3 mt12"><div class="stat"><div class="l">${ic('dumbbell', 15, 2.3)}${t('calendar.workouts')}</div><div class="v num">${full.length}${partial ? html` <small class="partn">${t('calendar.partialN', { n: partial })}</small>` : ''}</div></div>
 <div class="stat"><div class="l">${ic('clock', 15, 2.3)}${t('calendar.time')}</div><div class="v num">${totalMin(list)} <small>${t('unit.min')}</small></div></div>
 <div class="stat"><div class="l">${ic('bolt', 15, 2.3)}${t('summary.volume')}</div><div class="v num">${fmtVolume(vol).value} <small>${fmtVolume(vol).unit}</small></div></div></div>
-${list.length && !isNow ? html`<button class="btn sec w100 mt12" data-act="recap">${ic('gift', 18, 2.2)}${t('calendar.recap', { month: fmtDate(first, { month: 'long' }) })}</button>` : ''}
+${
+  list.length || filled.size
+    ? html`<button class="btn sec w100 mt12" data-act="recap">${ic('gift', 18, 2.2)}${t(isNow ? 'calendar.recapSoFar' : 'calendar.recap', { month: fmtDate(first, { month: 'long' }) })}</button>`
+    : ''
+}
 <div class="section-title"><h2 class="h3">${t('calendar.history')}</h2></div>
 ${
   list.length

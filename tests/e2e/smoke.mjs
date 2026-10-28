@@ -183,11 +183,8 @@ async function run(name, browser, P) {
   await layer.locator('input').first().fill('Maria');
   await page.getByRole('button', { name: "Let's go" }).click();
   await settle();
-  // 1.3.4: the one-time anonymous-data notice follows the welcome
-  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
-  assert.match(await layer.innerText(), /anonymously/i, 'data notice after onboarding');
-  await layer.locator('[data-close]').first().click();
-  await settle();
+  // 1.4.0: no anonymous-data notice after onboarding (it comes with the first manual food)
+  assert.equal(await page.locator('.datanotice').count(), 0, 'no data notice after onboarding');
   assert.match(await page.locator('h1').first().innerText(), /Maria/);
 
   // Workout → summary
@@ -344,6 +341,7 @@ async function run(name, browser, P) {
   await v132(page, h);
   await v133(page, h, name);
   await v134(page, h, name);
+  await v140(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -450,31 +448,35 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer, dayFi
   await closePrompts();
   await go('food');
   await closePrompts();
-  await page.locator('.bluebtn').scrollIntoViewIfNeeded();
+  await page.locator('.waterplus').scrollIntoViewIfNeeded();
   await page.evaluate(() => scrollBy(0, 40));
   await settle();
-  await tag('.bluebtn');
+  await tag('.waterplus');
   await tag('.glasses');
   const y = await page.evaluate(() => scrollY);
   const n = await page.locator('.glass.on').count();
-  await page.locator('.bluebtn').click();
+  await page.locator('.waterplus').click();
   await settle();
   assert.equal(await page.locator('.glass.on').count(), n + 1, '+1 glass');
-  assert.ok((await same('.bluebtn')) && (await same('.glasses')), 'water + updates in place');
+  assert.ok((await same('.waterplus')) && (await same('.glasses')), 'water + updates in place');
   // 1.2 micro animation: rapid taps restart one animation (no queue), in its own layer.
-  await page.locator('.bluebtn').click();
+  await page.locator('.waterplus').click();
   await page.waitForTimeout(120);
-  await page.locator('.bluebtn').click();
+  await page.locator('.waterplus').click();
   await page.waitForTimeout(120);
-  await page.locator('.bluebtn').click();
+  await page.locator('.waterplus').click();
   await page.waitForTimeout(250);
   assert.equal(await page.locator('#micro .micro.water').count(), 1, 'one water animation, restarted');
   assert.equal(await page.locator('.glass.on').count(), n + 4, 'every rapid tap counted');
-  assert.ok((await same('.bluebtn')) && (await same('.glasses')), 'no re-render from the animation');
+  assert.ok((await same('.waterplus')) && (await same('.glasses')), 'no re-render from the animation');
   assert.equal(await page.locator('#page #micro').count(), 0, 'animation layer is outside the page');
   await shot('micro-water');
   await page.locator('#micro .micro.water').waitFor({ state: 'detached', timeout: 2000 });
   assert.equal(await page.evaluate(() => scrollY), y, 'scroll position kept');
+  // 1.4.0: − on the left removes one glass, never below 0
+  await page.locator('.waterminus').click();
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator('.glass.on').count(), n + 3, '− removes one glass');
   await clearCel();
   await go('checkin/morning');
   await page.locator('[data-f="mood"][data-v="4"]').click();
@@ -692,11 +694,13 @@ async function fixes(page, { go, settle, shot, clearCel, layer }) {
   await layer.locator('#mc').fill('30');
   await layer.locator('#mf').fill('10');
   await layer.locator('#mkcal').fill('50');
-  await layer.locator('[data-act="save"]').click();
   await settle();
-  assert.equal(await layer.locator('.ferr').count(), 0);
-  assert.match(await layer.locator('.fwarn').innerText(), /290 kcal/);
-  assert.match(await layer.locator('[data-act="save"]').innerText(), /Save anyway/);
+  // 1.4.0: a live, non-blocking hint while typing; the button stays a plain Save
+  assert.match(await layer.locator('#kcalhint .fwarn').innerText(), /290 kcal.*says 50/);
+  assert.match(await layer.locator('[data-act="save"]').innerText(), /^\s*Save\s*$/);
+  await layer.locator('#mkcal').fill('285');
+  await settle();
+  assert.equal(await layer.locator('#kcalhint .fwarn').count(), 0, 'close enough: no hint');
   await page.keyboard.press('Escape');
   await settle();
   // body weight
@@ -993,8 +997,6 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   await layer.locator('input').first().fill('Maria');
   await page.getByRole('button', { name: "Let's go" }).click();
   await settle();
-  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
-  await layer.locator('[data-close]').first().click();
   await settle();
   await clearCel();
   await go('progress/body');
@@ -1277,6 +1279,11 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   await page.waitForTimeout(300);
   await shot('manual-fiber-salt');
   await layer.locator('[data-act="save"]').click();
+  // 1.4.0: the first manual food explains the anonymous sharing once (Profile wording)
+  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
+  assert.match(await layer.innerText(), /Помогни да подобрим приложението/);
+  assert.match(await layer.innerText(), /Не изпращай/);
+  await layer.locator('[data-close]').last().click();
   await layer.locator('#grams').waitFor();
   assert.match(await layer.locator('.extra').innerText(), /Фибри/i, 'grams sheet shows fiber/salt');
   await layer.locator('[data-act="done"]').click();
@@ -1553,13 +1560,13 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.3\.4/);
+  assert.match(txt, /Какво ново в 1\.4\.0/);
   assert.match(txt, /Отмени/, 'the 1.3.2 pill item');
   assert.match(txt, /преименуваш/, 'the 1.3.2 rename item');
   assert.match(txt, /Запиши/, 'the 1.3.3 recording item');
   assert.doesNotMatch(txt, /What's new|Undo|Rename|Record/, 'no English');
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
-  assert.equal(await layer.locator('.whatsnew > div').count(), 11, 'the 1.3.4, 1.3.3 and 1.3.2 items');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 19, 'the 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items');
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
@@ -1863,10 +1870,10 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.3\.4/);
+  assert.match(txt, /Какво ново в 1\.4\.0/);
   assert.match(txt, /Запиши/);
   assert.match(txt, /Обичайният ти обяд/);
-  assert.equal(await layer.locator('.whatsnew > div').count(), 8, 'the 1.3.4 and 1.3.3 items');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 16, 'the 1.4.0, 1.3.4 and 1.3.3 items');
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
@@ -1967,33 +1974,25 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await idb('kv', [{ id: 'seenWhatsNew', value: '1.3.3' }], ['dataNotice']);
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
-  let txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.3\.4/);
+  const txt = await layer.innerText();
+  assert.match(txt, /Какво ново в 1\.4\.0/);
   assert.match(txt, /крачки/i);
   assert.match(txt, /Обратна връзка/);
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
-  assert.equal(await layer.locator('.whatsnew > div').count(), 6, 'the six 1.3.4 items');
+  assert.equal(await layer.locator('.whatsnew > div').count(), 14, 'the eight 1.4.0 and six 1.3.4 items');
   await page.waitForTimeout(700);
   await shot('whats-new-134');
   await layer.locator('[data-close]').first().click();
-  await layer.locator('.datanotice').waitFor({ timeout: 4000 });
-  txt = await layer.innerText();
-  assert.match(
-    txt,
-    /Изпращаме анонимно имената и стойностите на ръчно въведени храни, за да подобрим приложението\. Можеш да го изключиш в Профил\./,
-  );
-  await page.waitForTimeout(600);
-  await shot('data-notice');
-  await layer.locator('[data-close]').first().click();
+  // 1.4.0: no notice after the update – it waits for the first manual food (below)
   await settle();
-  await reopen();
-  assert.equal(await layer.locator('.datanotice').count(), 0, 'the notice shows only once');
-  console.log("  ✔ 1.3.4 What's new + the one-time data notice");
+  assert.equal(await page.locator('.datanotice').count(), 0, 'no notice at start-up');
+  console.log("  ✔ 1.3.4 What's new, no data notice at start-up");
 
   // 2) Manual food → POST /foods with only the allowed fields; nothing when switched off
   await page.route('**/*openfoodfacts.org/**', (r) =>
     r.fulfill({ json: { count: 0, products: [] }, headers: { 'access-control-allow-origin': '*' } }),
   );
+  let first = true;
   const manual = async (/** @type {string} */ n, /** @type {string} */ meal) => {
     await go(`food/add/${meal}`);
     await page.locator('[data-act="manual"]').first().click();
@@ -2005,6 +2004,16 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
     await layer.locator('#mfib').fill('3');
     await layer.locator('#msalt').fill('0,8');
     await layer.locator('[data-act="save"]').click();
+    if (first) {
+      // the one-time notice, shown before anything is sent
+      await layer.locator('.datanotice').waitFor({ timeout: 4000 });
+      assert.match(await layer.innerText(), /се изпращат анонимно/);
+      assert.equal(foods.length, 0, 'nothing sent before the notice is closed');
+      await page.waitForTimeout(400);
+      await shot('data-notice');
+      await layer.locator('[data-close]').last().click();
+      first = false;
+    }
     await layer.locator('#grams').waitFor();
     await layer.locator('[data-act="done"]').click();
     await settle();
@@ -2043,7 +2052,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   // 3) Home: a filled meal opens the Food meal sheet, an empty one opens Add food
   await go('home');
   const filled = page.locator('.homemeals .meal[data-m="breakfast"]');
-  assert.equal(await filled.getAttribute('data-act'), 'homeMeal');
+  assert.equal(await filled.getAttribute('data-act'), 'dayMeal');
   await filled.scrollIntoViewIfNeeded();
   await filled.click();
   await layer.locator('.mealitems').waitFor();
@@ -2105,11 +2114,13 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await layer.locator('[data-act="h"][data-d="1"]').click();
   await layer.locator('[data-act="rate"][data-v="4"]').click();
   await settle();
-  assert.equal(await dayField('sleepH'), 7.5);
+  // 1.4.0: the sheet starts at the suggested 7,5 h, so +½ h gives 8
+  assert.equal(await dayField('sleepH'), 8);
   assert.equal(await dayField('sleepQ'), 4);
-  await layer.locator('[data-close]').last().click();
+  assert.equal(await layer.locator('[data-act="clear"]').count(), 1, 'a saved entry can be deleted');
+  await layer.locator('[data-act="done"]').click();
   await settle();
-  assert.match(await page.locator('.sleepcard').innerText(), /7,5/);
+  assert.match(await page.locator('.sleepcard').innerText(), /\b8\b/);
   await page.locator('.sleepcard').scrollIntoViewIfNeeded();
   await shot('sleep-card');
   console.log('  ✔ 1.3.4 sleep card');
@@ -2311,20 +2322,24 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await page.waitForTimeout(500);
   await shot('feedback-sheet');
   await layer.locator('[data-act="send"]').click();
-  await page.locator('.toast').waitFor({ timeout: 8000 });
-  assert.match(await page.locator('.toast').innerText(), /Благодар/);
+  await layer.locator('.fbthanks').waitFor({ timeout: 8000 });
+  assert.match(await layer.locator('.fbthanks').innerText(), /Благодар/);
   assert.equal(feedback.length, 1);
   const fb = feedback[0].body;
   assert.deepEqual(Object.keys(fb).sort(), ['images', 'lang', 'text', 'version']);
   assert.match(fb.text, /пулса/);
   assert.equal(fb.lang, 'bg');
-  assert.match(fb.version, /^1\.3\.4/);
+  assert.match(fb.version, /^1\.(3\.4|4\.\d)/);
   assert.equal(fb.images.length, 1);
   assert.equal(fb.images[0].mime, 'image/jpeg');
   const bytes = Buffer.from(fb.images[0].data, 'base64');
   assert.ok(bytes.length <= 300000, `image ≤ 300 KB (${bytes.length})`);
   assert.deepEqual([...bytes.subarray(0, 3)], [0xff, 0xd8, 0xff], 'a JPEG');
   assert.equal(feedback[0].headers.cookie, undefined);
+  // 1.4.0: a thank-you screen instead of a toast, then Done closes the sheet
+  await layer.locator('.fbthanks').waitFor({ timeout: 4000 });
+  await layer.locator('.fbthanks [data-act="close"]').click();
+  await settle();
   assert.equal(await layer.locator('.fbsheet').count(), 0, 'the sheet closes');
 
   await go('profile');
@@ -2333,4 +2348,289 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await page.evaluate(() => (localStorage.removeItem('vf-push-url'), localStorage.removeItem('vf-voice-url')));
   void name;
   console.log('  ✔ 1.3.4 feedback from Profile (dictation, screenshot ≤ 300 KB JPEG, thanks)');
+}
+
+/**
+ * 1.4.0 day history: a past calendar day opens the shared day cards, edits land on THAT date
+ * (not today), water − never goes below 0, and future days are not tappable or editable.
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+/** Close every open sheet (Escape, a few times). @param {any} page @param {any} layer @param {() => Promise<void>} settle */
+async function closeAllSheets(page, layer, settle) {
+  for (let i = 0; i < 5 && (await layer.locator('.panel').count()); i++) {
+    await page.keyboard.press('Escape');
+    await settle();
+  }
+}
+
+async function v140(page, { go, settle, shot, layer, rows }) {
+  const key = await page.evaluate(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 2);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+  const dayRow = async () => {
+    await page.waitForTimeout(150);
+    return /** @type {any[]} */ (await rows('days')).find((x) => x.id === key) ?? {};
+  };
+  const before = (await dayRow()).steps ?? 0;
+  await go('progress/calendar');
+  await page.locator('.cal').waitFor();
+  for (const el of await page.locator('.cal .future').all())
+    assert.equal(await el.evaluate((e) => e.tagName), 'SPAN', 'future days are not buttons');
+  await page.locator(`.cal [data-go="day/${key}"]`).click();
+  await page.locator('.dayview').waitFor();
+  for (const sel of ['.stepscard', '.sleepcard', '.homemeals', '.dayworkouts'])
+    assert.equal(await page.locator(`.dayview ${sel}`).count(), 1, `${sel} on the day view`);
+  await page.locator('.dayview [data-act="stepsAdd"][data-n="1000"]').click();
+  await settle();
+  assert.equal((await dayRow()).steps, before + 1000, 'steps added to the past day');
+  // water: − (left) … glasses … + (right); − is disabled at 0
+  const w0 = await page.locator('.dayview .glasses .glass.on').count();
+  if (w0 === 0) assert.ok(await page.locator('.dayview .waterminus').isDisabled(), '− disabled at 0');
+  await page.locator('.dayview .waterplus').click();
+  await settle();
+  await page.locator('.dayview .waterminus').click();
+  await settle();
+  assert.equal(await page.locator('.dayview .glasses .glass.on').count(), w0, '+ then − returns to the start');
+  if (w0 === 0) assert.ok(await page.locator('.dayview .waterminus').isDisabled(), 'never below 0');
+  const order = await page
+    .locator('.dayview .water > button, .dayview .water > .glasses')
+    .evaluateAll((els) => els.map((e) => e.className.split(' ').find((c) => /water(minus|plus)|glasses/.test(c))));
+  assert.deepEqual(order.filter(Boolean), ['waterminus', 'glasses', 'waterplus'], 'minus, glasses, plus');
+  await page.evaluate(() => scrollTo(0, 0));
+  await shot('day-view');
+
+  // Sleep from a screenshot (tester bug): 7 h 20 min is saved as read (not the 7.5 h default),
+  // shown as "7 ч 20 мин", the date field is wide enough, and a quality can be picked.
+  await page.evaluate(() => localStorage.setItem('vf-voice-url', 'https://voice.test'));
+  await page.route(/^https:\/\/voice\.test\/vision/, (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        })
+      : route.fulfill({
+          headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ days: [{ date: key, hours: 7 + 20 / 60, quality: null }], via: 'mock' }),
+        }),
+  );
+  await page.locator('.dayview [data-act="sleepShot"]').click();
+  const fsp = await import('node:fs/promises');
+  await layer
+    .locator('input[type="file"]')
+    .setInputFiles({ name: 's.png', mimeType: 'image/png', buffer: await fsp.readFile('assets/icons/icon-192.png') });
+  await layer.locator('.shotrow, .verr').first().waitFor({ timeout: 8000 });
+  assert.equal(await layer.locator('.verr').count(), 0, `screenshot read: ${await layer.innerText()}`);
+  assert.equal(await layer.locator('[data-change="hh"]').inputValue(), '7');
+  assert.equal(await layer.locator('[data-change="mm"]').inputValue(), '20');
+  const dw = (await layer.locator('.shotrow input[type="date"]').boundingBox())?.width ?? 0;
+  assert.ok(dw >= 150, `date field readable (${dw}px)`);
+  await layer.locator('.shotq [data-v="4"]').click();
+  await shot('sleep-shot');
+  await layer.locator('[data-act="save"]').click();
+  await settle();
+  const sl = await dayRow();
+  assert.ok(Math.abs(sl.sleepH - (7 + 20 / 60)) < 0.01, `7 h 20 min saved (${sl.sleepH})`);
+  assert.equal(sl.sleepQ, 4);
+  assert.match(await page.locator('.dayview .sleepcard').innerText(), /7 (ч|h) 20 (мин|min)/);
+  // round 3: a night without bed/wake times has no "– → –" in Progress › Sleep
+  await go('progress/sleep');
+  await page.locator('.sbars').waitFor();
+  assert.doesNotMatch(await page.locator('.content').innerText(), /– → –/);
+  await go('day/2099-01-01');
+  assert.equal(await page.locator('.dayview .stepscard').count(), 0, 'no cards for a future day');
+  assert.equal(await layer.locator('.panel').count(), 0);
+  console.log(
+    '  ✔ 1.4.0 day history: past day opens, edits land on that date, water −/+, sleep screenshot 7 ч 20 мин, no future days',
+  );
+
+  // Online food search never hangs on "Търся…": local results at once, then a clear
+  // "not available" + retry; a barcode-style product keeps one brand and shows "–" for
+  // what it does not list.
+  await go('profile');
+  await page.locator('.lang [data-v="bg"]').click();
+  await settle();
+  // round 3: weight step in Bulgarian format
+  assert.match(await page.locator('[data-act="wstep"][data-v="2.5"]').innerText(), /^2,5$/);
+  // 1.4.0 round 3: the search goes through the Worker's /off-search (one request per search,
+  // debounced), never straight to OFF (whose search endpoints have no usable CORS)
+  /** @type {string[]} */
+  const offCalls = [];
+  const countOff = (/** @type {any} */ r) => /openfoodfacts\.org|\/off-search/.test(r.url()) && offCalls.push(r.url());
+  page.on('request', countOff);
+  await page.unroute('**/*openfoodfacts.org/**');
+  await page.route('**/*openfoodfacts.org/**', (r) => r.abort());
+  await page.route(/^https:\/\/voice\.test\/off-search/, (r) => r.abort());
+  await go('food/add/lunch');
+  await page.locator('#fq').pressSequentially('банан', { delay: 40 });
+  assert.ok((await page.locator('#results .lrow').count()) > 0, 'local results show at once');
+  await page.locator('#offres .offfail').waitFor({ timeout: 12000 });
+  assert.equal(await page.locator('#offres .offbusy').count(), 0, 'the spinner is gone');
+  assert.equal(offCalls.length, 1, `one request per search: ${offCalls.join(', ')}`);
+  assert.match(offCalls[0], /^https:\/\/voice\.test\/off-search\?q=%D0%B1%D0%B0%D0%BD%D0%B0%D0%BD&lang=bg$/);
+  await page.unroute(/^https:\/\/voice\.test\/off-search/);
+  await page.route(/^https:\/\/voice\.test\/off-search/, (r) =>
+    r.fulfill({
+      headers: { 'access-control-allow-origin': '*' },
+      json: {
+        count: 1,
+        products: [
+          {
+            code: '3017620422003',
+            product_name: 'Nutella банан',
+            brands: 'Nutella,Ferrero',
+            nutriments: { 'energy-kcal_100g': 539, proteins_100g: 6.3, fat_100g: 30.9 },
+          },
+        ],
+      },
+    }),
+  );
+  await page.locator('#offres [data-act="retryOff"]').click();
+  await page.locator('#offres .lrow').first().waitFor({ timeout: 12000 });
+  const offName = await page.locator('#offres .lrow').first().innerText();
+  assert.match(offName, /Nutella банан/);
+  assert.doesNotMatch(offName, /Nutella банан · Nutella/, 'brand not repeated');
+  await page.locator('#offres .lrow').first().click();
+  const g = await layer.locator('.panel').last().innerText();
+  assert.match(g, /В –/, 'unknown carbs show "–"');
+  assert.match(g, /Фибри –/, 'unknown fibre shows "–"');
+  // final fix (b): the missing values are named, counted as 0, and the user is taken to them
+  assert.match(
+    await layer.locator('.panel .missnote').last().innerText(),
+    /Липсват стойности за въглехидрати, фибри, сол – броят се като 0\. Попълни ги\./,
+  );
+  await layer.locator('.panel .missnote [data-act="fix"]').last().click();
+  await settle();
+  assert.match(await layer.locator('.panel').last().innerText(), /Попълни стойностите/);
+  assert.equal(await page.evaluate(() => document.activeElement?.id), 'mc', 'focus on the first missing value');
+  assert.equal(await layer.locator('#mc.missing').count(), 1, 'the missing field is marked');
+  assert.equal(await layer.locator('#mkcal').inputValue(), '539', 'known values are prefilled');
+  await layer.locator('#mc').fill('57,5');
+  await layer.locator('[data-act="save"]').last().click();
+  await settle();
+  const g2 = await layer.locator('.panel').last().innerText();
+  assert.match(g2, /В \d+ г/, 'carbs now counted');
+  assert.equal(await layer.locator('.panel .missnote').count(), 0, 'notice gone after filling in');
+  await layer.locator('.panel [data-act="done"]').last().click();
+  await settle();
+  await page.waitForTimeout(300);
+  const fixedFood = /** @type {any[]} */ (await rows('foods')).find((f) => f.id === 'off_3017620422003');
+  assert.equal(fixedFood?.c, 57.5, 'the corrected value is saved with that food');
+  const logged = /** @type {any[]} */ (await rows('food')).filter((r) => r.foodId === 'off_3017620422003');
+  assert.ok(logged.length && logged.every((r) => !r.missing && r.c > 0), 'diary row uses the filled-in carbs');
+  // final fix (c): impossible values are filtered out; nothing reliable → "enter it yourself"
+  await page.unroute(/^https:\/\/voice\.test\/off-search/);
+  await page.route(/^https:\/\/voice\.test\/off-search/, (r) =>
+    r.fulfill({
+      headers: { 'access-control-allow-origin': '*' },
+      json: {
+        count: 1,
+        products: [
+          {
+            code: '111',
+            product_name: 'Нутела крем',
+            nutriments: { 'energy-kcal_100g': 5, proteins_100g: 6.3, carbohydrates_100g: 57.5, fat_100g: 30.9 },
+          },
+        ],
+      },
+    }),
+  );
+  await page.locator('#fq').fill('');
+  await page.locator('#fq').pressSequentially('нутела крем', { delay: 30 });
+  await page.locator('#results .noreliable').waitFor({ timeout: 12000 });
+  assert.match(
+    await page.locator('#results .noreliable').innerText(),
+    /Няма надежден резултат за тази храна\. Въведи я сам\./,
+  );
+  assert.equal(await page.locator('#offres .lrow').count(), 0, 'the 5 kcal product is not shown');
+  assert.equal(await page.locator('#results [data-act="manual"]').count(), 1, 'one "enter it yourself" button');
+  await page.locator('#results .noreliable [data-act="manual"]').click();
+  await settle();
+  assert.equal(await layer.locator('#mname').inputValue(), 'нутела крем', 'the searched name is prefilled');
+  assert.equal(await layer.locator('#mkcal').inputValue(), '', 'an empty form');
+  await page.keyboard.press('Escape');
+  await settle();
+  // barcode: an implausible product = not found + the same message; a product with a missing
+  // macro opens with the notice (typed code: no camera in the test browser)
+  await page.route(/world\.openfoodfacts\.org\/api\/v2\/product\/(\d+)/, (r) => {
+    const code = /product\/(\d+)/.exec(r.request().url())?.[1];
+    const nutr =
+      code === '5000000000001'
+        ? { 'energy-kcal_100g': 5, proteins_100g: 6.3, carbohydrates_100g: 57.5, fat_100g: 30.9 }
+        : { 'energy-kcal_100g': 120, proteins_100g: 20, fat_100g: 4, salt_100g: 0.2, fiber_100g: 0 };
+    return r.fulfill({
+      headers: { 'access-control-allow-origin': '*' },
+      json: {
+        status: 1,
+        product: {
+          code,
+          product_name: code === '5000000000001' ? 'Крем лешник' : 'Протеинов пудинг',
+          nutriments: nutr,
+        },
+      },
+    });
+  });
+  await page.locator('#fq').fill('');
+  await settle();
+  await page.locator('[data-act="scan"]').first().click();
+  await settle();
+  await layer.locator('#bcode').fill('5000000000001');
+  await layer.locator('[data-act="lookup"]').click();
+  await page.locator('#scanstatus', { hasText: 'Няма надежден резултат' }).waitFor({ timeout: 12000 });
+  assert.match(await layer.locator('.panel [data-act="manual"]').last().innerText(), /Въведи храната сам/);
+  await layer.locator('.panel [data-act="manual"]').last().click();
+  await settle();
+  assert.equal(await layer.locator('#mname').inputValue(), 'Крем лешник', 'the product name is prefilled');
+  await page.keyboard.press('Escape');
+  await settle();
+  await page.locator('[data-act="scan"]').first().click();
+  await settle();
+  await layer.locator('#bcode').fill('5000000000002');
+  await layer.locator('[data-act="lookup"]').click();
+  await layer.locator('.panel .missnote').waitFor({ timeout: 12000 });
+  assert.match(
+    await layer.locator('.panel .missnote').innerText(),
+    /Липсва стойност за въглехидрати – брои се като 0\. Попълни я\./,
+  );
+  await layer.locator('.panel [data-act="done"]').last().click();
+  await settle();
+  await page.waitForTimeout(300);
+  const pud = /** @type {any[]} */ (await rows('food')).find((r) => r.foodId === 'off_5000000000002');
+  assert.ok(pud && pud.c === 0 && pud.missing?.includes('c'), 'saved without the fix: counted as 0, still marked');
+  // …and can be filled in afterwards from the diary item
+  await go('food');
+  await page.locator('.meal[data-m="lunch"]').click();
+  await layer.locator('.itembtn', { hasText: 'Протеинов пудинг' }).click();
+  await layer.locator('.itemedit .missnote').waitFor();
+  await layer.locator('.itemedit .missnote [data-act="fix"]').click();
+  await settle();
+  assert.equal(await page.evaluate(() => document.activeElement?.id), 'mc');
+  await layer.locator('#mc').fill('3');
+  await layer.locator('[data-act="save"]').last().click();
+  await settle();
+  assert.equal(await layer.locator('.itemedit .missnote').count(), 0, 'notice gone in the item sheet');
+  await page.waitForTimeout(300);
+  const pud2 = /** @type {any[]} */ (await rows('food')).find((r) => r.id === pud.id);
+  assert.ok(pud2 && !pud2.missing && pud2.c > 0, `the diary row now counts the carbs (${pud2?.c})`);
+  await closeAllSheets(page, layer, settle);
+  await page.unroute(/world\.openfoodfacts\.org\/api\/v2\/product\/(\d+)/);
+  assert.ok(
+    !offCalls.some((u) => u.includes('openfoodfacts.org') && !u.includes('/api/v2/product/')),
+    'search never straight to OFF (barcode lookups use its product API)',
+  );
+  page.off('request', countOff);
+  await page.unroute('**/*openfoodfacts.org/**');
+  await page.unroute(/^https:\/\/voice\.test\/off-search/);
+  await go('profile');
+  await page.locator('.lang [data-v="en"]').click();
+  await settle();
+  console.log(
+    '  ✔ 1.4.0 online search via the Worker (1 request), ends ("not available" + retry), brand once, unknown "–", step „2,5“; missing values named + filled in (grams sheet and diary item), impossible OFF values filtered (search + barcode → „Въведи я сам“)',
+  );
 }

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Поправи и презареди · Видричка</title>
+    <!--
+      1.4.0 self-repair page. A real static file that the service worker never intercepts
+      (sw.js bypasses /repair by path), so it opens even when the app does not: it
+      unregisters the service worker, deletes the app's file caches (never the data – that is
+      in IndexedDB – and never the reminder settings cache "*config") and opens the app again.
+    -->
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        padding: 32px 24px;
+        text-align: center;
+        line-height: 1.5;
+        color: #1d1d1f;
+        background: #fff7ef;
+      }
+      h1 { font-size: 22px; }
+      a.btn {
+        display: inline-block;
+        font-size: 18px;
+        padding: 12px 22px;
+        border-radius: 12px;
+        background: #ff7a2f;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      .muted { color: #666; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <h1>Поправи и презареди</h1>
+    <p id="st">Поправям приложението…</p>
+    <p class="muted">Данните ти (тренировки, храна, сън) остават на телефона.<br />Your data stays on this device.</p>
+    <p><a class="btn" id="go" href="./">Отвори Видричка</a></p>
+    <script>
+      (async function () {
+        var st = document.getElementById('st');
+        var done = 0;
+        try {
+          var sw = navigator.serviceWorker;
+          if (sw && sw.getRegistrations) {
+            var regs = await sw.getRegistrations();
+            for (var i = 0; i < regs.length; i++) if (await regs[i].unregister()) done++;
+          }
+          if (self.caches) {
+            var keys = await caches.keys();
+            for (var j = 0; j < keys.length; j++)
+              if (/^vfb?-/.test(keys[j]) && !/config$/.test(keys[j])) await caches.delete(keys[j]);
+          }
+          st.textContent = 'Готово – приложението е поправено. Отварям го отново…';
+          document.documentElement.setAttribute('data-repaired', String(done));
+          setTimeout(function () {
+            location.replace('./');
+          }, 1500);
+        } catch (e) {
+          st.textContent = 'Не успях да поправя всичко автоматично. Натисни „Отвори Видричка“.';
+          document.documentElement.setAttribute('data-repaired', 'error');
+        }
+      })();
+    </script>
+  </body>
+</html>

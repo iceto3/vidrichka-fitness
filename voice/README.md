@@ -6,6 +6,10 @@ A stateless Cloudflare Worker. It turns a dictated or typed sentence into food a
 - `POST /transcribe?lang=bg|en` (1.1.0) takes the recorded audio as the raw body (`Content-Type: audio/*`, e.g. `audio/mp4` from iPhone or `audio/webm;codecs=opus` from Android; at most 1 MB and 35 s). It runs Workers AI `@cf/openai/whisper-large-v3-turbo` (with `vad_filter`) and returns `{ text, duration }`.
 - `POST /parse` takes the body `{ text, today: 'YYYY-MM-DD', time: 'HH:MM', tz, lang: 'bg'|'en' }`, sent as `text/plain` JSON. It returns `{ entries, model, usage }`. Each entry is either `{type:'food', name, meal, meal_named, amount, grams, kcal, protein, carbs, fat, fiber, salt, date, time}` or `{type:'water', amount_ml, meal, meal_named, date, time}` (`fiber`/`salt` in grams for the portion, `null` if unknown; `meal_named` is true when the sentence named the meal).
 
+## Open Food Facts search (1.4.0, beta Worker)
+
+`GET /off-search?q=<text>&lang=bg|en` → `{products: [...]}` – OFF text search for the app, whose own search endpoints are not usable from a browser (CORS). Cached for a day, 20 requests per minute per IP (`OFF_LIMITER`), allowed origins only, the query is never logged.
+
 ## Protection
 
 - **Origin:** `ALLOWED_ORIGINS` (`https://iceto3.github.io`) plus localhost. Requests from any other origin get 403, and CORS headers are sent only to allowed origins.

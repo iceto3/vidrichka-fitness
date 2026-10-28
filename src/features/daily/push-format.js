@@ -51,6 +51,7 @@ export const serverSettings = (d) => ({
   morning: !!d.morning,
   wake: d.wake,
   loud: d.loud,
+  loudOn: d.loudOn !== false,
   protein: !!d.protein,
   water: d.water.map((w) => ({ time: w.time, on: !!w.on })),
   checkinAm: { time: d.checkinAm.time, on: !!d.checkinAm.on },

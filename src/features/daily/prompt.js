@@ -18,6 +18,16 @@ import { activeWorkout, sessions } from '../workouts/api.js';
 import { BREAKFAST_LOGGER, day } from './api.js';
 import { slotText } from './notify.js';
 import { morningPromptOk } from './logic.js';
+import { kv } from '../../core/store.js';
+
+/** 1.4.0: no reminder pop-ups in the first minutes after the very first start (onboarding). */
+export const FRESH_MS = 30 * 60e3;
+
+/** Was the app first started less than FRESH_MS ago? @param {number} [now] */
+export const justStarted = (now = Date.now()) => {
+  const at = /** @type {{createdAt?: number}} */ (kv('meta', {})).createdAt;
+  return !!at && now >= at && now - at < FRESH_MS;
+};
 
 /** @type {import('./logic.js').Slot[]} */
 const waiting = [];
@@ -51,6 +61,7 @@ const stale = (/** @type {import('./logic.js').Slot} */ s) => {
 
 /** Queue a prompt for a due reminder. @param {import('./logic.js').Slot} s */
 export function prompt(s) {
+  if (justStarted()) return; // a check-in right after onboarding feels like a nag; Home shows the card
   const i = waiting.findIndex((w) => w.group === s.group);
   if (i >= 0) waiting.splice(i, 1); // newest of a group wins
   waiting.push(s);

@@ -24,7 +24,7 @@ export const PROTEIN_STEPS = [10, 20, 30];
 /**
  * @typedef {object} TimeToggle @property {string} time `HH:MM` @property {boolean} on
  * @typedef {object} Settings Reminder settings as registered by the app.
- * @property {boolean} morning @property {string} wake @property {string} loud
+ * @property {boolean} morning @property {string} wake @property {string} loud @property {boolean} [loudOn] false = no loud alarm (1.4.0)
  * @property {boolean} protein @property {TimeToggle[]} water
  * @property {TimeToggle} checkinAm @property {TimeToggle} checkinPm @property {TimeToggle} bedtime
  * @property {{wake: boolean, bed: boolean}} silent
@@ -138,15 +138,16 @@ export function planDay(tz, day, s, flags = {}) {
       silent: s.silent.wake,
       skip: 'ack_at',
     });
-    add({
-      kind: 'loud',
-      group: 'morning',
-      at: loud,
-      until: loud + 4 * HOUR,
-      route: 'morning',
-      loud: true,
-      skip: 'ack_at',
-    });
+    if (s.loudOn !== false)
+      add({
+        kind: 'loud',
+        group: 'morning',
+        at: loud,
+        until: loud + 4 * HOUR,
+        route: 'morning',
+        loud: true,
+        skip: 'ack_at',
+      });
   }
   if (s.protein && flags.ack_at)
     PROTEIN_STEPS.forEach((m, i) => {

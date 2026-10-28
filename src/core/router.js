@@ -69,8 +69,17 @@ async function show() {
     if (leaving) return; // a reload/close cancelled the view's import: not an error
     console.error('[router] failed to open', path, err);
     emit('toast', { key: 'common.error' });
+    // 1.4.0: a view chunk that cannot be loaded (old cached shell, missing file) → self-heal
+    // (index.html: unregister the worker, drop its caches, reload; rate-limited there)
+    if (isChunkError(err)) /** @type {any} */ (globalThis).__vfHeal?.('chunk');
   }
 }
+
+/** A failed dynamic import (the browsers word it differently). @param {unknown} err */
+export const isChunkError = (err) =>
+  /dynamically imported module|Importing a module script failed|error loading dynamically/i.test(
+    String(/** @type {any} */ (err)?.message ?? err),
+  );
 
 /** True while the page is unloading (pending view imports are cancelled then). */
 let leaving = false;

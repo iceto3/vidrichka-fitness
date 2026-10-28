@@ -2,9 +2,10 @@
  * Where the push server lives (tiny on purpose: main.js reads it for the "What's new" note).
  * @module features/daily/push-config
  */
+import { SERVERS } from '../../core/channel.js';
 
 /** The deployed push server (Cloudflare Worker). Empty = not deployed: push stays off and hidden. */
-export const PUSH_URL = 'https://vidrichka-push.vidrichka.workers.dev';
+export const PUSH_URL = SERVERS.push; // 1.4.0: per release channel (core/channel.js)
 /** VAPID public key (the private one is a Worker secret). */
 export const VAPID_KEY = 'BO9JFEsnJLOmHpg2N_M9-ayXuGGZiPSJikbvjhPVEwtQjXtt3oLME6uWM3JBtmqywZrrrpB2QTC_v14cF-vqbuY';
 
