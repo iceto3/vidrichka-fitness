@@ -20,6 +20,15 @@ All notable changes to this project are documented here. The format follows
 - Durations are shown as „X ч MM мин“ everywhere (e.g. „8 ч 00 мин“).
 - What's new entry for 1.4.2.
 
+### Fixed (beta tester round)
+
+- **Label wording:** the implausible-label message reads „…Провери етикета и ги въведи ръчно.“ (it was already right in 1.4.2-beta-eef52b30bc; a unit test now guards it and that no string contains „Проверя“). A spell check of all Bulgarian strings found nothing else.
+- **Future wake-up in the sleep editor:** checked live (`checkNight` in `daily/sleeptimes.js`, the same rule the save uses): „Часът на ставане още не е дошъл.“ shows inline right away and **Готово** is disabled until the time is valid (also for 0 h / more than 16 h). Invalid values are never saved.
+- **Dates never move silently:** when the night is not "evening before → this morning" (bedtime after midnight, ден назад / ден напред), a short note shows the resulting dates, e.g. „Лягане вт, 27.10 → ставане ср, 28.10“.
+- **ден назад / ден напред** are now real buttons with a 44×44 px touch target (still small text).
+- **Label photo:** a failed or blocked reading (implausible values, unreadable, error, offline, limit) clears every value the previous photo filled that was not changed since (`applyScan` in `food/label.js`); values typed by hand stay. The error then says „Стойностите от предишната снимка са изчистени.“ A new good photo also clears old-scan values it does not have.
+- **Removing the creatine supplement** shows the app's „Отмени“ pill (same as other deletions); tapping it puts the grams back.
+
 ## [1.4.1] – 2026-10-28
 
 ### Changed
