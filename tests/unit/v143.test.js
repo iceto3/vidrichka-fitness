@@ -46,7 +46,8 @@ test('1.4.3: version, What’s new entry, strings in both languages, no English 
   assert.ok(keys.length >= 30);
   for (const k of keys) {
     assert.ok(en[k], `en ${k}`);
-    assert.doesNotMatch(bg[k].replace(/\{\w+\}/g, ''), /[A-Za-z]/, `English in bg ${k}`);
+    for (const s of typeof bg[k] === 'string' ? [bg[k]] : Object.values(bg[k]))
+      assert.doesNotMatch(s.replace(/\{\w+\}/g, ''), /[A-Za-z]/, `English in bg ${k}`);
   }
   assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.4\.3\]/);
 });

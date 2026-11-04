@@ -116,3 +116,25 @@ test('never on past days, never with protein off, never from a wake-up on anothe
   assert.equal(get('days', D).proteinStart, at(D, '06:30'));
   assert.equal(dayKey(at(D, '06:30')), D);
 });
+
+test('user-addressed texts follow the profile gender; Vidrichka herself stays feminine', async () => {
+  const { setLang, setGender, t } = await import('../../src/core/i18n.js');
+  await setLang('bg');
+  setGender('m');
+  assert.match(t('mealChart.empty'), /кога си ял\.$/);
+  assert.match(t('whatsNew.timing143'), /в който си ял,.*кога си ял навреме/);
+  assert.equal(t('food.enterSelf'), 'Въведи храната сам');
+  assert.match(t('mascot.plan', { plan: 'Крака' }), /Аз съм готова – щом и ти си готов!$/);
+  setGender('f');
+  assert.match(t('mealChart.empty'), /кога си яла\.$/);
+  assert.equal(t('food.enterSelf'), 'Въведи храната сама');
+  assert.match(t('mascot.plan', { plan: 'Крака' }), /щом и ти си!$/);
+  // the Home sleep card: right for anyone; the otter tucks herself in
+  for (const g of ['f', 'm']) {
+    setGender(g);
+    assert.equal(t('home.goodnightTitle'), 'Лека нощ!');
+    assert.equal(t('home.goodnightSub', { otter: 'Видричка' }), 'Лягаш ли си? Докосни и Видричка ще се завие 🌙');
+  }
+  setGender('f');
+  await setLang('en');
+});

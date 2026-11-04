@@ -2647,7 +2647,7 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await page.locator('#results .noreliable').waitFor({ timeout: 12000 });
   assert.match(
     await page.locator('#results .noreliable').innerText(),
-    /Няма надежден резултат за тази храна\. Въведи я сам\./,
+    /Няма надежден резултат за тази храна\. Въведи я сама\./,
   );
   assert.equal(await page.locator('#offres .lrow').count(), 0, 'the 5 kcal product is not shown');
   assert.equal(await page.locator('#results [data-act="manual"]').count(), 1, 'one "enter it yourself" button');
@@ -2684,7 +2684,7 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await layer.locator('#bcode').fill('5000000000001');
   await layer.locator('[data-act="lookup"]').click();
   await page.locator('#scanstatus', { hasText: 'Няма надежден резултат' }).waitFor({ timeout: 12000 });
-  assert.match(await layer.locator('.panel [data-act="manual"]').last().innerText(), /Въведи храната сам/);
+  assert.match(await layer.locator('.panel [data-act="manual"]').last().innerText(), /Въведи храната сама/);
   await layer.locator('.panel [data-act="manual"]').last().click();
   await settle();
   assert.equal(await layer.locator('#mname').inputValue(), 'Крем лешник', 'the product name is prefilled');

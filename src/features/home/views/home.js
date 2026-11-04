@@ -69,7 +69,13 @@ function dailyCards() {
     out.push(card('', 'data-go="checkin/evening"', 'bolt', t('home.checkinPm'), t('home.checkinPmSub')));
   if (isEvening(now) && !tuckedIn(now))
     out.push(
-      card('night', 'data-act="tuck"', 'moon', t('goodnight.cta', { otter: otterName() }), t('home.goodnightSub')),
+      card(
+        'night',
+        'data-act="tuck"',
+        'moon',
+        t('home.goodnightTitle'),
+        t('home.goodnightSub', { otter: otterName() }),
+      ),
     );
   return out;
 }

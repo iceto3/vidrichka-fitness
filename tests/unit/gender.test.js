@@ -31,6 +31,12 @@ const GENDERED = [
   // 1.4.0: the dictation hints became neutral („какво изяде и изпи“); the otter's tap lines
   'home.otter3',
   'home.otter5',
+  // 1.4.3 tester round: Графики / What's new „кога си яла“, „Въведи … сама“, the otter's „щом и ти си [готова]“
+  'mealChart.empty',
+  'whatsNew.timing143',
+  'food.noReliable',
+  'food.enterSelf',
+  'mascot.plan',
 ];
 
 /** Every string variant of a dictionary value. @param {any} v @returns {string[]} */
@@ -65,6 +71,10 @@ test('no user-addressed feminine form is left as a plain BG string', () => {
     /\bХидратирана\b/,
     /Вие двете/,
     /\b(си|съм) (била|готова|направила|сигурна|уморена)\b/,
+    // 1.4.3: eating/drinking/sleeping participles and „сама/сам“, either gender left plain
+    /(^|[^А-Яа-я])си (яла|ял|пила|пил|спала|спал|станала|станал)(?![А-Яа-я])/,
+    /(^|[^А-Яа-я])(сама|сам)(?![А-Яа-я])/,
+    /щом и ти си!/,
   ];
   for (const [k, v] of Object.entries(bg)) {
     if (isGendered(v)) continue;
