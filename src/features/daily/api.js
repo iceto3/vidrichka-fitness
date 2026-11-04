@@ -45,12 +45,38 @@ const yesterday = (/** @type {string} */ d) => dayKey(addDays(parseDay(d), -1));
 export function wakeUp(now = Date.now()) {
   const id = dayKey(now),
     rec = day(id);
-  if (rec.wake) return false;
+  if (rec.wake) {
+    // 1.4.3 (tester): woke earlier (typed in the sleep editor, or tapped with protein off)
+    if (proteinFromWake(now)) (emit('daily:changed'), emit('daily:wake'));
+    return false;
+  }
   const est = fillBedtime(get('days', yesterday(id)));
   if (est) patchDay(yesterday(id), est);
-  patchDay(id, { wake: now, ack: rec.ack ?? now, ...(dailySettings().protein ? { proteinStart: now } : {}) });
+  patchDay(id, { wake: now, ack: rec.ack ?? now });
+  proteinFromWake(now);
   emit('daily:wake');
   emit('daily:changed');
+  return true;
+}
+
+/** How far ahead of the clock a typed wake-up may be (the sleep editor's slack, min). */
+const WAKE_SLACK = 5 * 60_000;
+
+/**
+ * 1.4.3 (tester round): today's recorded wake-up – the morning tap or a wake time typed in
+ * the sleep editor – starts the 30-min protein countdown at that time when it has not
+ * started yet (protein on, nothing answered). An expired window is simply overdue, so the
+ * pill / banner still take Изядох (with the eaten time) or Пропуснах. Only today: past days
+ * are never started afterwards.
+ * @param {number} [now] @returns {boolean} true if it set proteinStart.
+ */
+export function proteinFromWake(now = Date.now()) {
+  const id = dayKey(now),
+    rec = get('days', id);
+  if (!rec || !dailySettings().protein || rec.proteinStart || rec.proteinAt || rec.proteinSkip) return false;
+  const w = [rec.wake, rec.sleepWake].find((x) => typeof x === 'number' && dayKey(x) === id && x <= now + WAKE_SLACK);
+  if (w == null) return false;
+  patchDay(id, { proteinStart: Math.min(w, now) });
   return true;
 }
 
@@ -165,8 +191,8 @@ export function setSleep(date, v) {
 /**
  * 1.4.2: record last night's sleep as bedtime + wake-up (timestamps from the sleep editor,
  * see ./sleeptimes.js). Hours are computed (to the minute) and stored as before, so streaks,
- * charts and the morning screen keep reading `sleepH`. The goodnight `bed` / morning `wake`
- * (which drive reminders and the protein countdown) are left alone.
+ * charts and the morning screen keep reading `sleepH`. The goodnight `bed` is left alone; a
+ * wake-up typed for today also becomes this morning's `wake` and protein start (1.4.3).
  * @param {string} date Morning's day key. @param {{bed: number, wake: number}} v
  */
 export function setSleepTimes(date, v) {
@@ -175,7 +201,14 @@ export function setSleepTimes(date, v) {
     hours = Math.round((wake - bed) / 60_000) / 60;
   if (!Number.isFinite(hours) || hours <= 0 || hours > MAX_SLEEP_H) throw new RangeError('sleep times');
   const patch = { sleepBed: bed, sleepWake: wake, sleepH: hours };
-  const rec = patchDay(date, patch);
+  let rec = patchDay(date, patch);
+  // 1.4.3 (tester): a wake-up typed for this morning means she is up – it counts as the
+  // morning's wake-up (if none yet) and starts the protein countdown at that time.
+  const now = Date.now();
+  if (date === dayKey(now) && dayKey(wake) === date && wake <= now + WAKE_SLACK) {
+    if (!rec.wake) rec = patchDay(date, { wake, ack: rec.ack ?? wake });
+    if (proteinFromWake(now)) rec = day(date);
+  }
   emit('sleep:logged', { date, ...patch });
   emit('daily:changed');
   return rec;

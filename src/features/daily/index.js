@@ -61,6 +61,12 @@ export async function startDaily() {
     (/** @type {Record<string, any>} */ p) =>
       ('daily' in p || 'lang' in p || 'userName' in p) && notify.syncDaily().catch(() => {}),
   );
+  // 1.4.3 (tester): protein switched on after this morning's wake-up was recorded
+  on(
+    'settings:changed',
+    (/** @type {Record<string, any>} */ p) => 'daily' in p && api.proteinFromWake() && emit('daily:changed'),
+  );
+  if (api.proteinFromWake()) emit('daily:changed');
   api.catchUpProtein();
   // 1.4.3: the meal pill above the nav on the other tabs (same countdown as the Home banner)
   (await import('./pill.js')).startMealPill();
