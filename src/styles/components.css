@@ -350,7 +350,7 @@ html[lang='bg'] .nav .t {
 .field {
   display: block;
 }
-.field > span:not(.tbox) {
+.field > span:not(.tbox):not(.t24) {
   display: block;
   font-size: 12px;
   font-weight: 700;

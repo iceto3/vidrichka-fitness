@@ -2503,12 +2503,14 @@ async function v143fixes(page, { go, settle, shot, layer, rows, clearCel }, name
     await card.scrollIntoViewIfNeeded();
     const c = await box(card),
       txt = await box(card.locator('.f1')),
-      title = await box(card.locator('.f1 .b')),
+      title = await box(card.locator('.f1 .b.block')),
       btn = await box(card.locator('[data-act="install"]'));
     assert.ok(txt.width >= c.width * 0.55, `${w}px: text column ${txt.width} of ${c.width}`);
     assert.ok(title.height <= 48, `${w}px: title in at most 2 lines (${title.height})`);
     assert.ok(btn.y >= txt.y + txt.height - 1, `${w}px: button below the text`);
     assert.ok(btn.width >= c.width * 0.7, `${w}px: full-width button`);
+    await card.locator('[data-act="install"]').scrollIntoViewIfNeeded();
+    await page.evaluate(() => scrollBy(0, 120));
     await page.waitForTimeout(150);
     await shot(`install-card-${w}`);
   }
@@ -2532,7 +2534,7 @@ async function v143fixes(page, { go, settle, shot, layer, rows, clearCel }, name
     assert.ok(h1.height <= 34, `${w}px: „Добави храна“ on one line (${h1.height})`);
     assert.ok(b.y >= h1.y + h1.height - 1, `${w}px: „Готово с храненето“ below the title`);
     await page.evaluate(() => scrollTo(0, 0));
-    await page.waitForTimeout(150);
+    await page.waitForTimeout(1200);
     await shot(`add-header-${w}`);
     await fin.click();
     await settle();
@@ -3464,6 +3466,16 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
   await page.waitForFunction(() => !document.querySelector('#layer .ateerr'));
   assert.equal(await layer.locator('.ateok').isDisabled(), false);
   await page.waitForTimeout(250);
+  {
+    // the 24 h field: −, time, + on one row
+    const ys = await layer
+      .locator('.mtime .t24 > *')
+      .evaluateAll((els) =>
+        els.map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)),
+      );
+    assert.equal(ys.length, 3);
+    assert.ok(Math.max(...ys) - Math.min(...ys) <= 2, `time field on one row (${ys})`);
+  }
   await shot('mealpill-time');
   await layer.locator('.ateok').click();
   await page.locator('.add .phint').waitFor();

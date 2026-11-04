@@ -14,6 +14,15 @@ All notable changes to this project are documented here. The format follows
 - **Meal item rows** (Закуска and the other meal lists): line 1 time and grams, line 2 „пр · вх · мз · кр · фб · сл“ (protein, carbs, fat, creatine only when the food has some, fiber, salt; grams, „–“ when unknown). A small ⓘ next to the meal title opens the legend with the full names.
 - What's new entry for 1.4.3. Unit tests in `tests/unit/v143.test.js`; e2e for the pill, its sheet, the time entry, the chart and the nutrient rows.
 
+### Fixed (tester round)
+
+- **A wake-up recorded by hand starts the protein countdown:** a wake-up for today (the morning tap, or **Ставане** typed in the sleep editor) starts the breakfast countdown at that time when protein is on and nothing is answered yet. If the window is already over, it is shown as overdue, so **Изядох** (with the time) and **Пропуснах** work as usual. Past days are never touched. A wake-up corrected in the editor moves an unanswered countdown with it. It is also checked at start-up and when protein is switched on.
+- **Wording follows the profile's gender:** „кога си яла/ял“, „щом и ти си готова/готов“ and „Въведи я сама/сам“ (this one was masculine only). The otter stays „тя“. The night card reads „Лека нощ!“ / „Лягаш ли си? Докосни и {otter} ще се завие 🌙“.
+- **Home install card:** the text gets the full width and **Инсталирай приложението** sits below it (390 and 360 px).
+- **Добави храна:** the title stays on one line. **Готово с храненето** is a full-width button under it.
+- **Sleep times** (and the meal time) are a typed 24-hour field (e.g. „0640“ or „6:40“) with −/+ steps (15 min for sleep, 5 min for meals) instead of the 12-hour AM/PM wheel. Text that isn't a time shows a hint and blocks **Готово**. The „до 16 ч“ rule is unchanged.
+- The **accessibility labels** („Към съдържанието“, „Основно меню“) are translated.
+
 ## [1.4.2] – 2026-10-28
 
 ### Added
