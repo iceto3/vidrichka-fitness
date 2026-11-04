@@ -42,9 +42,9 @@ test('sleep editor: a wake-up typed for this morning starts the protein countdow
     assert.equal(ps.left, (PROTEIN_WINDOW - 15) * MIN);
     assert.equal(pendingMeal(r, now)?.time, '15:00');
     assert.equal(pillVisible({ pending: pendingMeal(r, now), tab: 'food', path: 'food' }), true);
-    // typing it again does not restart it
+    // a corrected wake-up moves the unanswered countdown with it (see the editor test below)
     setDaySleepTimes(D, { bed: '23:30', wake: '07:15' });
-    assert.equal(get('days', D).proteinStart, at(D, '07:05'));
+    assert.equal(get('days', D).proteinStart, at(D, '07:15'));
   });
 });
 
@@ -182,4 +182,33 @@ test('accessibility labels and the time field are translated (no English in BG)'
     assert.ok(en[k], k);
     assert.doesNotMatch(String(bg[k]).replace(/\{\w+\}/g, ''), /[A-Za-z]/, k);
   }
+});
+
+test('the editor saves on every change: a corrected wake-up moves the wake-up and an unanswered countdown', () => {
+  protein(true);
+  reset(D, Y);
+  atClock('06:50', () => {
+    setDaySleepTimes(D, { bed: '23:10', wake: '06:25' });
+    assert.equal(get('days', D).proteinStart, at(D, '06:25'));
+    setDaySleepTimes(D, { bed: '23:10', wake: '06:40' });
+    const r = get('days', D);
+    assert.equal(r.wake, at(D, '06:40'));
+    assert.equal(r.proteinStart, at(D, '06:40'));
+  });
+  // a wake-up from the morning tap is not moved by the editor
+  reset(D, Y);
+  atClock('07:10', () => {
+    api.wakeUp();
+    setDaySleepTimes(D, { bed: '23:10', wake: '06:40' });
+    assert.equal(get('days', D).wake, at(D, '07:10'));
+    assert.equal(get('days', D).proteinStart, at(D, '07:10'));
+  });
+  // answered: the countdown stays as it was
+  reset(D, Y);
+  atClock('08:00', (now) => {
+    setDaySleepTimes(D, { bed: '23:10', wake: '07:00' });
+    api.proteinSkip(now);
+    setDaySleepTimes(D, { bed: '23:10', wake: '07:20' });
+    assert.equal(get('days', D).proteinStart, at(D, '07:00'));
+  });
 });

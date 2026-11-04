@@ -347,6 +347,7 @@ async function run(name, browser, P) {
   await v141tester(page, h, name, ctx);
   await v142(page, h);
   await v143(page, h, name);
+  await v143fixes(page, h, name);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -2458,6 +2459,154 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
  * @param {any} h helpers from run()
  */
 /** Close every open sheet (Escape, a few times). @param {any} page @param {any} layer @param {() => Promise<void>} settle */
+/**
+ * 1.4.3 tester round: Bulgarian accessibility labels, the install card and the add-food
+ * header at 390 / 360 px, the typed 24-hour sleep times (steps, bad text, 16 h rule), and a
+ * wake-up typed in the sleep editor starting the protein countdown + pill.
+ * @param {import('playwright-core').Page} page @param {any} h @param {string} name
+ */
+async function v143fixes(page, { go, settle, shot, layer, rows, clearCel }, name) {
+  const ts = (/** @type {string} */ d, /** @type {string} */ hm) => new Date(`${d}T${hm}:00+02:00`).getTime();
+  const box = async (/** @type {any} */ l) =>
+    /** @type {{x: number, y: number, width: number, height: number}} */ (await l.boundingBox());
+  // accessibility labels follow the language
+  assert.equal((await page.locator('a.skip').textContent())?.trim(), 'Към съдържанието');
+  assert.equal(await page.locator('#nav').getAttribute('aria-label'), 'Основно меню');
+
+  // the install card: text full width, button below it, nothing overlaps (390 and 360 px)
+  const vp = page.viewportSize();
+  await page.evaluate(
+    () =>
+      new Promise((res) => {
+        const r = indexedDB.open('vidrichka-fitness');
+        r.onsuccess = () => {
+          const tx = r.result.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put({ id: 'installDismissed', value: false });
+          tx.oncomplete = () => (r.result.close(), res(null));
+        };
+      }),
+  );
+  await page.reload();
+  await page.locator('#nav .t').first().waitFor();
+  await settle();
+  await closeAllSheets(page, layer, settle);
+  await clearCel();
+  if (name === 'android')
+    await page.evaluate(() =>
+      dispatchEvent(Object.assign(new Event('beforeinstallprompt'), { prompt() {}, userChoice: Promise.resolve() })),
+    );
+  await go('home');
+  for (const w of [390, 360]) {
+    await page.setViewportSize({ width: w, height: vp?.height ?? 844 });
+    await settle();
+    const card = page.locator('.installcard');
+    await card.scrollIntoViewIfNeeded();
+    const c = await box(card),
+      txt = await box(card.locator('.f1')),
+      title = await box(card.locator('.f1 .b')),
+      btn = await box(card.locator('[data-act="install"]'));
+    assert.ok(txt.width >= c.width * 0.55, `${w}px: text column ${txt.width} of ${c.width}`);
+    assert.ok(title.height <= 48, `${w}px: title in at most 2 lines (${title.height})`);
+    assert.ok(btn.y >= txt.y + txt.height - 1, `${w}px: button below the text`);
+    assert.ok(btn.width >= c.width * 0.7, `${w}px: full-width button`);
+    await page.waitForTimeout(150);
+    await shot(`install-card-${w}`);
+  }
+  await page.locator('[data-act="noInstall"]').click();
+  await settle();
+
+  // Добави храна: after a product is added the title stays on one line, the button below it
+  for (const w of [390, 360]) {
+    await page.setViewportSize({ width: w, height: vp?.height ?? 844 });
+    await go('food/add/lunch');
+    await page.locator('#fq').fill('Пилешко филе');
+    await settle();
+    await page.locator('#results [data-act="pick"][data-id="chicken_breast"]').click();
+    await layer.locator('[data-act="done"]').click();
+    await settle();
+    await clearCel();
+    const fin = page.locator('.add .topbar .finishmeal');
+    await fin.waitFor();
+    const h1 = await box(page.locator('.add .topbar h1')),
+      b = await box(fin);
+    assert.ok(h1.height <= 34, `${w}px: „Добави храна“ on one line (${h1.height})`);
+    assert.ok(b.y >= h1.y + h1.height - 1, `${w}px: „Готово с храненето“ below the title`);
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.waitForTimeout(150);
+    await shot(`add-header-${w}`);
+    await fin.click();
+    await settle();
+    await clearCel();
+  }
+  await page.setViewportSize(vp ?? { width: 390, height: 844 });
+
+  // next morning 06:50, nothing recorded yet: the wake-up typed in the sleep editor (24 h,
+  // typed or stepped) is this morning's wake-up and starts the protein countdown
+  await page.clock.setSystemTime(new Date('2026-11-05T06:50:00+02:00'));
+  await page.reload();
+  await page.locator('#nav .t').first().waitFor();
+  await settle();
+  await closeAllSheets(page, layer, settle);
+  await clearCel();
+  await go('home');
+  await page.locator('.sleepcard').scrollIntoViewIfNeeded();
+  await page.locator('.sleepcard').click();
+  await layer.locator('.sleeptimes').waitFor();
+  const bed = layer.locator('.sbed input.t24i'),
+    wake = layer.locator('.swake input.t24i');
+  assert.equal(await wake.getAttribute('type'), 'text', 'typed, not a 12-hour wheel');
+  assert.equal(await wake.getAttribute('inputmode'), 'numeric');
+  await bed.fill('2310');
+  await bed.blur();
+  await settle();
+  assert.equal(await bed.inputValue(), '23:10', '„2310“ → 23:10');
+  await wake.fill('06:25');
+  await settle();
+  await layer.locator('.swake .t24b[data-d="15"]').click();
+  await settle();
+  assert.equal(await wake.inputValue(), '06:30', '+15 snaps to the quarter');
+  await layer.locator('.swake .t24b[data-d="-15"]').click();
+  await settle();
+  await layer.locator('.swake .t24b[data-d="15"]').click();
+  await settle();
+  assert.equal(await wake.inputValue(), '06:30');
+  assert.match(await layer.locator('.sleepdur').innerText(), /^7 ч 20 мин$/);
+  // not a time → a hint, Готово off; the 16 h rule as before
+  await wake.fill('25:70');
+  await wake.blur();
+  await settle();
+  assert.match(await layer.locator('.sleeperr').innerText(), /Въведи час като 07:30/);
+  assert.ok(await layer.locator('.sleepdone').isDisabled());
+  await bed.fill('12:00');
+  await bed.blur();
+  await wake.fill('06:40');
+  await wake.blur();
+  await settle();
+  assert.match(await layer.locator('.sleeperr').innerText(), /Сънят трябва да е до 16 ч/);
+  await bed.fill('23:10');
+  await bed.blur();
+  await settle();
+  assert.equal(await layer.locator('.sleeperr').count(), 0);
+  await page.waitForTimeout(200);
+  await shot('sleep-time24');
+  await layer.locator('.sleepdone').click();
+  await settle();
+  const d5 = /** @type {any} */ ((await rows('days')).find((x) => x.id === '2026-11-05'));
+  assert.equal(d5.sleepWake, ts('2026-11-05', '06:40'));
+  assert.equal(d5.wake, ts('2026-11-05', '06:40'), 'counts as the wake-up');
+  assert.equal(d5.proteinStart, ts('2026-11-05', '06:40'), 'protein countdown from the typed wake-up');
+  await page.locator('.pbar.running').waitFor();
+  await go('food');
+  const pill = page.locator('#mealpill');
+  await pill.waitFor({ state: 'visible' });
+  assert.match(await pill.innerText(), /Закуска\s*(19|20):\d\d/);
+  await page.waitForTimeout(250);
+  await shot('mealpill-after-sleep');
+  console.log(
+    '  ✔ 1.4.3 tester round: BG a11y labels, install card + add-food header at 390/360, typed 24 h sleep times (steps, hint, 16 h), typed wake-up starts the countdown + pill',
+  );
+}
+
 async function closeAllSheets(page, layer, settle) {
   for (let i = 0; i < 5 && (await layer.locator('.panel').count()); i++) {
     await page.keyboard.press('Escape');

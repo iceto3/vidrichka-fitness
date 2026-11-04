@@ -201,12 +201,19 @@ export function setSleepTimes(date, v) {
     hours = Math.round((wake - bed) / 60_000) / 60;
   if (!Number.isFinite(hours) || hours <= 0 || hours > MAX_SLEEP_H) throw new RangeError('sleep times');
   const patch = { sleepBed: bed, sleepWake: wake, sleepH: hours };
+  const prev = day(date);
   let rec = patchDay(date, patch);
   // 1.4.3 (tester): a wake-up typed for this morning means she is up – it counts as the
-  // morning's wake-up (if none yet) and starts the protein countdown at that time.
+  // morning's wake-up (if none yet) and starts the protein countdown at that time. The
+  // editor saves on every change, so a wake-up that came from the editor follows a corrected
+  // time (and so does a countdown started from it, while nothing is answered).
   const now = Date.now();
   if (date === dayKey(now) && dayKey(wake) === date && wake <= now + WAKE_SLACK) {
-    if (!rec.wake) rec = patchDay(date, { wake, ack: rec.ack ?? wake });
+    const fromEditor = prev.wake != null && prev.wake === prev.sleepWake;
+    if (!rec.wake || fromEditor)
+      rec = patchDay(date, { wake, ack: !rec.ack || rec.ack === prev.wake ? wake : rec.ack });
+    if (fromEditor && rec.proteinStart === prev.sleepWake && !rec.proteinAt && !rec.proteinSkip)
+      rec = patchDay(date, { proteinStart: Math.min(wake, now) });
     if (proteinFromWake(now)) rec = day(date);
   }
   emit('sleep:logged', { date, ...patch });
