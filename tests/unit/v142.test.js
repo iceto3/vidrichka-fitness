@@ -39,14 +39,13 @@ const back = (n) => dayKey(addDays(parseDay(today), -n));
 const empty = { days: [], food: [], sessions: [] };
 const byId = Object.fromEntries(FOODS.map((f) => [f.id, f]));
 
-test('1.4.2: version, What’s new entry, strings in both languages', async () => {
-  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.4.2');
-  const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.4.2');
+test('1.4.2: What’s new entry, strings in both languages', async () => {
+  // 1.4.3: the version itself moved on (asserted in v143.test.js); the 1.4.2 entry stays
   const { NOTES } = await import('../../src/features/whatsnew/notes.js');
-  assert.equal(NOTES[0].v, '1.4.2');
+  const n142 = NOTES.find((n) => n.v === '1.4.2');
+  assert.ok(n142);
   assert.deepEqual(
-    NOTES[0].items.map(([, k]) => k),
+    n142.items.map(([, k]) => k),
     ['whatsNew.creatine142', 'whatsNew.label142', 'whatsNew.sleep142'],
   );
   for (const k of Object.keys(bg).filter((x) => /^(creatine|label)\.|142$|^sleep\.(bedtime|wakeTime|day)/.test(x)))

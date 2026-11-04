@@ -16,17 +16,8 @@ import { messageFor, moodFor, otter, otterName } from '../../mascot/api.js';
 import { level, quests, stats } from '../../motivation/api.js';
 import { activeWorkout, nextPlan, planFor, planMinutes, planName, sessions, startWorkout } from '../../workouts/api.js';
 import { backupDue, canInstall, installApp } from '../../profile/api.js';
-import {
-  BREAKFAST_LOGGER,
-  day,
-  goodnight,
-  isEvening,
-  morningPending,
-  proteinBar,
-  proteinSkip,
-  tuckedIn,
-} from '../../daily/api.js';
-import { closeNotifications } from '../../daily/notify.js';
+import { day, goodnight, isEvening, morningPending, proteinBar, tuckedIn } from '../../daily/api.js';
+import { mealAte, mealSkip } from '../../daily/views/mealsheet.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 import { dayRows } from '../../food/api.js';
 import { cardActions, mealsCard, sleepCard, stepsCard } from '../../day/views/cards.js';
@@ -235,16 +226,12 @@ ${
       },
       install: () => installApp(),
       noInstall: () => void setKv('installDismissed', true),
-      proteinYes: () => {
-        // 1.2.1: only opens the logger; saving a breakfast there ticks the protein quest.
-        closeNotifications(['protein']);
-        emit('nav', { path: BREAKFAST_LOGGER });
-        return false;
-      },
-      proteinSkip: () => {
-        proteinSkip(); // push "protein-skipped": follow-ups stop; no celebration, no quest
-        closeNotifications(['protein']);
-      },
+      // 1.4.3: the same actions as the meal pill's sheet (features/daily/views/mealsheet.js).
+      // „Изядох“ only opens the logger (1.2.1: saving a breakfast there ticks the protein quest);
+      // after the 30-min window it first asks when she ate.
+      proteinYes: () => (mealAte(), false),
+      // push "protein-skipped": follow-ups stop; no celebration, no quest
+      proteinSkip: () => void mealSkip(),
     },
     mount: (el) => {
       // The steps quest (#/home?steps) jumps to the steps card.

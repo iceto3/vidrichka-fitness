@@ -89,9 +89,14 @@ export function fillBedtime(rec) {
   return bed ? { bed, bedEst: true } : null;
 }
 
-/** Was the protein "yes" within the window (+ grace)? @param {any} rec */
-export const proteinOnTime = (rec) =>
-  !!(rec?.proteinStart && rec.proteinAt && rec.proteinAt - rec.proteinStart <= (PROTEIN_WINDOW + PROTEIN_GRACE) * MIN);
+/**
+ * Was the protein "yes" within the window (+ grace)? 1.4.3: a late meal's typed time
+ * (`mealTimes.breakfast.actual`) counts instead of the moment it was logged. @param {any} rec
+ */
+export const proteinOnTime = (rec) => {
+  const at = Number(rec?.mealTimes?.breakfast?.actual) || rec?.proteinAt;
+  return !!(rec?.proteinStart && rec.proteinAt && at - rec.proteinStart <= (PROTEIN_WINDOW + PROTEIN_GRACE) * MIN);
+};
 
 /**
  * Protein countdown state.

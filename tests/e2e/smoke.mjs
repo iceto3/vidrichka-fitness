@@ -346,6 +346,7 @@ async function run(name, browser, P) {
   await v141(page, h, name, ctx);
   await v141tester(page, h, name, ctx);
   await v142(page, h);
+  await v143(page, h, name);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -1564,7 +1565,8 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.2/);
+  assert.match(txt, /Какво ново в 1\.4\.3/);
+  assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
   assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
   assert.match(txt, /Отмени/, 'the 1.3.2 pill item');
@@ -1574,8 +1576,8 @@ async function v132(page, { go, settle, clearCel, layer }) {
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    23,
-    'the 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
+    26,
+    'the 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
   );
   await layer.locator('[data-close]').first().click();
   await settle();
@@ -1880,12 +1882,17 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.2/);
+  assert.match(txt, /Какво ново в 1\.4\.3/);
+  assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
   assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
   assert.match(txt, /Запиши/);
   assert.match(txt, /Обичайният ти обяд/);
-  assert.equal(await layer.locator('.whatsnew > div').count(), 20, 'the 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items');
+  assert.equal(
+    await layer.locator('.whatsnew > div').count(),
+    23,
+    'the 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items',
+  );
   await layer.locator('[data-close]').first().click();
   await settle();
   await go('profile');
@@ -1987,7 +1994,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.2/);
+  assert.match(txt, /Какво ново в 1\.4\.3/);
+  assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
   assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
   assert.match(txt, /крачки/i);
@@ -1995,8 +2003,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    18,
-    'three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
+    21,
+    'three 1.4.3 and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
   );
   await page.waitForTimeout(700);
   await shot('whats-new-134');
@@ -2865,9 +2873,9 @@ async function v141tester(page, { go, settle, shot }, name, ctx) {
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
   // build id: 1.4.1-<hash> / 1.4.1-beta-<hash> from a build, the plain version from the sources
-  const idRe = DIR === '.' ? /^Билд: 1\.4\.2$/ : /^Билд: 1\.4\.2(-beta)?-[0-9a-f]{7,}$/;
+  const idRe = DIR === '.' ? /^Билд: 1\.4\.3$/ : /^Билд: 1\.4\.3(-beta)?-[0-9a-f]{7,}$/;
   const meta = await page.evaluate(
-    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.4.2',
+    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.4.3',
   );
   const foot = page.locator('#pbuild');
   await foot.scrollIntoViewIfNeeded();
@@ -3117,5 +3125,258 @@ async function v142(page, { go, settle, shot, layer, dayField }) {
   await page.evaluate(() => localStorage.removeItem('vf-voice-url'));
   console.log(
     '  ✔ 1.4.2 creatine card + supplement 3 г, label photo pre-fills the form (no-connection error first); fixes: undo, stale label values',
+  );
+}
+
+/**
+ * 1.4.3: the meal pill (other tabs, shrink/expand on scroll, its Изядох/Пропуснах sheet,
+ * never over the nav), the late-meal time entry (default now, no future times), the
+ * Прогрес chart + summary and the abbreviated nutrients with their legend (Bulgarian UI).
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
+  const ts = (/** @type {string} */ d, /** @type {string} */ hm) => new Date(`${d}T${hm}:00+02:00`).getTime();
+  // Six past days with timed breakfasts (old-style and 1.4.3 records) and today's countdown
+  /** @type {Record<string, any>} */
+  const seed = {
+    '2026-10-29': { proteinStart: ts('2026-10-29', '08:00'), proteinAt: ts('2026-10-29', '08:20') },
+    '2026-10-30': { proteinStart: ts('2026-10-30', '07:40'), proteinAt: ts('2026-10-30', '08:25') },
+    '2026-10-31': { proteinStart: ts('2026-10-31', '08:10'), proteinSkip: ts('2026-10-31', '08:15') },
+    '2026-11-01': { proteinStart: ts('2026-11-01', '09:00'), proteinAt: ts('2026-11-01', '09:25') },
+    '2026-11-02': {
+      proteinStart: ts('2026-11-02', '07:30'),
+      proteinAt: ts('2026-11-02', '08:50'),
+      mealTimes: { breakfast: { planned: ts('2026-11-02', '08:00'), actual: ts('2026-11-02', '08:35') } },
+    },
+    '2026-11-03': { proteinStart: ts('2026-11-03', '08:00'), proteinAt: ts('2026-11-03', '08:28') },
+    '2026-11-04': {
+      proteinStart: ts('2026-11-04', '07:00'),
+      wake: ts('2026-11-04', '07:00'),
+      ack: ts('2026-11-04', '07:00'),
+    },
+  };
+  const old = /** @type {any[]} */ (await rows('days'));
+  const recs = Object.entries(seed).map(([id, v]) => {
+    const r = { ...(old.find((x) => x.id === id) ?? {}), id, ...v, proteinCelebrated: true };
+    for (const k of ['proteinAt', 'proteinSkip', 'mealTimes', 'proteinAteAt']) if (!(k in v)) delete r[k];
+    if (id === '2026-11-04') delete r.proteinCelebrated;
+    return r;
+  });
+  await page.clock.setSystemTime(new Date('2026-11-04T07:10:00+02:00'));
+  await page.evaluate(
+    (recs) =>
+      new Promise((res, rej) => {
+        const r = indexedDB.open('vidrichka-fitness');
+        r.onerror = () => rej(r.error);
+        r.onsuccess = () => {
+          const tx = r.result.transaction('days', 'readwrite');
+          for (const x of recs) tx.objectStore('days').put(x);
+          tx.oncomplete = () => (r.result.close(), res(null));
+        };
+      }),
+    recs,
+  );
+  await page.reload();
+  await page.locator('#nav .t').first().waitFor();
+  await settle();
+  await closeAllSheets(page, layer, settle);
+  await clearCel();
+
+  // the 1.4.1 technique test left a workout running: no pill during a workout, even with a
+  // pending meal; then the workout is dropped (as stored) and the app opened again
+  const kvIdb = (/** @type {any} */ row) =>
+    page.evaluate(
+      (row) =>
+        new Promise((res, rej) => {
+          const r = indexedDB.open('vidrichka-fitness');
+          r.onerror = () => rej(r.error);
+          r.onsuccess = () => {
+            const tx = r.result.transaction('kv', 'readwrite');
+            tx.objectStore('kv').put(row);
+            tx.oncomplete = () => (r.result.close(), res(null));
+          };
+        }),
+      row,
+    );
+  if ((await rows('kv')).find((x) => x.id === 'active')?.value) {
+    await go('food');
+    await page.waitForTimeout(1200);
+    assert.equal(await page.locator('#mealpill').isVisible(), false, 'no pill during a workout');
+    await kvIdb({ id: 'active', value: null });
+    await page.reload();
+    await page.locator('#nav .t').first().waitFor();
+    await settle();
+    await closeAllSheets(page, layer, settle);
+    await clearCel();
+    console.log('  ✔ 1.4.3 no meal pill during a workout');
+  }
+
+  // Home has the banner, not the pill
+  await go('home');
+  await page.locator('.pbar.running').waitFor();
+  assert.equal(await page.locator('#mealpill').isVisible(), false, 'no pill on Начало');
+  // any other tab: the pill with the same countdown as the banner
+  const pill = page.locator('#mealpill');
+  for (const tab of ['food', 'progress', 'profile']) {
+    await go(tab);
+    await pill.waitFor({ state: 'visible', timeout: 3000 });
+  }
+  await go('food');
+  await pill.waitFor({ state: 'visible' });
+  assert.match(await pill.innerText(), /Закуска\s*(1\d|20):\d\d/, 'meal name + countdown');
+  assert.match(String(await pill.getAttribute('aria-label')), /Закуска: остават (1\d|20):\d\d/);
+  const t1 = await pill.locator('.ptime').innerText();
+  await page.waitForTimeout(2100);
+  assert.notEqual(await pill.locator('.ptime').innerText(), t1, 'the pill ticks');
+  // above the nav, inside the screen, and the page has room for it
+  const pb = /** @type {any} */ (await pill.boundingBox()),
+    nb = /** @type {any} */ (await page.locator('#nav').boundingBox()),
+    vp = /** @type {any} */ (page.viewportSize());
+  assert.ok(pb.y + pb.height <= nb.y - 4, `pill above the nav (${pb.y + pb.height} ≤ ${nb.y})`);
+  assert.ok(pb.x >= 8 && pb.x + pb.width <= vp.width, 'inside the screen');
+  assert.ok(await page.evaluate(() => document.body.classList.contains('has-mpill')));
+  // the end of the page scrolls clear of the pill
+  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  await settle();
+  const lastBottom = await page.evaluate(() => {
+    const kids = [...document.querySelectorAll('#page > * > *')].filter((n) => n.getBoundingClientRect().height > 0);
+    return Math.max(...kids.map((n) => n.getBoundingClientRect().bottom));
+  });
+  const pb2 = /** @type {any} */ (await pill.boundingBox());
+  assert.ok(lastBottom <= pb2.y + 1, `the last content ends above the pill (${lastBottom} ≤ ${pb2.y})`);
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.waitForTimeout(250);
+  await shot('mealpill-tab');
+
+  // scroll down → clock circle, scroll up → full pill
+  await go('progress/trends');
+  await pill.waitFor({ state: 'visible' });
+  for (const y of [200, 500, 800]) {
+    await page.evaluate((y) => scrollTo(0, y), y);
+    await page.waitForTimeout(80);
+  }
+  await page.waitForFunction(() => document.getElementById('mealpill')?.classList.contains('mini'));
+  assert.equal(await pill.locator('.mptx').isVisible(), false, 'shrunk: only the clock');
+  const mb = /** @type {any} */ (await pill.boundingBox());
+  assert.ok(Math.abs(mb.width - mb.height) < 2, 'a circle');
+  await page.waitForTimeout(250);
+  await shot('mealpill-mini');
+  for (const y of [600, 400]) {
+    await page.evaluate((y) => scrollTo(0, y), y);
+    await page.waitForTimeout(80);
+  }
+  await page.waitForFunction(() => !document.getElementById('mealpill')?.classList.contains('mini'));
+
+  // the sheet: Изядох / Пропуснах (the banner's actions)
+  await go('food');
+  await pill.click();
+  const sheet = layer.locator('.mealsheet');
+  await sheet.waitFor();
+  assert.match(await sheet.innerText(), /Закуска[\s\S]*остават[\s\S]*Изядох[\s\S]*Пропуснах/);
+  await page.waitForTimeout(300);
+  await shot('mealpill-sheet');
+  // in the window, Изядох opens the breakfast logger (as the banner does); the pill hides there
+  await sheet.locator('[data-act="ate"]').click();
+  await page.locator('.add .phint').waitFor();
+  assert.match(page.url(), /#\/food\/add\/breakfast\?protein$/);
+  assert.equal(await pill.isVisible(), false, 'no pill on the logger itself');
+  await go('food');
+  await pill.waitFor({ state: 'visible' });
+
+  // after the window: dark red; Изядох asks when she ate (default now, no future)
+  await page.clock.setSystemTime(new Date('2026-11-04T07:45:00+02:00'));
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await page.waitForFunction(() => document.getElementById('mealpill')?.classList.contains('overdue'));
+  // the app's own overdue reminder prompt comes first (it closes other sheets): answer „Later“
+  for (let quiet = 0, i = 0; quiet < 5 && i < 30; i++) {
+    if (await layer.locator('.dprompt').count()) {
+      await layer
+        .locator('[data-close]')
+        .first()
+        .click({ timeout: 2000 })
+        .catch(() => {});
+      quiet = 0;
+    } else quiet++;
+    await page.waitForTimeout(500);
+  }
+  await pill.click();
+  await sheet.waitFor();
+  assert.match(await sheet.innerText(), /времето изтече/);
+  await sheet.locator('[data-act="ate"]').click();
+  const tin = layer.locator('.mtime input[data-change="atehm"]');
+  await tin.waitFor();
+  assert.equal(await tin.inputValue(), '07:45', 'defaults to now');
+  await tin.fill('07:55');
+  await layer.locator('.ateerr').waitFor();
+  assert.match(await layer.locator('.ateerr').innerText(), /още не е дошъл/);
+  assert.ok(await layer.locator('.ateok').isDisabled(), 'no future time');
+  await tin.fill('07:40');
+  await page.waitForFunction(() => !document.querySelector('#layer .ateerr'));
+  assert.equal(await layer.locator('.ateok').isDisabled(), false);
+  await page.waitForTimeout(250);
+  await shot('mealpill-time');
+  await layer.locator('.ateok').click();
+  await page.locator('.add .phint').waitFor();
+  // a breakfast with creatine (chicken), so the row shows кр
+  await page.locator('#fq').fill('Пилешко филе');
+  await settle();
+  await page.locator('#results [data-act="pick"][data-id="chicken_breast"]').click();
+  await layer.locator('[data-act="done"]').click();
+  await settle();
+  await clearCel();
+  const today = /** @type {any} */ ((await rows('days')).find((x) => x.id === '2026-11-04'));
+  assert.deepEqual(
+    today.mealTimes?.breakfast,
+    { planned: ts('2026-11-04', '07:30'), actual: ts('2026-11-04', '07:40') },
+    'planned and actual time stored',
+  );
+  assert.ok(today.proteinAt >= ts('2026-11-04', '07:45'), 'proteinAt is still the save time');
+  await go('progress');
+  await page.waitForTimeout(1200);
+  assert.equal(await pill.isVisible(), false, 'no pill once the meal is marked');
+
+  // Прогрес › Графики: the per-day chart and the summary
+  await go('progress/trends');
+  const ch = page.locator('.ch-meals');
+  await ch.waitFor();
+  const st = await ch.locator('svg [data-s]').evaluateAll((n) => n.map((x) => x.getAttribute('data-s')));
+  assert.deepEqual(st, ['ontime', 'late', 'missed', 'ontime', 'late', 'ontime', 'late']);
+  const ctext = await ch.innerText();
+  assert.match(ctext, /Хранене навреме/);
+  assert.match(ctext, /навреме 3\/7/);
+  assert.match(ctext, /средно закъснение 20 мин/);
+  const lateTags = await ch.locator('svg .mclate').allTextContents();
+  assert.deepEqual(lateTags, ['+15 мин', '+35 мин', '+10 мин']);
+  await ch.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(200);
+  // the fixed nav and pill hidden for the card picture (they would cover its bottom)
+  await page.addStyleTag({ content: '#nav,#mealpill{display:none!important}' }).then(async (hs) => {
+    await ch.evaluate((n) => n.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(150);
+    if (SHOTS) await ch.screenshot({ path: `screenshots/${name === 'iphone' ? 'iphone-' : ''}mealchart.png` });
+    await hs.evaluate((e) => e.remove());
+  });
+
+  // the meal list: line 1 time + grams, line 2 the abbreviated nutrients; ⓘ → legend
+  await go('food');
+  await page.locator('.meal[data-m="breakfast"]').click();
+  const items = layer.locator('.mealitems');
+  await items.waitFor();
+  const line = (await items.locator('.nutrline').last().innerText()).trim();
+  assert.match(line, /^пр [\d,]+ · вх [\d,]+ · мз [\d,]+ · кр [\d,<]+ · фб [\d,–<]+ · сл [\d,–<]+$/, line);
+  assert.match(await items.locator('.itembtn').last().innerText(), /\d\d:\d\d · \d+ г/);
+  await page.waitForTimeout(250);
+  await shot('meal-nutrients');
+  await layer.locator('.nutrinfo').click();
+  const leg = layer.locator('.nutrlegend');
+  await leg.waitFor();
+  const lt = await leg.innerText();
+  for (const w of ['Протеин', 'Въглехидрати', 'Мазнини', 'Креатин', 'Фибри', 'Сол']) assert.match(lt, new RegExp(w));
+  await page.waitForTimeout(250);
+  await shot('meal-legend');
+  await closeAllSheets(page, layer, settle);
+  console.log(
+    '  ✔ 1.4.3 meal pill (other tabs, above the nav, shrinks/expands, sheet), late time entry (now, no future), Прогрес chart + summary, nutrient rows + legend',
   );
 }

@@ -33,6 +33,9 @@ export function matchPath(pattern, path) {
   return params;
 }
 
+/** 1.4.3: the view on screen (its `tab` and `hideNav`), e.g. for the meal pill. */
+export const currentView = () => cur.view;
+
 /** Current route path without the leading `#/`. */
 export const currentPath = () => location.hash.replace(/^#\/?/, '').split('?')[0] || 'home';
 

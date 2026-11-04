@@ -13,6 +13,14 @@
 /** @type {Release[]} */
 export const NOTES = [
   {
+    v: '1.4.3',
+    items: [
+      ['clock', 'whatsNew.pill143'],
+      ['chart', 'whatsNew.timing143'],
+      ['food', 'whatsNew.nutr143'],
+    ],
+  },
+  {
     v: '1.4.2',
     items: [
       ['bolt', 'whatsNew.creatine142'],

@@ -381,3 +381,23 @@
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+
+/* 1.4.3 meal item rows: line 2 = abbreviated nutrients, ⓘ legend */
+.mealitems .nutrline {
+  margin-top: 1px;
+  white-space: normal;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+.nutrinfo {
+  color: var(--muted);
+}
+.nutrlegend .nabbr {
+  display: inline-block;
+  min-width: 34px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--muted);
+  text-align: center;
+}

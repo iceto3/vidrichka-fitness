@@ -10,6 +10,7 @@ import { addDays, dayKey, parseDay } from '../../core/dates.js';
 import { dailySettings } from '../../core/settings.js';
 import { award } from '../motivation/api.js';
 import { eveningKey, fillBedtime, isEvening, isMorning, nights, proteinOnTime, sleepStreak } from './logic.js';
+import { TIMED_MEAL, actualAt, plannedAt } from './mealtime.js';
 
 export {
   BREAKFAST_LOGGER,
@@ -62,7 +63,19 @@ export function proteinYes(now = Date.now()) {
   const id = dayKey(now),
     rec = day(id);
   if (rec.proteinAt) return false;
-  const next = patchDay(id, { proteinAt: now, proteinStart: rec.proteinStart ?? now, proteinCelebrated: true });
+  const start = rec.proteinStart ?? now;
+  // 1.4.3: planned (end of the 30-min window) and actual time (typed for a late meal, else now)
+  const mealTimes = {
+    ...rec.mealTimes,
+    [TIMED_MEAL]: { planned: plannedAt({ proteinStart: start }), actual: actualAt(rec, now) },
+  };
+  const next = patchDay(id, {
+    proteinAt: now,
+    proteinStart: start,
+    proteinCelebrated: true,
+    mealTimes,
+    proteinAteAt: null,
+  });
   emit('protein:done', { onTime: proteinOnTime(next) });
   emit('daily:changed');
   return true;
@@ -79,6 +92,19 @@ export function proteinLogged(row, now = Date.now()) {
   const rec = day(dayKey(now));
   if (!rec.proteinStart || rec.proteinAt || rec.proteinSkip) return false;
   return proteinYes(now);
+}
+
+/**
+ * 1.4.3: the time she says she ate a late breakfast („Изядох в 9:15“). Kept until the
+ * breakfast is saved in the logger, which then records it as the actual time (see proteinYes).
+ * @param {number} at Checked with `checkAteAt` (not in the future). @param {number} [now]
+ */
+export function setAteAt(at, now = Date.now()) {
+  const id = dayKey(now),
+    rec = day(id);
+  if (!rec.proteinStart || rec.proteinAt || rec.proteinSkip || !(at > 0) || at > now) return false;
+  patchDay(id, { proteinAteAt: at });
+  return true;
 }
 
 /**

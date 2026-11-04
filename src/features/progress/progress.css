@@ -249,3 +249,22 @@ button.cd:not(.on):active {
 .insight:not(.soon) {
   background: linear-gradient(135deg, rgba(20, 163, 168, 0.12), rgba(20, 163, 168, 0.02)), var(--card);
 }
+
+/* 1.4.3 meal timing chart (Progress › Графики) */
+.mealchart .mclate {
+  font-size: 9.5px;
+  font-weight: 800;
+  fill: #c2611c;
+}
+.dark .mealchart .mclate {
+  fill: #f6a35e;
+}
+.mealchart .mcpend {
+  fill: none;
+  stroke: var(--muted);
+  stroke-opacity: 0.5;
+  stroke-dasharray: 3 3;
+}
+.mclegend .lg {
+  color: var(--muted);
+}

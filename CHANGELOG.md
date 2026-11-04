@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.3] – 2026-11-04
+
+### Added
+
+- **Meal-reminder pill:** while the breakfast countdown runs (the brown Начало banner), a small pill in the banner's colours floats just above the bottom nav on every tab except Начало. It shows the meal and the same countdown (`pendingMeal` reuses `proteinBar`, no second timer logic) and turns dark red when the time is up. Tapping it opens a bottom sheet with **Изядох** / **Пропуснах**, which run the banner's own actions (`daily/views/mealsheet.js`, shared by both). Scrolling down shrinks it to a clock circle; scrolling up (or back at the top) expands it. It is hidden when nothing is pending, once the meal is answered, during a workout, on pages without the nav and on the breakfast logger itself. It sits left (the „Отмени“ pill is right), respects the safe-area insets, and while it shows the page gets extra room at the bottom so it never covers content or the nav.
+- **Meal timing:** **Изядох** after the 30-minute window (banner or pill) first asks **Кога яде?** with a time picker (default now; future times and times before the countdown are refused inline). Saving the breakfast stores `mealTimes.breakfast = {planned, actual}` on the day (planned = end of the window). Backward compatible: no migration, older days are read from `proteinStart` / `proteinAt` / `proteinSkip`; the streak's on-time rule uses the entered time.
+- **Прогрес › Графики › Хранене навреме:** a per-day chart of the last 7 days drawn as plain SVG (green on time, orange late with „+N мин“, grey missed, dashed while today's is still pending) with a summary such as „навреме 5/7 · средно закъснение 12 мин“ (average over the late meals).
+- **Meal item rows** (Закуска and the other meal lists): line 1 time and grams, line 2 „пр · вх · мз · кр · фб · сл“ (protein, carbs, fat, creatine only when the food has some, fiber, salt; grams, „–“ when unknown). A small ⓘ next to the meal title opens the legend with the full names.
+- What's new entry for 1.4.3. Unit tests in `tests/unit/v143.test.js`; e2e for the pill, its sheet, the time entry, the chart and the nutrient rows.
+
 ## [1.4.2] – 2026-10-28
 
 ### Added
