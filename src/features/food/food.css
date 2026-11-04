@@ -401,3 +401,16 @@
   color: var(--muted);
   text-align: center;
 }
+
+/* 1.4.3 (tester): „Готово с храненето“ gets its own full-width row under the title */
+.add .topbar {
+  flex-wrap: wrap;
+}
+.add .topbar > .center {
+  flex: 1;
+  min-width: 0;
+}
+.add .topbar .finishmeal {
+  flex-basis: 100%;
+  margin-top: 10px;
+}

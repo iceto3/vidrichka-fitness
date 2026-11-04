@@ -124,6 +124,20 @@ export const empty = (icon, text) =>
 export const timeInput = (o) =>
   html`<span class="input tbox ${o.cls ?? ''}${o.disabled ? ' off' : ''}"><span class="tval num" aria-hidden="true">${fmtHM(o.value)}</span><input class="tnative" type="time" data-change="${o.act}" ${o.k ? raw(`data-k="${o.k}"`) : ''} value="${o.value}" aria-label="${o.label}" ${o.disabled ? raw('disabled') : ''}></span>`;
 
+/**
+ * 1.4.3 (tester round): a typed 24-hour time with quick −/+ steps (no 12-hour AM/PM wheel,
+ * whatever the phone's locale). The text field is `inputmode="numeric"`; `data-change` and
+ * `data-input` both go to `o.act` (the view commits a complete time while typing, see
+ * `hmComplete`, and anything else on change, see `parseHM`). The step buttons call `o.step`
+ * with `data-f` = `o.f` and `data-d` = ±minutes.
+ * @param {{value: string, act: string, step: string, f?: string, label: string, mins?: number, bad?: boolean, cls?: string}} o
+ */
+export const time24 = (o) => {
+  const d = o.mins ?? 15,
+    f = o.f ? raw(` data-f="${o.f}"`) : '';
+  return html`<span class="t24 ${o.cls ?? ''}${o.bad ? ' bad' : ''}"><button type="button" class="t24b" data-act="${o.step}"${f} data-d="-${d}" aria-label="${t('time24.minus', { n: d })}">${ic('minus', 18, 2.6)}</button><input class="t24i num" type="text" inputmode="numeric" maxlength="5" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="${t('time24.ph')}" value="${o.value}" data-change="${o.act}" data-input="${o.act}" aria-label="${o.label}" aria-invalid="${o.bad ? 'true' : 'false'}"><button type="button" class="t24b" data-act="${o.step}"${f} data-d="${d}" aria-label="${t('time24.plus', { n: d })}">${ic('plus', 18, 2.6)}</button></span>`;
+};
+
 // Desktop browsers only open the picker from their own icon: open it on any tap.
 if (typeof document !== 'undefined')
   document.addEventListener('click', (e) => {

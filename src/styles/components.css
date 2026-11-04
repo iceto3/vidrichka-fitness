@@ -688,3 +688,46 @@ html[lang='bg'] .nav .t {
     animation-duration: 2.4s;
   }
 }
+
+/* 1.4.3 (tester round): typed 24-hour time with −/+ steps (ui/components.js › time24) */
+.t24 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.t24 .t24i {
+  width: 5.6em;
+  height: 48px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+  font-size: 19px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.02em;
+  padding: 0 6px;
+}
+.t24 .t24i:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.t24.bad .t24i {
+  border-color: var(--red);
+}
+.t24 .t24b {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--soft);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.t24 .t24b:active {
+  background: var(--accent-soft);
+}

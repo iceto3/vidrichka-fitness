@@ -189,8 +189,10 @@ ${showRecap ? html`<button class="card mt12 row gap12 recapcard" data-act="recap
 ${backupDue() ? html`<button class="card mt12 row gap12" data-go="profile"><span class="sq acc">${ic('cloud', 20, 2.2)}</span><span class="f1 left"><span class="b block">${t('home.backupTitle')}</span><span class="muted xs b">${t('home.backupBody')}</span></span>${ic('right', 18, 2.2, 'var(--muted)')}</button>` : ''}
 ${
   canInstall() && !kv('installDismissed', false)
-    ? html`<div class="card mt12 row gap12"><span class="sq acc">${ic('download', 20, 2.2)}</span><span class="f1"><span class="b block">${t('install.cardTitle')}</span><span class="muted xs b">${t('install.cardBody')}</span></span>
-<button class="btn sm" data-act="install">${t('install.cta')}</button><button class="iconbtn flat sm" data-act="noInstall" aria-label="${t('common.close')}">${ic('close', 16)}</button></div>`
+    ? // 1.4.3 (tester): text gets the full width, the button sits below it (no squashed column at 360–390 px)
+      html`<div class="card mt12 installcard"><div class="row gap12"><span class="sq acc">${ic('download', 20, 2.2)}</span><span class="f1"><span class="b block">${t('install.cardTitle')}</span><span class="muted xs b">${t('install.cardBody')}</span></span>
+<button class="iconbtn flat sm" data-act="noInstall" aria-label="${t('common.close')}">${ic('close', 16)}</button></div>
+<button class="btn sm w100 mt10" data-act="install">${t('install.cta')}</button></div>`
     : ''
 }
 </div>`;

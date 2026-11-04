@@ -163,7 +163,7 @@ ${!loc.length && q && offView(off, q) !== 'none' ? html`<button class="btn sec w
       return html`<div class="content add">
 <header class="row between topbar"><button class="iconbtn" data-act="finish" aria-label="${t('common.back')}">${ic('back', 22)}</button>
 <div class="center"><h1 class="h2">${t('food.add')}</h1><div class="muted xs b">${t('food.toMeal', { meal: t(`meal.${meal}`), day })}</div></div>
-${basket.length ? html`<button class="btn sm" data-act="finish">${t('food.finishMeal')}</button>` : html`<span class="iconbtn ghost" aria-hidden="true"></span>`}</header>
+<span class="iconbtn ghost" aria-hidden="true"></span>${basket.length ? html`<button class="btn sm finishmeal" data-act="finish">${t('food.finishMeal')}</button>` : ''}</header>
 <label class="search mt14">${ic('search', 20, 2.2)}<input id="fq" class="bare f1" type="search" data-input="q" value="${q}" placeholder="${t('food.searchPh')}" autocomplete="off" enterkeyhint="search" aria-label="${t('food.search')}">
 ${voiceReady() ? html`<button class="iconbtn flat sm" data-act="voice" aria-label="${t('voice.say')}">${ic('mic', 20, 2.2)}</button>` : ''}<button class="iconbtn flat sm acc-bg" data-act="scan" aria-label="${t('food.scan')}">${ic('scan', 20, 2.2)}</button></label>
 ${

@@ -89,3 +89,39 @@ function startOfDay(d) {
   x.setHours(0, 0, 0, 0);
   return x;
 }
+
+/**
+ * 1.4.3 (tester round): a typed 24-hour time → "HH:MM", or null. Accepts „7“, „730“, „0730“,
+ * „7:30“, „07.30“, „7,30“ and „7 30“; hours 0–23, minutes 0–59.
+ * @param {string} s @returns {string|null}
+ */
+export function parseHM(s) {
+  const v = String(s ?? '').trim();
+  const r = /^(\d{1,2})\s*[:.,h ]\s*(\d{2})$/.exec(v);
+  /** @type {string[]|null} */
+  let m = r ? [...r] : null;
+  if (!m && /^\d{3,4}$/.test(v)) m = [v, v.slice(0, -2), v.slice(-2)];
+  if (!m && /^\d{1,2}$/.test(v)) m = [v, v, '00'];
+  if (!m) return null;
+  const h = Number(m[1]),
+    min = Number(m[2]);
+  return h <= 23 && min <= 59 ? `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}` : null;
+}
+
+/** A typed time is complete (HH:MM or 4 digits), so it can be used while still typing. @param {string} s */
+export const hmComplete = (s) => /^\s*(\d{2}\s*[:.,]\s*\d{2}|\d{4})\s*$/.test(String(s ?? ''));
+
+/**
+ * "HH:MM" moved by `d` minutes, around the clock (23:50 + 15 → 00:00, 00:00 − 15 → 23:45). When stepping, the
+ * time first snaps to the step grid (07:07 + 15 → 07:15, 07:07 − 15 → 07:00).
+ * @param {string} hm @param {number} d @returns {string}
+ */
+export function stepHM(hm, d) {
+  const [h, m] = (parseHM(hm) ?? '00:00').split(':').map(Number);
+  const cur = h * 60 + m,
+    step = Math.abs(d) || 1,
+    off = cur % step;
+  const next = off ? (d > 0 ? cur - off + step : cur - off) : cur + d;
+  const t = ((next % 1440) + 1440) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+}

@@ -9,10 +9,10 @@
 import { html } from '../../../ui/dom.js';
 import { t } from '../../../core/i18n.js';
 import { emit } from '../../../core/bus.js';
-import { hhmm } from '../../../core/dates.js';
+import { hhmm, hmComplete, parseHM, stepHM } from '../../../core/dates.js';
 import { dailySettings } from '../../../core/settings.js';
 import { ic } from '../../../ui/icons.js';
-import { timeInput } from '../../../ui/components.js';
+import { time24 } from '../../../ui/components.js';
 import { closeSheet, openSheet } from '../../../ui/sheet.js';
 import { closeNotifications } from '../notify.js';
 import { BREAKFAST_LOGGER, day, proteinSkip, setAteAt } from '../api.js';
@@ -49,7 +49,8 @@ export const countdownParts = (mode) =>
  * @param {'ask'|'time'} [step]
  */
 export function openMealSheet(step = 'ask') {
-  const st = { step, hm: hhmm(Date.now()), /** @type {string} */ err: '' };
+  /** @type {{step: string, hm: string, err: string, typed?: string}} */
+  const st = { step, hm: hhmm(Date.now()), err: '' };
   /** @type {number|undefined} */
   let timer;
   const validate = () => {
@@ -64,7 +65,7 @@ export function openMealSheet(step = 'ask') {
       if (st.step === 'time')
         return html`<div class="mealsheet mtime"><h2 class="h2">${t('mealTime.title', { meal: name })}</h2>
 <p class="small muted b mt6 lh">${t('mealTime.body')}</p>
-<div class="field mt12"><span>${t('mealTime.label')}</span>${timeInput({ value: st.hm, act: 'atehm', label: t('mealTime.label'), cls: 'wide' })}</div>
+<div class="field mt12"><span>${t('mealTime.label')}</span>${time24({ value: st.typed ?? st.hm, act: 'atehm', step: 'atestep', mins: 5, label: t('mealTime.label'), bad: !!st.err })}</div>
 ${st.err ? html`<p class="small b danger-t mt6 ateerr" role="alert">${t(st.err)}</p>` : html`<p class="xs b muted mt6">${t('mealTime.hint')}</p>`}
 <div class="row gap8 mt16"><button class="btn sec f1" data-act="cancel">${t('common.cancel')}</button><button class="btn f1 ateok" data-act="ateok" ${st.err ? 'disabled' : ''}>${ic('check', 18, 3)}${t('mealTime.save')}</button></div></div>`;
       const [pre, post] = countdownParts(m?.mode ?? 'running');
@@ -89,11 +90,28 @@ ${st.err ? html`<p class="small b danger-t mt6 ateerr" role="alert">${t(st.err)}
         closeSheet();
         return false;
       },
-      atehm: (el) => {
-        st.hm = /** @type {HTMLInputElement} */ (el).value || st.hm;
+      // 1.4.3 (tester round): typed 24-hour time (complete while typing, else on change) + ±5 min
+      atehm: (el, ev) => {
+        const txt = /** @type {HTMLInputElement} */ (el).value,
+          v = parseHM(txt);
+        if (ev?.type === 'input') {
+          if (!hmComplete(txt) || !v) return false;
+          st.hm = v;
+          st.typed = undefined;
+          validate();
+          emit('ui:refresh');
+          return false;
+        }
+        if (v) ((st.hm = v), (st.typed = undefined), validate());
+        else ((st.typed = txt), (st.err = 'time24.bad'));
+      },
+      atestep: (el) => {
+        st.hm = stepHM(st.hm, Number(el.dataset.d));
+        st.typed = undefined;
         validate();
       },
       ateok: () => {
+        if (st.typed != null) return; // not a time yet (the button is disabled)
         const r = validate();
         if (!r.ok) return;
         setAteAt(r.at);

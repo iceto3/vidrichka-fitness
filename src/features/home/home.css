@@ -210,3 +210,8 @@
   color: inherit;
   cursor: pointer;
 }
+
+/* 1.4.3 (tester): install card – text full width, button below */
+.installcard .f1 {
+  min-width: 0;
+}

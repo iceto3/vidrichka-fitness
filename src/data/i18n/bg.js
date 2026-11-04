@@ -25,6 +25,8 @@ export default {
   'common.error': 'Нещо се обърка – опитай отново.',
   'common.noStorage': 'Хранилището не е достъпно (частен режим?) – данните няма да се запазят.',
   // nav
+  'a11y.skip': 'Към съдържанието',
+  'a11y.nav': 'Основно меню',
   'nav.home': 'Начало',
   'nav.workouts': 'Тренировки',
   'nav.food': 'Храна',
@@ -1268,6 +1270,11 @@ export default {
   'nutr.cr': 'кр',
   'nutr.fib': 'фб',
   'nutr.salt': 'сл',
+  // 1.4.3 tester round: typed 24-hour time field
+  'time24.ph': 'чч:мм',
+  'time24.minus': '{n} мин по-рано',
+  'time24.plus': '{n} мин по-късно',
+  'time24.bad': 'Въведи час като 07:30 (от 00:00 до 23:59).',
   'nutr.legendTitle': 'Съкращения',
   'nutr.legendOpen': 'Какво значат съкращенията',
   'nutr.legendNote': 'Стойностите са в грамове за изядената порция. „–“ значи, че храната няма такава стойност.',

@@ -138,3 +138,48 @@ test('user-addressed texts follow the profile gender; Vidrichka herself stays fe
   setGender('f');
   await setLang('en');
 });
+
+test('typed 24-hour time: forms accepted, out of range refused, ±steps snap and wrap', async () => {
+  const { parseHM, hmComplete, stepHM } = await import('../../src/core/dates.js');
+  for (const [s, v] of [
+    ['7', '07:00'],
+    ['730', '07:30'],
+    ['0730', '07:30'],
+    ['7:30', '07:30'],
+    ['07.30', '07:30'],
+    ['7,30', '07:30'],
+    [' 23:59 ', '23:59'],
+    ['00:00', '00:00'],
+  ])
+    assert.equal(parseHM(s), v, s);
+  for (const s of ['24:00', '7:60', '12:5', 'ab', '', '7:30 PM', '12345']) assert.equal(parseHM(s), null, s);
+  assert.equal(hmComplete('07:3'), false);
+  assert.equal(hmComplete('0730'), true);
+  assert.equal(hmComplete('07:30'), true);
+  assert.equal(stepHM('07:00', 15), '07:15');
+  assert.equal(stepHM('07:07', 15), '07:15');
+  assert.equal(stepHM('07:07', -15), '07:00');
+  assert.equal(stepHM('23:45', 15), '00:00');
+  assert.equal(stepHM('00:00', -15), '23:45');
+  assert.equal(stepHM('07:40', -5), '07:35');
+});
+
+test('accessibility labels and the time field are translated (no English in BG)', async () => {
+  const bg = (await import('../../src/data/i18n/bg.js')).default,
+    en = (await import('../../src/data/i18n/en.js')).default;
+  assert.equal(bg['a11y.skip'], 'Към съдържанието');
+  assert.equal(bg['a11y.nav'], 'Основно меню');
+  assert.equal(en['a11y.skip'], 'Skip to content');
+  for (const k of [
+    'a11y.skip',
+    'a11y.nav',
+    'time24.ph',
+    'time24.minus',
+    'time24.plus',
+    'time24.bad',
+    'home.goodnightTitle',
+  ]) {
+    assert.ok(en[k], k);
+    assert.doesNotMatch(String(bg[k]).replace(/\{\w+\}/g, ''), /[A-Za-z]/, k);
+  }
+});

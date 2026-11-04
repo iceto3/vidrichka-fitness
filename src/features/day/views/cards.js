@@ -11,11 +11,11 @@
 import { html, raw } from '../../../ui/dom.js';
 import { L, fmtDate, fmtDuration, fmtNum, t } from '../../../core/i18n.js';
 import { kv, setKv } from '../../../core/store.js';
-import { dayKey, durationMin, parseDay } from '../../../core/dates.js';
+import { dayKey, durationMin, hmComplete, parseDay, parseHM, stepHM } from '../../../core/dates.js';
 import { settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
-import { bar, stepper, timeInput } from '../../../ui/components.js';
+import { bar, stepper, time24 } from '../../../ui/components.js';
 import { closeSheet, confirmDialog, openSheet, snack, toast } from '../../../ui/sheet.js';
 import { FACES, scale } from '../../daily/views/checkin.js';
 import { MEALS, MEAL_STYLE, totals } from '../../food/logic.js';
@@ -134,6 +134,37 @@ export function openSleepSheet(date) {
   const cur = sleepEditorTimes(date);
   /** Error of the last save attempt that the live check does not cover (e.g. storage). */
   let err = '';
+  /** 1.4.3: text typed into a time field that is not a time yet (shown as typed, with a hint). */
+  /** @type {{bed?: string, wake?: string}} */
+  const bad = {};
+  /**
+   * A typed time: a complete one is used while typing, anything else on change (blur /
+   * Enter). Returns false when nothing changed (no re-render while typing).
+   * @param {'bed'|'wake'} f @param {HTMLElement} el @param {Event} [ev]
+   */
+  const typed = (f, el, ev) => {
+    const txt = /** @type {HTMLInputElement} */ (el).value,
+      v = parseHM(txt);
+    if (ev?.type === 'input') {
+      if (!hmComplete(txt) || !v) return false;
+      if (v !== cur[f] || bad[f]) setTime(f, v);
+      emit('ui:refresh');
+      return false;
+    }
+    if (!v) {
+      if (txt.trim()) bad[f] = txt;
+      else delete bad[f];
+      return;
+    }
+    setTime(f, v);
+  };
+  /** @param {'bed'|'wake'} f @param {string} v */
+  const setTime = (f, v) => {
+    delete bad[f];
+    cur[f] = v;
+    if (f === 'bed') cur.shift = 0; // a new time → the date rule applies again
+    save();
+  };
   /** Save when the values are valid; invalid ones are only shown (Готово stays off). */
   const save = () => {
     err = '';
@@ -152,13 +183,13 @@ export function openSleepSheet(date) {
     render: () => {
       const s = readDay(date).sleep,
         n = checkNight(date, cur),
-        msg = n.err ? t(`day.err.${n.err}`, { max: MAX_SLEEP_H }) : err;
+        msg = bad.bed || bad.wake ? t('time24.bad') : n.err ? t(`day.err.${n.err}`, { max: MAX_SLEEP_H }) : err;
       return html`<h2 class="h2">${t(isToday(date) ? 'sleep.cardTitle' : 'day.sleep')}</h2>
 <div class="sleeptimes mt12">
-<div class="stime sbed"><span class="b">${t('sleep.bedtime')}</span>${timeInput({ value: cur.bed, act: 'sbed', label: t('sleep.bedtime'), cls: 'wide' })}
+<div class="stime sbed"><span class="b">${t('sleep.bedtime')}</span>${time24({ value: bad.bed ?? cur.bed, act: 'sbed', step: 'sstep', f: 'bed', label: t('sleep.bedtime'), bad: !!bad.bed })}
 <span class="muted xs b sdate" data-day="${n.bedDay}">${dayLabel(n.bed)}</span>
 <span class="row gap8 sshift"><button type="button" class="sshiftb" data-act="sshift" data-d="-1" ${cur.shift <= -1 ? raw('disabled') : ''}>${t('sleep.dayBack')}</button><button type="button" class="sshiftb" data-act="sshift" data-d="1" ${cur.shift >= 1 ? raw('disabled') : ''}>${t('sleep.dayForward')}</button></span></div>
-<div class="stime swake"><span class="b">${t('sleep.wakeTime')}</span>${timeInput({ value: cur.wake, act: 'swake', label: t('sleep.wakeTime'), cls: 'wide' })}
+<div class="stime swake"><span class="b">${t('sleep.wakeTime')}</span>${time24({ value: bad.wake ?? cur.wake, act: 'swake', step: 'sstep', f: 'wake', label: t('sleep.wakeTime'), bad: !!bad.wake })}
 <span class="muted xs b sdate" data-day="${n.wakeDay}">${dayLabel(n.wake)}</span></div></div>
 ${n.moved ? html`<p class="small b mt8 sleepnote" role="status">${ic('info', 14, 2.4)}${t('sleep.datesNote', { bed: dayLabel(n.bed), wake: dayLabel(n.wake) })}</p>` : ''}
 <div class="row between mt12"><span class="b">${t('sleep.hours')}</span><span class="xb num big19 sleepdur">${fmtDuration(n.hours)}</span></div>
@@ -168,18 +199,12 @@ ${s.hours == null && !msg ? html`<p class="muted xs b mt4">${t('sleep.timesHint'
 <div class="row gap10 mt16">${s.manual ? html`<button class="btn sec f1" data-act="clear">${ic('trash', 16, 2.2)}${t('sleep.delete')}</button>` : ''}<button class="btn f1 sleepdone" data-act="done" ${msg ? raw('disabled aria-disabled="true"') : ''}>${t('common.done')}</button></div>`;
     },
     actions: {
-      sbed: (el) => {
-        const v = /** @type {HTMLInputElement} */ (el).value;
-        if (!/^\d{2}:\d{2}$/.test(v)) return false;
-        cur.bed = v;
-        cur.shift = 0; // a new time → the date rule applies again
-        save();
-      },
-      swake: (el) => {
-        const v = /** @type {HTMLInputElement} */ (el).value;
-        if (!/^\d{2}:\d{2}$/.test(v)) return false;
-        cur.wake = v;
-        save();
+      sbed: (el, ev) => typed('bed', el, ev),
+      swake: (el, ev) => typed('wake', el, ev),
+      // 1.4.3: quick ±15 min steps next to the typed time
+      sstep: (el) => {
+        const f = el.dataset.f === 'bed' ? 'bed' : 'wake';
+        setTime(f, stepHM(cur[f], Number(el.dataset.d)));
       },
       sshift: (el) => {
         cur.shift = Math.max(-1, Math.min(1, cur.shift + Number(el.dataset.d)));
@@ -187,7 +212,7 @@ ${s.hours == null && !msg ? html`<p class="muted xs b mt4">${t('sleep.timesHint'
       },
       rate: (el) => void safely(() => setDaySleep(date, { q: Number(el.dataset.v) })),
       done: () => {
-        if (checkNight(date, cur).err) return; // the button is disabled; nothing to save
+        if (bad.bed || bad.wake || checkNight(date, cur).err) return; // the button is disabled; nothing to save
         // Closing with the offered times saves them (they were shown as the values).
         if (readDay(date).sleep.hours == null) save();
         if (err) return;
