@@ -2717,7 +2717,8 @@ async function v143r2(page, { go, settle, shot, layer, rows, clearCel }) {
   await page.evaluate(() => document.querySelectorAll('.toast, .undopill').forEach((e) => e.remove()));
   const pill = page.locator('#mealpill');
   await pill.waitFor({ state: 'visible' });
-  assert.match(await pill.innerText(), /Закуска/);
+  await page.evaluate(() => scrollTo(0, 0)); // a scrolled page shows the mini pill (no text)
+  await page.waitForFunction(() => /Закуска/.test(document.getElementById('mealpill')?.innerText ?? ''));
   await go('home');
   await page.locator('.pbar.running').waitFor();
   assert.equal(await page.locator('.quest[data-go="morning"] .qbox.done').count(), 0, 'quest un-ticked');
