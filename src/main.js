@@ -3,7 +3,7 @@
  * the reward engine, reminders and the service worker (with an update prompt).
  * @module main
  */
-import { kv, load, setKv } from './core/store.js';
+import { fromOtherTab, kv, load, setKv, startTabSync } from './core/store.js';
 import { WHATS_NEW, buildId } from './core/version.js';
 import { newSince } from './features/whatsnew/notes.js';
 import { IS_BETA } from './core/channel.js';
@@ -217,6 +217,11 @@ function betaMarker() {
 async function start() {
   betaMarker();
   const { persistent } = await load();
+  // 1.4.3 (tester round 3): other open tabs see each change at once (no stale copies)
+  startTabSync();
+  on('store:kv', (/** @type {{id: string}} */ row) => {
+    if (fromOtherTab() && row?.id === 'settings') emit('settings:changed', { lang: 1, theme: 1, gender: 1 });
+  });
   await applySettings();
   watchTheme();
   seedPlans();

@@ -10,7 +10,7 @@ import { register } from '../../core/registry.js';
 import { emit, on } from '../../core/bus.js';
 import { currentPath } from '../../core/router.js';
 import { dailySettings } from '../../core/settings.js';
-import { all } from '../../core/store.js';
+import { all, fromOtherTab } from '../../core/store.js';
 import { dayKey } from '../../core/dates.js';
 import { proteinOnTime } from './logic.js';
 
@@ -88,6 +88,7 @@ export async function startDaily() {
   on('store:food', (/** @type {any} */ row) => {
     const had = bf.has(row?.id);
     bf = breakfastIds();
+    if (fromOtherTab()) return; // round 3: the tab that saved it did this already
     if (had && !bf.has(row.id)) api.proteinUnlogged(row.id);
     else if (!api.proteinLogged(row) && !had) api.ateTimeOnRow(row);
   });
