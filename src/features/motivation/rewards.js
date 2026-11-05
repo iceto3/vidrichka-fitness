@@ -6,7 +6,7 @@
 import { on, emit } from '../../core/bus.js';
 import { kv, setKv } from '../../core/store.js';
 import { registry } from '../../core/registry.js';
-import { award, quests, stats } from './api.js';
+import { award, quests, setAward, stats } from './api.js';
 import { XP } from './xp.js';
 
 let timer = 0,
@@ -36,6 +36,12 @@ export function syncRewards() {
   const s = stats();
   const qs = quests();
   let changed = qs.filter((q) => q.isDone && award(`quest:${s.today}:${q.id}`, q.xp)).length > 0;
+  // 1.4.3 (tester round 3): a quest of today that is no longer done (its breakfast, water,
+  // workout… was deleted) gives its XP back; Undo makes it done again and the line above
+  // grants it once more. Hidden quests and earlier days are never touched.
+  const ledger = kv('xp', {});
+  for (const q of qs)
+    if (!q.isDone && ledger[`quest:${s.today}:${q.id}`]) (setAward(`quest:${s.today}:${q.id}`, 0), (changed = true));
   if (s.monthWorkouts >= s.monthTarget && award(`challenge:${s.month}`, XP.challenge))
     (emit('challenge:done', s.month), (changed = true));
   const earned = kv('badges', {});

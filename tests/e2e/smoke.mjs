@@ -2689,6 +2689,8 @@ async function v143r2(page, { go, settle, shot, layer, rows, clearCel }) {
   d = await day5();
   assert.ok(d.proteinAt, 'protein breakfast recorded');
   assert.ok((await xp())['quest:2026-11-05:protein'], 'protein quest XP');
+  await page.waitForTimeout(300);
+  assert.ok((await xp())['quest:2026-11-05:breakfast'], 'breakfast quest XP');
   await go('food');
   const openBreakfast = async () => {
     await page.locator('.meal[data-m="breakfast"]').click();
@@ -2704,11 +2706,14 @@ async function v143r2(page, { go, settle, shot, layer, rows, clearCel }) {
   assert.equal(d.proteinAt, null, 'proteinAt cleared');
   assert.equal(d.mealTimes?.breakfast, undefined, 'meal time cleared');
   assert.equal((await xp())['quest:2026-11-05:protein'], undefined, 'quest XP taken back');
-  await page.locator('.undopill').click();
+  // round 3: „Запиши закуската“ is un-ticked as well, so its XP goes too
+  assert.equal((await xp())['quest:2026-11-05:breakfast'], undefined, 'breakfast quest XP taken back');
+  await page.locator('.undopill').tap();
   await settle();
   d = await day5();
   assert.ok(d.proteinAt, 'Undo restores proteinAt');
   assert.ok((await xp())['quest:2026-11-05:protein'], 'and the quest XP');
+  assert.ok((await xp())['quest:2026-11-05:breakfast'], 'and the breakfast quest XP');
   await closeAllSheets(page, layer, settle);
   await openBreakfast();
   await layer.locator('.lrow', { hasText: 'Пилешко филе' }).first().locator('[data-act="del"]').click();
