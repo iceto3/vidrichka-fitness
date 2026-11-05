@@ -13,7 +13,7 @@ import { hhmm, hmComplete, parseHM, stepHM } from '../../../core/dates.js';
 import { dailySettings } from '../../../core/settings.js';
 import { ic } from '../../../ui/icons.js';
 import { time24 } from '../../../ui/components.js';
-import { closeSheet, openSheet } from '../../../ui/sheet.js';
+import { closeSheet, openSheet, refreshSheet } from '../../../ui/sheet.js';
 import { closeNotifications } from '../notify.js';
 import { BREAKFAST_LOGGER, day, proteinSkip, setAteAt } from '../api.js';
 import { checkAteAt, pendingMeal } from '../mealtime.js';
@@ -99,16 +99,24 @@ ${st.err ? html`<p class="small b danger-t mt6 ateerr" role="alert">${t(st.err)}
           st.hm = v;
           st.typed = undefined;
           validate();
-          emit('ui:refresh');
+          refreshSheet(); // round 2: only the sheet, the field keeps its focus
           return false;
         }
-        if (v) ((st.hm = v), (st.typed = undefined), validate());
-        else ((st.typed = txt), (st.err = 'time24.bad'));
+        if (v) {
+          st.hm = v;
+          st.typed = undefined;
+          validate();
+          /** @type {HTMLInputElement} */ (el).value = v;
+        } else ((st.typed = txt), (st.err = 'time24.bad'));
+        refreshSheet();
+        return false;
       },
       atestep: (el) => {
         st.hm = stepHM(st.hm, Number(el.dataset.d));
         st.typed = undefined;
         validate();
+        refreshSheet();
+        return false;
       },
       ateok: () => {
         if (st.typed != null) return; // not a time yet (the button is disabled)

@@ -156,11 +156,15 @@ test('typed 24-hour time: forms accepted, out of range refused, ±steps snap and
   assert.equal(hmComplete('07:3'), false);
   assert.equal(hmComplete('0730'), true);
   assert.equal(hmComplete('07:30'), true);
-  assert.equal(stepHM('07:00', 15), '07:15');
-  assert.equal(stepHM('07:07', 15), '07:15');
-  assert.equal(stepHM('07:07', -15), '07:00');
-  assert.equal(stepHM('23:45', 15), '00:00');
-  assert.equal(stepHM('00:00', -15), '23:45');
+  // round 2: exactly the step, no snapping; around midnight
+  assert.equal(stepHM('06:40', 5), '06:45');
+  assert.equal(stepHM('06:45', -5), '06:40');
+  assert.equal(stepHM('07:07', 5), '07:12');
+  assert.equal(stepHM('07:07', -5), '07:02');
+  assert.equal(stepHM('23:58', 5), '00:03');
+  assert.equal(stepHM('00:02', -5), '23:57');
+  assert.equal(stepHM('00:00', -5), '23:55');
+  assert.equal(stepHM('23:55', 5), '00:00');
   assert.equal(stepHM('07:40', -5), '07:35');
 });
 

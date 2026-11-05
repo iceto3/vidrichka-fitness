@@ -6,9 +6,9 @@
  */
 import { all, get, put } from '../../core/store.js';
 import { emit } from '../../core/bus.js';
-import { addDays, dayKey, parseDay } from '../../core/dates.js';
+import { addDays, dayKey, hhmm, parseDay } from '../../core/dates.js';
 import { dailySettings } from '../../core/settings.js';
-import { award } from '../motivation/api.js';
+import { award, setAward } from '../motivation/api.js';
 import { eveningKey, fillBedtime, isEvening, isMorning, nights, proteinOnTime, sleepStreak } from './logic.js';
 import { TIMED_MEAL, actualAt, plannedAt } from './mealtime.js';
 
@@ -114,10 +114,77 @@ export function proteinYes(now = Date.now()) {
  * @returns {boolean} true if it recorded the protein breakfast.
  */
 export function proteinLogged(row, now = Date.now()) {
-  if (!row || row.removed || row.type === 'water' || row.meal !== 'breakfast' || row.date !== dayKey(now)) return false;
-  const rec = day(dayKey(now));
+  if (!row || row.removed || row.type === 'water' || row.meal !== TIMED_MEAL || row.date !== dayKey(now)) return false;
+  const id = dayKey(now),
+    rec = day(id);
+  // 1.4.3 (round 2): Undo of the deleted protein breakfast puts back exactly what it had recorded
+  const u = rec.proteinUndo;
+  if (u && u.row === row.id && !rec.proteinAt && !rec.proteinSkip) {
+    patchDay(id, {
+      proteinAt: u.proteinAt,
+      proteinCelebrated: u.proteinCelebrated,
+      proteinStart: rec.proteinStart ?? u.proteinStart,
+      mealTimes: { ...rec.mealTimes, ...(u.mealTime ? { [TIMED_MEAL]: u.mealTime } : {}) },
+      proteinUndo: null,
+    });
+    emit('daily:changed');
+    return true;
+  }
   if (!rec.proteinStart || rec.proteinAt || rec.proteinSkip) return false;
-  return proteinYes(now);
+  if (!proteinYes(now)) return false;
+  if (u) patchDay(id, { proteinUndo: null });
+  ateTimeOnRow(row);
+  return true;
+}
+
+/**
+ * 1.4.3 (round 2): a breakfast saved after „Кога яде?“ shows the time she ate, not the time
+ * she saved it, so the diary row and the Прогрес chart agree. Only for rows saved for today's
+ * breakfast after the meal was recorded (the same logging, within an hour) whose time is the
+ * save time. @param {any} row @returns {boolean} true if the row's time was changed.
+ */
+export function ateTimeOnRow(row) {
+  if (!row || row.removed || row.type === 'water' || row.meal !== TIMED_MEAL) return false;
+  const rec = get('days', row.date),
+    actual = rec?.mealTimes?.[TIMED_MEAL]?.actual;
+  if (!rec?.proteinAt || !(actual > 0) || actual >= rec.proteinAt - 60_000) return false;
+  if (!(row.ts >= rec.proteinAt - 60_000 && row.ts - rec.proteinAt < 60 * 60_000)) return false;
+  put('food', { ...row, ts: actual, time: hhmm(new Date(actual)) });
+  return true;
+}
+
+/**
+ * 1.4.3 (round 2): today's protein breakfast follows the diary. When the last breakfast entry
+ * of today is deleted (or moved away), the meal counts as not eaten again: `proteinAt` and the
+ * meal's timing are cleared, so the countdown / pill come back (overdue once the window has
+ * passed), the „готова“ card and the quest are un-ticked and the quest XP is taken back. What
+ * was cleared is kept on the day (`proteinUndo`) so Undo / Възстанови restores it unchanged.
+ * @param {string} rowId The breakfast row that went away. @param {number} [now]
+ * @returns {boolean} true if it cleared the protein breakfast.
+ */
+export function proteinUnlogged(rowId, now = Date.now()) {
+  const id = dayKey(now),
+    rec = get('days', id);
+  if (!rec?.proteinAt) return false;
+  if (all('food').some((r) => r.date === id && r.meal === TIMED_MEAL && r.type !== 'water')) return false;
+  const mealTimes = { ...rec.mealTimes };
+  delete mealTimes[TIMED_MEAL];
+  patchDay(id, {
+    proteinAt: null,
+    proteinCelebrated: null,
+    proteinAteAt: null,
+    mealTimes,
+    proteinUndo: {
+      row: rowId,
+      proteinAt: rec.proteinAt,
+      proteinCelebrated: rec.proteinCelebrated ?? null,
+      proteinStart: rec.proteinStart ?? null,
+      mealTime: rec.mealTimes?.[TIMED_MEAL] ?? null,
+    },
+  });
+  setAward(`quest:${id}:protein`, 0);
+  emit('daily:changed');
+  return true;
 }
 
 /**
@@ -226,10 +293,36 @@ export function setSleepTimes(date, v) {
  * if any, shows again. @param {string} date
  */
 export function clearSleep(date) {
-  const rec = patchDay(date, { sleepH: null, sleepQ: null, sleepBed: null, sleepWake: null });
+  const prev = day(date);
+  /** @type {Record<string, any>} */
+  const patch = { sleepH: null, sleepQ: null, sleepBed: null, sleepWake: null };
+  // 1.4.3 (round 2): today's wake-up that came from this entry goes with it, and so does a
+  // protein countdown started from it while the meal is unanswered.
+  if (date === dayKey() && prev.wake != null && prev.wake === prev.sleepWake) {
+    patch.wake = null;
+    if (prev.ack === prev.wake) patch.ack = null;
+    if (prev.proteinStart && !prev.proteinAt && !prev.proteinSkip)
+      ((patch.proteinStart = null), (patch.proteinAteAt = null));
+  }
+  const rec = patchDay(date, patch);
   emit('sleep:logged', { date, cleared: true });
   emit('daily:changed');
-  return rec;
+  return { rec, undo: Object.fromEntries(Object.keys(patch).map((k) => [k, prev[k] ?? null])) };
+}
+
+/**
+ * 1.4.3 (round 2): Undo of a deleted sleep entry: the fields it cleared come back as they
+ * were (a protein countdown only while the meal is still unanswered).
+ * @param {string} date @param {Record<string, any>} undo From {@link clearSleep}.
+ */
+export function restoreSleep(date, undo) {
+  const rec = day(date),
+    back = { ...undo };
+  if (rec.proteinAt || rec.proteinSkip || rec.proteinStart) (delete back.proteinStart, delete back.proteinAteAt);
+  if (rec.wake) delete back.wake;
+  patchDay(date, back);
+  emit('sleep:logged', { date });
+  emit('daily:changed');
 }
 
 /** Last night's sleep (the morning of `date`): hours (manual or estimated) and quality. @param {string} [date] */

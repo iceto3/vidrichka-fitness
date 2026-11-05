@@ -138,6 +138,13 @@ export const time24 = (o) => {
   return html`<span class="t24 ${o.cls ?? ''}${o.bad ? ' bad' : ''}"><button type="button" class="t24b" data-act="${o.step}"${f} data-d="-${d}" aria-label="${t('time24.minus', { n: d })}">${ic('minus', 18, 2.6)}</button><input class="t24i num" type="text" inputmode="numeric" maxlength="5" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="${t('time24.ph')}" value="${o.value}" data-change="${o.act}" data-input="${o.act}" aria-label="${o.label}" aria-invalid="${o.bad ? 'true' : 'false'}"><button type="button" class="t24b" data-act="${o.step}"${f} data-d="${d}" aria-label="${t('time24.plus', { n: d })}">${ic('plus', 18, 2.6)}</button></span>`;
 };
 
+// 1.4.3 round 2: tapping a typed time selects it, so what is typed replaces it completely.
+if (typeof document !== 'undefined')
+  document.addEventListener('focusin', (e) => {
+    const i = /** @type {HTMLInputElement|null} */ (/** @type {HTMLElement} */ (e.target)?.closest?.('.t24i'));
+    if (i) setTimeout(() => document.activeElement === i && i.select(), 0);
+  });
+
 // Desktop browsers only open the picker from their own icon: open it on any tap.
 if (typeof document !== 'undefined')
   document.addEventListener('click', (e) => {

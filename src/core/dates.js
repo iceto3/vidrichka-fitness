@@ -112,16 +112,12 @@ export function parseHM(s) {
 export const hmComplete = (s) => /^\s*(\d{2}\s*[:.,]\s*\d{2}|\d{4})\s*$/.test(String(s ?? ''));
 
 /**
- * "HH:MM" moved by `d` minutes, around the clock (23:50 + 15 → 00:00, 00:00 − 15 → 23:45). When stepping, the
- * time first snaps to the step grid (07:07 + 15 → 07:15, 07:07 − 15 → 07:00).
+ * "HH:MM" moved by exactly `d` minutes, around the clock (06:40 + 5 → 06:45, 23:58 + 5 →
+ * 00:03, 00:02 − 5 → 23:57). 1.4.3 round 2: no snapping to a grid.
  * @param {string} hm @param {number} d @returns {string}
  */
 export function stepHM(hm, d) {
   const [h, m] = (parseHM(hm) ?? '00:00').split(':').map(Number);
-  const cur = h * 60 + m,
-    step = Math.abs(d) || 1,
-    off = cur % step;
-  const next = off ? (d > 0 ? cur - off + step : cur - off) : cur + d;
-  const t = ((next % 1440) + 1440) % 1440;
+  const t = (((h * 60 + m + Math.round(d)) % 1440) + 1440) % 1440;
   return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
 }

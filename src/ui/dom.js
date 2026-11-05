@@ -109,7 +109,8 @@ function morphNode(a, b) {
   for (const { name, value } of [...y.attributes]) {
     if (x.getAttribute(name) === value) continue;
     x.setAttribute(name, value);
-    if (name === 'value' && 'value' in x) x.value = value;
+    // 1.4.3 (round 2): never overwrite what is being typed in a focused field
+    if (name === 'value' && 'value' in x && document.activeElement !== x) x.value = value;
   }
   for (const { name } of [...x.attributes])
     // 1.4.1: a <details> the user opened (e.g. Подробно за мускулите) stays open across re-renders

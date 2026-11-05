@@ -119,6 +119,10 @@
   opacity: 0.35;
   cursor: default;
 }
+/* 1.4.3 round 2: the hint / error line keeps its room, so the sheet does not jump */
+.sleepmsgs {
+  min-height: 38px;
+}
 .sleepdone:disabled {
   background: var(--line);
   color: var(--muted);

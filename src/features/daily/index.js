@@ -10,6 +10,8 @@ import { register } from '../../core/registry.js';
 import { emit, on } from '../../core/bus.js';
 import { currentPath } from '../../core/router.js';
 import { dailySettings } from '../../core/settings.js';
+import { all } from '../../core/store.js';
+import { dayKey } from '../../core/dates.js';
 import { proteinOnTime } from './logic.js';
 
 register(
@@ -71,7 +73,25 @@ export async function startDaily() {
   // 1.4.3: the meal pill above the nav on the other tabs (same countdown as the Home banner)
   (await import('./pill.js')).startMealPill();
   // 1.2.1: the protein breakfast counts only once a breakfast entry is saved.
-  on('store:food', (/** @type {any} */ row) => api.proteinLogged(row));
+  // 1.4.3 (round 2): … and stops counting when today's last breakfast entry is deleted (or
+  // moved away); Undo / Възстанови puts it back. A later breakfast row of the same late meal
+  // gets the typed „Кога яде?“ time too.
+  const breakfastIds = () => {
+    const d = dayKey();
+    return new Set(
+      all('food')
+        .filter((r) => r.date === d && r.meal === 'breakfast' && r.type !== 'water')
+        .map((r) => r.id),
+    );
+  };
+  let bf = breakfastIds();
+  on('store:food', (/** @type {any} */ row) => {
+    const had = bf.has(row?.id);
+    bf = breakfastIds();
+    if (had && !bf.has(row.id)) api.proteinUnlogged(row.id);
+    else if (!api.proteinLogged(row) && !had) api.ateTimeOnRow(row);
+  });
+  on('store:replaced', () => (bf = breakfastIds()));
   // Not awaited: it waits for the service worker; pushOn() alone already decides local planning.
   push.startPush().catch((e) => console.warn('[push]', e));
   notify.syncDaily().catch(() => {});

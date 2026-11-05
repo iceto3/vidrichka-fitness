@@ -89,6 +89,15 @@ export function closeSheet(entry = stack[stack.length - 1], fromPop = false) {
   repositionPills();
 }
 
+/**
+ * 1.4.3 (round 2): re-render only the top sheet (its morph keeps a focused field), without
+ * the page under it – for sheets that change nothing until „Готово“.
+ */
+export const refreshSheet = () => {
+  const top = stack[stack.length - 1];
+  if (top) render(top);
+};
+
 /** Number of open sheets. */
 export const sheetsOpen = () => stack.length;
 

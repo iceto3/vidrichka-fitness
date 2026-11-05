@@ -13,7 +13,16 @@
 import { all, get } from '../../core/store.js';
 import { addDays, dayKey, parseDay } from '../../core/dates.js';
 import { addSteps, clampSteps, setSteps, stepGoal, stepRun } from '../steps/api.js';
-import { MAX_SLEEP_H, clearSleep, patchDay, rateDay, setSleep, setSleepTimes, sleepRun } from '../daily/api.js';
+import {
+  MAX_SLEEP_H,
+  clearSleep,
+  patchDay,
+  rateDay,
+  restoreSleep,
+  setSleep,
+  setSleepTimes,
+  sleepRun,
+} from '../daily/api.js';
 import { checkNight, editorTimes } from '../daily/sleeptimes.js';
 import { setWater } from '../food/api.js';
 import { MAX_GLASSES, dayError, dayFromIndex, indexData } from './logic.js';
@@ -97,6 +106,9 @@ export function sleepEditorTimes(date) {
 
 /** Delete the day's manual sleep entry. @param {string} date */
 export const clearDaySleep = (date) => clearSleep(assertEditable(date));
+
+/** 1.4.3 round 2: Undo of {@link clearDaySleep}. @param {string} date @param {Record<string, any>} undo */
+export const restoreDaySleep = (date, undo) => restoreSleep(assertEditable(date), undo);
 
 /** Mood or energy 1–5 (null clears). @param {string} date @param {'mood'|'energy'} field @param {number|null} v */
 export function rateDayField(date, field, v) {
