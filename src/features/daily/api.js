@@ -298,7 +298,7 @@ export function clearSleep(date) {
   const patch = { sleepH: null, sleepQ: null, sleepBed: null, sleepWake: null };
   // 1.4.3 (round 2): today's wake-up that came from this entry goes with it, and so does a
   // protein countdown started from it while the meal is unanswered.
-  if (date === dayKey() && prev.wake != null && prev.wake === prev.sleepWake) {
+  if (date === dayKey(Date.now()) && prev.wake != null && prev.wake === prev.sleepWake) {
     patch.wake = null;
     if (prev.ack === prev.wake) patch.ack = null;
     if (prev.proteinStart && !prev.proteinAt && !prev.proteinSkip)

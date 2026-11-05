@@ -216,3 +216,143 @@ test('the editor saves on every change: a corrected wake-up moves the wake-up an
     assert.equal(get('days', D).proteinStart, at(D, '07:00'));
   });
 });
+
+// ── round 2 ──────────────────────────────────────────────────────────────────────────────
+const { all, kv, setKv, remove } = await import('../../src/core/store.js');
+const { clearDaySleep, restoreDaySleep } = await import('../../src/features/day/api.js');
+const bfRow = (id, time, extra = {}) =>
+  put('food', {
+    id,
+    date: D,
+    meal: 'breakfast',
+    ts: at(D, time),
+    time,
+    name: 'x',
+    grams: 100,
+    kcal: 1,
+    p: 1,
+    c: 0,
+    f: 0,
+    ...extra,
+  });
+const clearFood = () => all('food').forEach((r) => remove('food', r.id));
+
+test('round 2: deleting the protein breakfast clears it (pill back, overdue), XP taken back; Undo restores it', () => {
+  protein(true);
+  reset(D, Y);
+  clearFood();
+  setKv('xp', { 'quest:2026-11-03:protein': { amt: 15, ts: 1 }, [`quest:${D}:water`]: { amt: 10, ts: 2 } });
+  atClock('07:20', (now) => {
+    setDaySleepTimes(D, { bed: '23:30', wake: '07:05' });
+    const row = bfRow('f-bf1', '07:20');
+    assert.equal(api.proteinLogged(row, now), true);
+  });
+  const done = get('days', D);
+  assert.ok(done.proteinAt && done.mealTimes.breakfast);
+  setKv('xp', { ...kv('xp', {}), [`quest:${D}:protein`]: { amt: 15, ts: 3 } });
+  atClock('08:00', (now) => {
+    remove('food', 'f-bf1');
+    assert.equal(api.proteinUnlogged('f-bf1', now), true);
+    const r = get('days', D);
+    assert.equal(r.proteinAt, null);
+    assert.equal(r.mealTimes.breakfast, undefined, 'the meal timing goes with it');
+    assert.equal(r.proteinStart, at(D, '07:05'), 'the countdown start stays');
+    assert.equal(proteinState(r, now).state, 'overdue');
+    assert.equal(pendingMeal(r, now)?.mode, 'overdue', 'the pill is back');
+    const xp = kv('xp', {});
+    assert.equal(xp[`quest:${D}:protein`], undefined, 'quest XP taken back');
+    assert.ok(xp['quest:2026-11-03:protein'] && xp[`quest:${D}:water`], 'history and other quests kept');
+    // Undo puts the same row back → exactly what it had recorded
+    const back = put('food', {
+      ...(done && {
+        id: 'f-bf1',
+        date: D,
+        meal: 'breakfast',
+        ts: at(D, '07:20'),
+        time: '07:20',
+        name: 'x',
+        grams: 100,
+        kcal: 1,
+        p: 1,
+        c: 0,
+        f: 0,
+      }),
+    });
+    assert.equal(api.proteinLogged(back, now), true);
+    const u = get('days', D);
+    assert.equal(u.proteinAt, done.proteinAt);
+    assert.deepEqual(u.mealTimes.breakfast, done.mealTimes.breakfast);
+    assert.equal(u.proteinUndo, null);
+    assert.equal(proteinState(u, now).state, 'done');
+  });
+  clearFood();
+});
+
+test('round 2: another breakfast entry left → still eaten; a notification „yes“ is not undone by other meals', () => {
+  protein(true);
+  reset(D, Y);
+  clearFood();
+  atClock('07:20', (now) => {
+    setDaySleepTimes(D, { bed: '23:30', wake: '07:05' });
+    api.proteinLogged(bfRow('f-a', '07:20'), now);
+    bfRow('f-b', '07:21');
+    remove('food', 'f-a');
+    assert.equal(api.proteinUnlogged('f-a', now), false);
+    assert.ok(get('days', D).proteinAt);
+  });
+  clearFood();
+});
+
+test('round 2: deleting today’s sleep entry clears an unanswered protein start; Undo brings it back', () => {
+  protein(true);
+  reset(D, Y);
+  atClock('07:20', () => {
+    setDaySleepTimes(D, { bed: '23:30', wake: '07:05' });
+    const { undo } = clearDaySleep(D);
+    let r = get('days', D);
+    assert.equal(r.proteinStart, null);
+    assert.equal(r.wake, null, 'the wake-up came from this entry');
+    assert.equal(pendingMeal(r, Date.now()), null, 'no pill');
+    restoreDaySleep(D, undo);
+    r = get('days', D);
+    assert.equal(r.proteinStart, at(D, '07:05'));
+    assert.equal(r.wake, at(D, '07:05'));
+    assert.equal(r.sleepWake, at(D, '07:05'));
+  });
+  // answered (skipped) or a morning-tap wake-up: the start stays
+  reset(D, Y);
+  atClock('07:30', (now) => {
+    api.wakeUp(at(D, '07:10'));
+    setDaySleepTimes(D, { bed: '23:30', wake: '07:00' });
+    clearDaySleep(D);
+    assert.equal(get('days', D).proteinStart, at(D, '07:10'));
+    api.proteinSkip(now);
+  });
+});
+
+test('round 2: the diary row of a late breakfast shows the „Кога яде?“ time', () => {
+  protein(true);
+  reset(D, Y);
+  clearFood();
+  atClock('09:40', (now) => {
+    setDaySleepTimes(D, { bed: '23:30', wake: '07:00' });
+    api.setAteAt(at(D, '08:10'), now);
+    api.proteinLogged(bfRow('f-late', '09:40'), now);
+    assert.equal(get('food', 'f-late').time, '08:10');
+    assert.equal(get('food', 'f-late').ts, at(D, '08:10'));
+    assert.equal(get('days', D).mealTimes.breakfast.actual, at(D, '08:10'));
+    // a second item of the same breakfast too
+    const second = bfRow('f-late2', '09:41');
+    assert.equal(api.ateTimeOnRow(second), true);
+    assert.equal(get('food', 'f-late2').time, '08:10');
+  });
+  // eaten in time (no typed time) → the save time stays
+  reset(D, Y);
+  clearFood();
+  atClock('07:20', (now) => {
+    setDaySleepTimes(D, { bed: '23:30', wake: '07:05' });
+    api.proteinLogged(bfRow('f-ok', '07:20'), now);
+    assert.equal(get('food', 'f-ok').time, '07:20');
+  });
+  clearFood();
+});
