@@ -23,6 +23,15 @@ All notable changes to this project are documented here. The format follows
 - **Sleep times** (and the meal time) are a typed 24-hour field (e.g. „0640“ or „6:40“) with −/+ steps (15 min for sleep, 5 min for meals) instead of the 12-hour AM/PM wheel. Text that isn't a time shows a hint and blocks **Готово**. The „до 16 ч“ rule is unchanged.
 - The **accessibility labels** („Към съдържанието“, „Основно меню“) are translated.
 
+### Fixed (tester round 2)
+
+- **The protein countdown follows the data:** deleting today's breakfast that recorded the protein meal (or moving it to another meal or day) clears it when no other breakfast is left: the countdown, the pill and the Начало bar come back (overdue if the window has passed), „Протеиновата закуска е готова“ and the quest **Протеин до 30 мин след ставане** are un-ticked and their XP is taken back (other quests and XP untouched). **Отмени** restores it all. Deleting today's sleep entry clears a countdown that its wake-up started (when the meal isn't answered yet); its **Отмени** brings it back.
+- **−/+ on time fields step exactly** (5 min for sleep and meals, no snapping to a grid: 06:42 + 5 = 06:47, 06:45 − 5 = 06:40) and wrap at midnight.
+- **Sleep editor:** saves only with **Готово** (closing discards), the sheet no longer jumps when a field is tapped, typing keeps the focus, and tapping a field selects it so typing replaces the whole value. The protein countdown moves on **Готово**.
+- **360 px:** the Вода card puts the glasses on their own row („0/8 чаши · 0 л“ on one line), „Креатин 0 г“ stays on one line with the button below, the Начало **Седмична цел** card is no longer clipped (ring and title on top), and the protein / fibre / salt line in **Хранения днес** has the card's padding.
+- **Food search** matches words, not one exact substring: case-insensitive, Bulgarian word forms (пилешки / пилешко / пилешките), „гърди“ = breast (so „пилешки гърди“ finds **Пилешко филе**) and „бут“ = „бедро“. Built-in foods come first, then your own products, then Open Food Facts. Nutrition data unchanged.
+- **A late breakfast's row time** is the time from **Кога яде?**, not the save time.
+
 ## [1.4.2] – 2026-10-28
 
 ### Added

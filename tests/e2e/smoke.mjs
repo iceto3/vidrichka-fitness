@@ -348,6 +348,7 @@ async function run(name, browser, P) {
   await v142(page, h);
   await v143(page, h, name);
   await v143fixes(page, h, name);
+  await v143r2(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -2143,20 +2144,17 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
+  const [h0, q0] = [await dayField('sleepH'), await dayField('sleepQ')];
   await layer.locator('input[data-change="sbed"]').fill('23:00');
   await settle();
   await layer.locator('input[data-change="swake"]').fill('07:00');
   await settle();
   await layer.locator('[data-act="rate"][data-v="4"]').click();
   await settle();
+  // 1.4.3 round 2: nothing is saved until Готово
+  assert.equal(await dayField('sleepH'), h0, 'not saved while editing');
+  assert.equal(await dayField('sleepQ'), q0);
   // 23:00 is the evening before → 8 h across midnight
-  assert.equal(await dayField('sleepH'), 8);
-  const sb = await dayField('sleepBed'),
-    swk = await dayField('sleepWake');
-  assert.equal(swk - sb, 8 * 3600e3, 'bed and wake saved (timestamps), 8 h apart');
-  // read in the page's time zone (the CI runner itself is UTC)
-  assert.equal(await page.evaluate((ts) => new Date(ts).getHours(), sb), 23);
-  assert.equal(await dayField('sleepQ'), 4);
   assert.match(await layer.locator('.sleepdur').innerText(), /^8 (ч|h) 00 (мин|min)$/);
   const [bd, wd] = await layer.locator('.sdate').evaluateAll((e) => e.map((x) => x.getAttribute('data-day')));
   assert.equal(wd, key, 'wake on the day');
@@ -2212,17 +2210,25 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
     'and it looks disabled',
   );
   assert.equal(await layer.locator('.sleepnote').count(), 1, 'the moved dates are shown');
-  assert.equal(await dayField('sleepH'), 8, 'the refused value is not saved');
-  assert.equal(await dayField('sleepBed'), sb, 'bed still the evening before');
+  assert.equal(await dayField('sleepH'), h0, 'the refused value is not saved');
   await layer.locator('[data-act="sshift"][data-d="-1"]').click();
   await settle();
   assert.equal(await layer.locator('.sleeperr').count(), 0);
   assert.ok(!(await layer.locator('[data-act="done"]').isDisabled()), 'Готово on again');
-  assert.equal(await dayField('sleepH'), 8);
-  assert.equal(await layer.locator('[data-act="clear"]').count(), 1, 'a saved entry can be deleted');
   await layer.locator('[data-act="done"]').click();
   await settle();
+  assert.equal(await dayField('sleepH'), 8, 'saved with Готово');
+  const sb = await dayField('sleepBed'),
+    swk = await dayField('sleepWake');
+  assert.equal(swk - sb, 8 * 3600e3, 'bed and wake saved (timestamps), 8 h apart');
+  // read in the page's time zone (the CI runner itself is UTC)
+  assert.equal(await page.evaluate((ts) => new Date(ts).getHours(), sb), 23);
+  assert.equal(await dayField('sleepQ'), 4);
   assert.match(await page.locator('.sleepcard').innerText(), /\b8\b/);
+  await page.locator('.sleepcard').click();
+  await layer.locator('.sleeptimes').waitFor();
+  assert.equal(await layer.locator('[data-act="clear"]').count(), 1, 'a saved entry can be deleted');
+  await closeAllSheets(page, layer, settle);
   await page.locator('.sleepcard').scrollIntoViewIfNeeded();
   await shot('sleep-card');
   console.log('  ✔ 1.3.4 sleep card');
@@ -2465,7 +2471,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
  * wake-up typed in the sleep editor starting the protein countdown + pill.
  * @param {import('playwright-core').Page} page @param {any} h @param {string} name
  */
-async function v143fixes(page, { go, settle, shot, layer, rows, clearCel }, name) {
+async function v143fixes(page, { go, settle, shot, layer, rows, clearCel, dayField }, name) {
   const ts = (/** @type {string} */ d, /** @type {string} */ hm) => new Date(`${d}T${hm}:00+02:00`).getTime();
   const box = async (/** @type {any} */ l) =>
     /** @type {{x: number, y: number, width: number, height: number}} */ (await l.boundingBox());
@@ -2562,17 +2568,40 @@ async function v143fixes(page, { go, settle, shot, layer, rows, clearCel }, name
   await bed.blur();
   await settle();
   assert.equal(await bed.inputValue(), '23:10', '„2310“ → 23:10');
-  await wake.fill('06:25');
+  // 1.4.3 round 2: select-all + typing replaces the value (no stray digit), focus is kept
+  await wake.click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.type('0642');
   await settle();
-  await layer.locator('.swake .t24b[data-d="15"]').click();
+  assert.equal(await wake.inputValue(), '0642', 'typed over the selection (no stray digit)');
+  assert.ok(await wake.evaluate((e) => e === document.activeElement), 'focus kept while typing');
+  await wake.blur();
   await settle();
-  assert.equal(await wake.inputValue(), '06:30', '+15 snaps to the quarter');
-  await layer.locator('.swake .t24b[data-d="-15"]').click();
+  assert.equal(await wake.inputValue(), '06:42', 'shown as 06:42 when she leaves the field');
+  // − / + step exactly 5 min (no snapping): 06:42 + 5 = 06:47, 06:45 − 5 = 06:40
+  await layer.locator('.swake .t24b[data-d="5"]').click();
   await settle();
-  await layer.locator('.swake .t24b[data-d="15"]').click();
+  assert.equal(await wake.inputValue(), '06:47', '+5 exactly');
+  await wake.fill('06:45');
+  await wake.blur();
   await settle();
-  assert.equal(await wake.inputValue(), '06:30');
+  await layer.locator('.swake .t24b[data-d="-5"]').click();
+  await settle();
+  assert.equal(await wake.inputValue(), '06:40', '−5 exactly');
+  await layer.locator('.swake .t24b[data-d="5"]').click();
+  await settle();
+  assert.equal(await wake.inputValue(), '06:45', '+5 exactly');
+  await wake.fill('06:30');
+  await wake.blur();
+  await settle();
   assert.match(await layer.locator('.sleepdur').innerText(), /^7 ч 20 мин$/);
+  // the sheet does not move when a field is tapped
+  const p0 = await box(layer.locator('.panel'));
+  await bed.click();
+  await settle();
+  const p1 = await box(layer.locator('.panel'));
+  assert.ok(Math.abs(p1.y - p0.y) < 2 && Math.abs(p1.height - p0.height) < 2, `sheet still (${p0.y}→${p1.y})`);
+  assert.equal(await dayField('proteinStart'), null, 'nothing saved before Готово');
   // not a time → a hint, Готово off; the 16 h rule as before
   await wake.fill('25:70');
   await wake.blur();
@@ -2606,6 +2635,141 @@ async function v143fixes(page, { go, settle, shot, layer, rows, clearCel }, name
   await shot('mealpill-after-sleep');
   console.log(
     '  ✔ 1.4.3 tester round: BG a11y labels, install card + add-food header at 390/360, typed 24 h sleep times (steps, hint, 16 h), typed wake-up starts the countdown + pill',
+  );
+}
+
+/**
+ * 1.4.3 tester round 2 (Nov 5, 06:50, countdown from the 06:40 wake-up): closing the sleep
+ * sheet discards; „пилешки гърди“ finds the built-in chicken breast first; deleting the protein
+ * breakfast brings the countdown back (card, quest and XP undone) and Undo restores it;
+ * Храна / Начало at 360 and 390 px (water, creatine, weekly goal, meals macros).
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function v143r2(page, { go, settle, shot, layer, rows, clearCel }) {
+  const ts = (/** @type {string} */ hm) => new Date(`2026-11-05T${hm}:00+02:00`).getTime();
+  const day5 = async () => /** @type {any} */ ((await rows('days')).find((x) => x.id === '2026-11-05'));
+  const xp = async () => /** @type {any} */ ((await rows('kv')).find((x) => x.id === 'xp'))?.value ?? {};
+  const box = async (/** @type {any} */ l) =>
+    /** @type {{x: number, y: number, width: number, height: number}} */ (await l.boundingBox());
+
+  // closing the sleep sheet discards the change (saved only with Готово)
+  await go('home');
+  await page.locator('.sleepcard').scrollIntoViewIfNeeded();
+  await page.locator('.sleepcard').click();
+  await layer.locator('.sleeptimes').waitFor();
+  await layer.locator('.swake input.t24i').fill('06:55');
+  await settle();
+  await closeAllSheets(page, layer, settle);
+  let d = await day5();
+  assert.equal(d.sleepWake, ts('06:40'), 'closed without Готово → not saved');
+  assert.equal(d.proteinStart, ts('06:40'), 'and the countdown not moved');
+
+  // the search: built-in chicken breast first (it has creatine → „кр“ on the row)
+  await go('food/add/breakfast');
+  await page.locator('#fq').fill('пилешки гърди');
+  await settle();
+  const ids = await page
+    .locator('#results [data-act="pick"]')
+    .evaluateAll((e) => e.map((x) => /** @type {HTMLElement} */ (x).dataset.id));
+  assert.equal(ids[0], 'chicken_breast', `„пилешки гърди“ → ${ids.slice(0, 4)}`);
+  assert.ok(ids.includes('chicken_breast_raw'), 'the other chicken breasts too');
+  await page.waitForTimeout(250);
+  await shot('search-pileshki-gardi');
+  await page.locator('#results [data-act="pick"][data-id="chicken_breast"]').click();
+  await layer.locator('[data-act="done"]').click();
+  await settle();
+  await clearCel();
+  await page
+    .locator('.add .topbar .finishmeal')
+    .click({ timeout: 3000 })
+    .catch(() => {});
+  await settle();
+  await clearCel();
+  d = await day5();
+  assert.ok(d.proteinAt, 'protein breakfast recorded');
+  assert.ok((await xp())['quest:2026-11-05:protein'], 'protein quest XP');
+  await go('food');
+  const openBreakfast = async () => {
+    await page.locator('.meal[data-m="breakfast"]').click();
+    await layer.locator('.mealitems').waitFor();
+  };
+  await openBreakfast();
+  assert.match(await layer.locator('.mealitems .nutrline').first().innerText(), /кр/, 'creatine on the row');
+
+  // delete it: the countdown, pill, card and quest come back; Undo restores the record
+  await layer.locator('.lrow', { hasText: 'Пилешко филе' }).first().locator('[data-act="del"]').click();
+  await settle();
+  d = await day5();
+  assert.equal(d.proteinAt, null, 'proteinAt cleared');
+  assert.equal(d.mealTimes?.breakfast, undefined, 'meal time cleared');
+  assert.equal((await xp())['quest:2026-11-05:protein'], undefined, 'quest XP taken back');
+  await page.locator('.undopill').click();
+  await settle();
+  d = await day5();
+  assert.ok(d.proteinAt, 'Undo restores proteinAt');
+  assert.ok((await xp())['quest:2026-11-05:protein'], 'and the quest XP');
+  await closeAllSheets(page, layer, settle);
+  await openBreakfast();
+  await layer.locator('.lrow', { hasText: 'Пилешко филе' }).first().locator('[data-act="del"]').click();
+  await settle();
+  await closeAllSheets(page, layer, settle);
+  await page.evaluate(() => document.querySelectorAll('.toast, .undopill').forEach((e) => e.remove()));
+  const pill = page.locator('#mealpill');
+  await pill.waitFor({ state: 'visible' });
+  assert.match(await pill.innerText(), /Закуска/);
+  await go('home');
+  await page.locator('.pbar.running').waitFor();
+  assert.equal(await page.locator('.quest[data-go="morning"] .qbox.done').count(), 0, 'quest un-ticked');
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.waitForTimeout(250);
+  await shot('protein-after-delete');
+
+  // 360 / 390 px: nothing clipped, value + unit together, macros padded
+  const vp = page.viewportSize();
+  for (const w of [360, 390]) {
+    await page.setViewportSize({ width: w, height: vp?.height ?? 844 });
+    await go('food');
+    await settle();
+    const amt = page.locator('.food .water .wateramt').first(),
+      cr = page.locator('.food .creatinecard .crtitle').first();
+    await amt.waitFor();
+    assert.ok((await box(amt)).height <= 20, `${w}px: „${await amt.innerText()}“ on one line`);
+    assert.ok((await box(cr)).height <= 24, `${w}px: „${await cr.innerText()}“ on one line`);
+    const over = () =>
+      page.evaluate(() => {
+        const out = [];
+        for (const c of document.querySelectorAll('#page .card')) {
+          const r = c.getBoundingClientRect();
+          for (const e of c.querySelectorAll('*')) {
+            const q = e.getBoundingClientRect();
+            if (q.width && q.right > r.right + 0.5) out.push(`${c.className} > ${e.className}`);
+          }
+        }
+        return { sw: document.documentElement.scrollWidth, iw: innerWidth, out: out.slice(0, 4) };
+      });
+    let o = await over();
+    assert.ok(o.sw <= o.iw && !o.out.length, `${w}px Храна: ${JSON.stringify(o)}`);
+    await page.locator('.food .water').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    await shot(`food-cards-${w}`);
+    await go('home');
+    await settle();
+    o = await over();
+    assert.ok(o.sw <= o.iw && !o.out.length, `${w}px Начало: ${JSON.stringify(o)}`);
+    const mc = await box(page.locator('.homemeals')),
+      sum = await box(page.locator('.homemeals .dayfoodsum span').first());
+    assert.ok(sum.x - mc.x >= 12, `${w}px: macros row padded (${sum.x - mc.x})`);
+    await page.locator('.goalcard').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    await shot(`home-goal-${w}`);
+    await page.locator('.homemeals').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    await shot(`home-meals-${w}`);
+  }
+  await page.setViewportSize(vp ?? { width: 390, height: 844 });
+  console.log(
+    '  ✔ 1.4.3 round 2: sleep sheet saves only on Готово, „пилешки гърди“ → built-in first, deleting the protein breakfast brings the countdown back (+ Undo), 360/390 layout',
   );
 }
 
@@ -3493,6 +3657,16 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
     'planned and actual time stored',
   );
   assert.ok(today.proteinAt >= ts('2026-11-04', '07:45'), 'proteinAt is still the save time');
+  // 1.4.3 round 2: the diary row shows when she ate (07:40), not the save time
+  const bfRow = /** @type {any} */ (
+    (await rows('food')).find((r) => r.date === '2026-11-04' && r.meal === 'breakfast' && r.foodId === 'chicken_breast')
+  );
+  assert.equal(bfRow?.time, '07:40', 'row time = „Кога яде?“');
+  await go('food');
+  await page.locator('.meal[data-m="breakfast"]').click();
+  await layer.locator('.mealitems').waitFor();
+  assert.match(await layer.locator('.mealitems').innerText(), /07:40 · /, 'the meal sheet shows 07:40');
+  await closeAllSheets(page, layer, settle);
   await go('progress');
   await page.waitForTimeout(1200);
   assert.equal(await pill.isVisible(), false, 'no pill once the meal is marked');
