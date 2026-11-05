@@ -349,6 +349,7 @@ async function run(name, browser, P) {
   await v143(page, h, name);
   await v143fixes(page, h, name);
   await v143r2(page, h);
+  await v143r3(page, h, name, ctx);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -568,14 +569,15 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer, dayFi
   await closePrompts();
   await go('home');
   await page.locator('.pbar.overdue').waitFor();
-  assert.equal(await page.locator('.pbar .ptime').innerText(), '00:00');
+  // 1.4.3 round 3: no frozen 00:00 – it counts up how late it is („+10 min“)
+  assert.match(await page.locator('.pbar .ptime').innerText(), /^\+(\d+ (h|ч) \d{2} )?\d+ (min|мин)$/);
   await page.reload();
   await page.locator('.pbar.overdue').waitFor({ timeout: 8000 });
   await closePrompts();
   assert.notEqual(
     await page.locator('.pbar .ptime').evaluate((n) => getComputedStyle(n).animationName),
     'none',
-    'the zeros blink',
+    'the late time blinks',
   );
   assert.equal(
     await page.locator('.pbar').evaluate((n) => getComputedStyle(n).animationName),
@@ -586,7 +588,7 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer, dayFi
   await page.locator('.pbar [data-act="proteinSkip"]').click();
   await page.locator('.pbar.skipped').waitFor();
   assert.equal(await layer.locator('.cel .toastc').count(), 0, 'no celebration for a skip');
-  console.log('  ✔ protein overdue (red, blinking 00:00, survives reload) → "Skipped"');
+  console.log('  ✔ protein overdue (red, blinking +N min, survives reload) → "Skipped"');
   await closePrompts();
   await go('progress/sleep');
   await page.locator('.sbars').waitFor();
@@ -2779,6 +2781,162 @@ async function v143r2(page, { go, settle, shot, layer, rows, clearCel }) {
   );
 }
 
+/**
+ * 1.4.3 tester round 3: „Отмени“ with a real finger (a tap that moves a few pixels – the
+ * tester's DevTools mouse did that – used to count as a swipe, so nothing came back), for a
+ * food entry and the sleep record, right after a full reload; two open tabs stay in sync.
+ * @param {import('playwright-core').Page} page @param {any} h @param {string} name
+ * @param {import('playwright-core').BrowserContext} ctx
+ */
+async function v143r3(page, { go, settle, shot, layer, rows, clearCel }, name, ctx) {
+  const box = async (/** @type {any} */ l) =>
+    /** @type {{x: number, y: number, width: number, height: number}} */ (await l.boundingBox());
+  const cdp = name === 'android' ? await ctx.newCDPSession(page) : null;
+  /** Touch events from inside the page (WebKit has no touch input API here). @param {number[]} p */
+  const synth = (p) =>
+    page.evaluate(([x, y, dx, dy]) => {
+      const el = /** @type {HTMLElement} */ (document.elementFromPoint(x, y));
+      const o = { bubbles: true, pointerId: 7, pointerType: 'touch', isPrimary: true };
+      el.dispatchEvent(new PointerEvent('pointerdown', { ...o, clientX: x, clientY: y }));
+      el.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: x + dx, clientY: y + dy }));
+      el.dispatchEvent(new PointerEvent('pointerup', { ...o, clientX: x + dx, clientY: y + dy }));
+    }, p);
+  /** A finger tap that moves 6 px down-right while held 200 ms. @param {any} l */
+  const fingerTap = async (l) => {
+    const b = await box(l);
+    const x = b.x + b.width / 2,
+      y = b.y + b.height / 2;
+    if (!cdp) return synth([x, y, 6, 6]);
+    // real touch input (Chromium): touchstart → touchmove → touchend
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    await page.waitForTimeout(40);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + 6, y: y + 6 }] });
+    await page.waitForTimeout(160);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  const food = async () => /** @type {any[]} */ (await rows('food'));
+  const today = await page.evaluate(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+  const addFood = async (/** @type {any} */ p, /** @type {string} */ meal, /** @type {string} */ q) => {
+    await p.evaluate((/** @type {string} */ r) => (location.hash = '#/' + r), `food/add/${meal}`);
+    await p.waitForTimeout(400);
+    await p.locator('#fq').fill(q);
+    await p.waitForTimeout(400);
+    await p.locator('#results [data-act="pick"]').first().click();
+    await p.locator('#layer [data-act="done"]').click();
+    await p.waitForTimeout(400);
+  };
+
+  // food: full reload, delete, Отмени tapped soon after with a moving finger
+  await addFood(page, 'lunch', 'Банан');
+  await clearCel();
+  await page.reload();
+  await page.locator('#nav .t').first().waitFor({ timeout: 8000 });
+  await closeAllSheets(page, layer, settle);
+  await go('food');
+  const lunch = async () => (await food()).filter((r) => r.date === today && r.meal === 'lunch').length;
+  const n0 = await lunch();
+  assert.ok(n0 >= 1, 'a lunch entry to delete');
+  await page.locator('.meal[data-m="lunch"]').click();
+  await layer.locator('.mealitems').waitFor();
+  await layer.locator('.lrow [data-act="del"]').first().click();
+  const pill = page.locator('.undopill');
+  await pill.waitFor();
+  await page.waitForTimeout(150);
+  await shot('undo-real-tap', false, true);
+  assert.equal(await lunch(), n0 - 1, 'deleted');
+  await fingerTap(pill);
+  await settle();
+  assert.equal(await lunch(), n0, 'a finger tap that moved a little still undoes');
+  assert.equal(await pill.count(), 0, 'the pill is gone');
+  assert.match(await page.locator('#page .meal[data-m="lunch"]').innerText(), /Банан/, 'the page shows it again');
+  await closeAllSheets(page, layer, settle);
+  // a real swipe still only dismisses
+  await page.locator('.meal[data-m="lunch"]').click();
+  await layer.locator('.mealitems').waitFor();
+  await layer.locator('.lrow [data-act="del"]').first().click();
+  await pill.waitFor();
+  {
+    const b = await box(pill);
+    await synth([b.x + b.width / 2, b.y + b.height / 2, 70, 0]);
+  }
+  await page.waitForTimeout(500);
+  assert.equal(await pill.count(), 0, 'swiped away');
+  assert.equal(await lunch(), n0 - 1, 'a swipe does not undo');
+  await closeAllSheets(page, layer, settle);
+
+  // sleep: confirm dialog → sheet closes → the pill → a moving finger tap restores it
+  await go('home');
+  const sleepOf = async () => {
+    const d = /** @type {any} */ ((await rows('days')).find((x) => x.id === today)) ?? {};
+    return JSON.stringify([d.sleepWake ?? null, d.sleepBed ?? null, d.wake ?? null, d.sleepQ ?? null]);
+  };
+  const s0 = await sleepOf();
+  assert.notEqual(s0, '[null,null,null,null]', 'a sleep record to delete');
+  await page.locator('.sleepcard').scrollIntoViewIfNeeded();
+  await page.locator('.sleepcard').click();
+  await layer.locator('.sleeptimes').waitFor();
+  await layer.locator('[data-act="clear"]').click();
+  await layer.locator('[data-act="ok"]').click();
+  await pill.waitFor();
+  await settle();
+  assert.notEqual(await sleepOf(), s0, 'sleep deleted');
+  await fingerTap(pill);
+  await settle();
+  assert.equal(await sleepOf(), s0, 'Отмени puts the sleep back');
+  assert.equal(await pill.count(), 0);
+  console.log('  ✔ 1.4.3 r3: Отмени with a moving finger after a reload (food, sleep); a swipe only dismisses');
+
+  if (name !== 'android') return;
+  // two tabs of the app: a change in one shows in the other at once (no reload)
+  const B = await ctx.newPage();
+  /** @type {string[]} */
+  const errsB = [];
+  B.on('pageerror', (e) => errsB.push(e.message));
+  await B.clock.install({ time: await page.evaluate(() => Date.now()) });
+  await B.goto(page.url().split('#')[0] + '#/food');
+  await B.locator('#nav .t').first().waitFor({ timeout: 8000 });
+  await closeAllSheets(B, B.locator('#layer'), () => B.waitForTimeout(350));
+  const has = (/** @type {any} */ p, /** @type {boolean} */ yes) =>
+    p.waitForFunction(
+      (/** @type {boolean} */ y) => /Ябълка/.test(document.getElementById('page')?.textContent ?? '') === y,
+      yes,
+      { timeout: 4000 },
+    );
+  await addFood(page, 'snack', 'Ябълка');
+  await clearCel();
+  await go('food');
+  await has(B, true);
+  // delete in B → gone in A; Отмени in B → back in A
+  await B.locator('.meal[data-m="snack"]').click();
+  await B.locator('#layer .mealitems').waitFor();
+  await B.locator('#layer .lrow', { hasText: 'Ябълка' }).first().locator('[data-act="del"]').click();
+  await has(page, false);
+  await B.locator('.undopill').tap();
+  await has(page, true);
+  // no ping-pong: nothing more is sent once both tabs are idle
+  const count = () =>
+    B.evaluate(() => {
+      const w = /** @type {any} */ (window);
+      if (!w.__bc) {
+        w.__n = 0;
+        w.__bc = new BroadcastChannel('vidrichka-fitness:sync');
+        w.__bc.onmessage = () => w.__n++;
+      }
+      return w.__n;
+    });
+  await count();
+  await page.waitForTimeout(1500);
+  const c1 = await count();
+  await page.waitForTimeout(1500);
+  assert.equal(await count(), c1, 'no endless messages between the tabs');
+  await B.close();
+  assert.deepEqual(errsB, [], 'no errors in the second tab');
+  console.log('  ✔ 1.4.3 r3: two tabs stay in sync (add / delete / Отмени), no loops');
+}
+
 async function closeAllSheets(page, layer, settle) {
   for (let i = 0; i < 5 && (await layer.locator('.panel').count()); i++) {
     await page.keyboard.press('Escape');
@@ -3621,9 +3779,17 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
     } else quiet++;
     await page.waitForTimeout(500);
   }
+  // round 3: the pill and the sheet say how late (+N мин), never 00:00
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.waitForFunction(() => /^\+/.test(document.querySelector('#mealpill .ptime')?.textContent ?? ''));
+  assert.match(await pill.locator('.ptime').innerText(), /^\+\d+ мин$/);
+  await shot('mealpill-late');
   await pill.click();
   await sheet.waitFor();
-  assert.match(await sheet.innerText(), /времето изтече/);
+  assert.match(await sheet.innerText(), /Времето изтече · \+\d+ мин/);
+  assert.doesNotMatch(await sheet.innerText(), /00:00/);
+  await page.waitForTimeout(300);
+  await shot('mealpill-late-sheet');
   await sheet.locator('[data-act="ate"]').click();
   const tin = layer.locator('.mtime input[data-change="atehm"]');
   await tin.waitFor();
