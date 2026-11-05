@@ -165,11 +165,11 @@ export default () => {
 ${dailyCards()}
 ${a ? html`<button class="card resume row gap12" data-go="workout"><span class="live"><i></i></span><span class="f1 b">${t('home.resume', { plan: planName(a) })}</span>${ic('right', 18, 2.4)}</button>` : ''}
 <div class="row gap12 stretch mt4">
- <button class="card f1 pad14 left streakbtn" data-act="streakInfo" aria-label="${t('home.weeklyStreak')}: ${t('home.weeks', { n: st.weeks })}"><div class="row gap8"><div class="sq warm">${ic('flame', 20, 2.2)}</div>
+ <button class="card f1 minw0 pad14 left streakbtn" data-act="streakInfo" aria-label="${t('home.weeklyStreak')}: ${t('home.weeks', { n: st.weeks })}"><div class="row gap8"><div class="sq warm">${ic('flame', 20, 2.2)}</div>
   <div><div class="xb big20">${t('home.weeks', { n: st.weeks })}</div><div class="muted xs b">${t('home.weeklyStreak')}${st.freezes ? html` · <span title="${t('home.freezeHint')}">❄️${st.freezes}</span>` : ''}</div></div></div>${weekDots()}</button>
- <div class="card f1 pad14 row gap10" role="group" aria-label="${t('home.weeklyGoal')}">${ring(66, 8, st.thisWeek / st.goal, { inner: html`<div class="xb big19">${st.thisWeek}<span class="muted fs12">/${st.goal}</span></div>` })}
-  <div class="minw0"><div class="b fs135 lh-t">${t('home.weeklyGoal')}</div><div class="muted xs b mt6">${t('home.ofWorkouts', { n: st.thisWeek, goal: st.goal })}</div>
-  <div class="chip ${left ? 'accent' : 'ok'} mt6 chip-sm">${left ? t('home.toGo', { n: left }) : t('home.goalMet')}</div></div></div>
+ <div class="card f1 minw0 pad14 goalcard" role="group" aria-label="${t('home.weeklyGoal')}"><div class="row gap8">${ring(54, 7, st.thisWeek / st.goal, { inner: html`<div class="xb fs18">${st.thisWeek}<span class="muted fs12">/${st.goal}</span></div>` })}
+  <div class="b fs135 lh-t minw0">${t('home.weeklyGoal')}</div></div><div class="muted xs b mt6">${t('home.ofWorkouts', { n: st.thisWeek, goal: st.goal })}</div>
+  <div class="chip ${left ? 'accent' : 'ok'} mt6 chip-sm">${left ? t('home.toGo', { n: left }) : t('home.goalMet')}</div></div>
 </div>
 ${workoutCard()}
 ${stepsCard(dayKey())}

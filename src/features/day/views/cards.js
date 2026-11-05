@@ -269,7 +269,7 @@ export function creatineCard(date) {
       c.suppG ? `${t('creatine.supp')} ${fmtNum(c.suppG, 1)} ${t('unit.g')}` : '',
     ].filter(Boolean);
   return html`<div class="card mt12 row gap10 creatinecard"><div class="mic sm creaic" aria-hidden="true">⚡</div>
-<div class="f1 minw0"><div class="b">${t('creatine.title')} <span class="num crtotal">${fmtNum(c.totalG, 1)} ${t('unit.g')}</span></div><div class="muted xs b">${parts.length ? parts.join(' · ') : t('creatine.none')}</div></div>
+<div class="f1 minw0"><div class="b nowrap crtitle">${t('creatine.title')} <span class="num crtotal">${fmtNum(c.totalG, 1)} ${t('unit.g')}</span></div><div class="muted xs b">${parts.length ? parts.join(' · ') : t('creatine.none')}</div></div>
 <button class="chip accent chip-sm creaadd" data-act="creaSheet">${c.suppG ? ic('edit', 13, 2.4) : ic('plus', 13, 2.6)}${t('creatine.add')}</button></div>`;
 }
 
@@ -354,7 +354,7 @@ export function waterCard(date) {
   const s = settings(),
     w = readDay(date).water ?? 0;
   return html`<div class="card mt12 row gap10 water"><div class="mic blue sm">${ic('drop', 20, 2.2)}</div>
-<div class="f1 minw0"><div class="b">${t('food.water')}</div><div class="muted xs b">${t('food.glasses', { n: w, goal: s.waterGoal, l: fmtNum((w * s.glassMl) / 1000, 2) })}</div></div>
+<div class="f1 minw0"><div class="b">${t('food.water')}</div><div class="muted xs b nowrap wateramt">${t('food.glasses', { n: w, goal: s.waterGoal, l: fmtNum((w * s.glassMl) / 1000, 2) })}</div></div>
 <button class="iconbtn sm bluebtn waterminus" data-act="water" data-n="${Math.max(0, w - 1)}" aria-label="${t('food.removeGlass')}" ${w > 0 ? '' : raw('disabled')}>${ic('minus', 18, 2.6)}</button>
 <div class="row gap4 glasses" role="group" aria-label="${t('food.water')}">${Array.from({ length: Math.max(s.waterGoal, w) }, (_, k) => html`<button class="glass${k < w ? ' on' : ''}" data-act="water" data-n="${k < w && k === w - 1 ? k : k + 1}" aria-label="${t('food.setGlasses', { n: k + 1 })}"></button>`)}</div>
 <button class="iconbtn sm bluebtn waterplus" data-act="water" data-n="${Math.min(MAX_GLASSES, w + 1)}" aria-label="${t('food.addGlass')}">${ic('plus', 18, 2.6)}</button></div>`;

@@ -20,6 +20,12 @@
 .homemeals .mhead {
   padding: 12px 14px 4px;
 }
+/* 1.4.3 round 2: the protein / fibre / salt line keeps the card padding (not at the edge) */
+.homemeals .dayfoodsum {
+  padding: 0 14px 6px;
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
 .stepscard.flash,
 .sleepcard.flash,
 .homemeals.flash {
