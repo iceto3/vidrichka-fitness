@@ -56,12 +56,17 @@ test('pill countdown = the Home banner countdown (one logic)', () => {
   // running: same mm:ss as proteinBar
   for (const dt of [0, 1000, 10 * MIN + 500, 29 * MIN + 59_000]) {
     const p = pendingMeal(rec(), T0 + dt);
-    assert.deepEqual(p, { meal: TIMED_MEAL, mode: 'running', time: proteinBar(rec(), T0 + dt)?.time });
+    assert.deepEqual(p, { meal: TIMED_MEAL, mode: 'running', time: proteinBar(rec(), T0 + dt)?.time, late: null });
   }
   assert.equal(pendingMeal(rec(), T0)?.time, '30:00');
   assert.equal(pendingMeal(rec(), T0 + 29 * MIN + 59_500)?.time, '00:01');
-  // overdue keeps showing 00:00 until answered
-  assert.deepEqual(pendingMeal(rec(), T0 + 3 * 60 * MIN), { meal: 'breakfast', mode: 'overdue', time: '00:00' });
+  // overdue: how late, counted up from the end of the window (round 3), until answered
+  assert.deepEqual(pendingMeal(rec(), T0 + 3 * 60 * MIN), {
+    meal: 'breakfast',
+    mode: 'overdue',
+    time: '',
+    late: { h: 2, m: 30 },
+  });
   // nothing pending: no countdown, eaten, skipped, reminder off
   assert.equal(pendingMeal({ id: TODAY }, T0), null);
   assert.equal(pendingMeal(null, T0), null);

@@ -36,10 +36,17 @@ test('running: counts down from 30:00', () => {
   assert.equal(proteinBar(rec, start - 5 * MIN)?.time, '30:00', 'clock moved back: clamped');
 });
 
-test('overdue: 00:00 from 30 min on, for as long as there is no answer (computed, so it survives reloads)', () => {
+test('overdue from 30 min on, counting up how late (1.4.3 round 3: no more 00:00), computed so it survives reloads', () => {
   const rec = { proteinStart: start };
-  for (const t of [30 * MIN, 31 * MIN, 5 * 60 * MIN, 14 * 60 * MIN])
-    assert.deepEqual(proteinBar(rec, start + t), { mode: 'overdue', time: '00:00' });
+  for (const [t, h, m] of [
+    [30 * MIN, 0, 1],
+    [31 * MIN, 0, 1],
+    [71 * MIN, 0, 41],
+    [95 * MIN, 1, 5],
+    [5 * 60 * MIN, 4, 30],
+    [14 * 60 * MIN, 13, 30],
+  ])
+    assert.deepEqual(proteinBar(rec, start + t), { mode: 'overdue', time: '', late: { h, m } });
   assert.equal(proteinState(rec, start + 40 * MIN).state, 'overdue');
 });
 

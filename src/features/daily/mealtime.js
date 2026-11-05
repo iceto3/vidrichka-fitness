@@ -26,13 +26,13 @@ const PILL_HIDDEN_ROUTES = /^food\/add\/breakfast$/;
  * The pending meal for the pill: name key + the Home banner's countdown (shared logic).
  * Null when nothing is pending (no countdown, already eaten or skipped, reminders off).
  * @param {any} rec Today's record. @param {number} now @param {boolean} [enabled] protein reminder on
- * @returns {{meal: string, mode: 'running'|'overdue', time: string} | null}
+ * @returns {{meal: string, mode: 'running'|'overdue', time: string, late: {h: number, m: number} | null} | null}
  */
 export function pendingMeal(rec, now, enabled = true) {
   if (!enabled) return null;
   const b = proteinBar(rec, now);
   if (!b || (b.mode !== 'running' && b.mode !== 'overdue')) return null;
-  return { meal: TIMED_MEAL, mode: b.mode, time: b.time };
+  return { meal: TIMED_MEAL, mode: b.mode, time: b.time, late: b.late ?? null };
 }
 
 /**

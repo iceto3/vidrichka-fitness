@@ -1243,7 +1243,9 @@ export default {
   'shot.err.limit': 'Достигнат е дневният лимит за разчитане на снимки. Опитай пак утре или въведи ръчно.',
   // 1.4.3 meal pill, meal timing, nutrient abbreviations
   'mealPill.left': 'остават {time}',
-  'mealPill.over': 'времето изтече · {time}',
+  'mealPill.over': 'Времето изтече · {time}',
+  'late.m': '+{m} мин',
+  'late.hm': '+{h} ч {mm} мин',
   'mealTime.title': 'Кога яде?',
   'mealTime.body':
     'Отбелязваш храненето след 30-минутния прозорец. Запиши кога яде – така Прогрес ще покаже закъснението.',

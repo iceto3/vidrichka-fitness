@@ -1213,7 +1213,9 @@ export default {
   'shot.err.limit': "Today's limit for reading pictures is reached. Try again tomorrow or enter it by hand.",
   // 1.4.3 meal pill, meal timing, nutrient abbreviations
   'mealPill.left': '{time} left',
-  'mealPill.over': 'time is up · {time}',
+  'mealPill.over': 'Time’s up · {time}',
+  'late.m': '+{m} min',
+  'late.hm': '+{h} h {mm} min',
   'mealTime.title': 'When did you eat?',
   'mealTime.body':
     "You're marking the meal after its 30-minute window. Enter when you ate so Progress can show the delay.",

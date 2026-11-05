@@ -101,7 +101,7 @@ export const proteinOnTime = (rec) => {
 /**
  * Protein countdown state.
  * @param {any} rec Today's record. @param {number} now
- * @returns {{state: 'idle'|'running'|'overdue'|'done'|'skipped', left: number, onTime?: boolean}} left in ms
+ * @returns {{state: 'idle'|'running'|'overdue'|'done'|'skipped', left: number, onTime?: boolean, over?: number}} left in ms
  */
 export function proteinState(rec, now) {
   if (!rec?.proteinStart) return { state: 'idle', left: 0 };
@@ -109,8 +109,19 @@ export function proteinState(rec, now) {
   if (rec.proteinSkip) return { state: 'skipped', left: 0 };
   // Clamped: a clock that moved back (time sync, time-zone change) must not show 30:01.
   const left = Math.min(PROTEIN_WINDOW * MIN, rec.proteinStart + PROTEIN_WINDOW * MIN - now);
-  return left > 0 ? { state: 'running', left } : { state: 'overdue', left: 0 };
+  return left > 0 ? { state: 'running', left } : { state: 'overdue', left: 0, over: -left };
 }
+
+/**
+ * 1.4.3 (tester round 3): how late an overdue meal is, counted up from the end of its window
+ * (whole minutes, at least 1), split for display: `{h: 0, m: 41}` → „+41 мин“,
+ * `{h: 1, m: 5}` → „+1 ч 05 мин“ (see `lateText` in the views).
+ * @param {number} ms Time since the window ended.
+ */
+export const lateParts = (ms) => {
+  const min = Math.max(1, Math.floor(Math.max(0, ms) / MIN));
+  return { h: Math.floor(min / 60), m: min % 60 };
+};
 
 /** Where "Ate it" / "Yes, I ate" leads: the Food logger on today's breakfast, with a hint (sw.js uses the same route). */
 export const BREAKFAST_LOGGER = 'food/add/breakfast?protein';
@@ -129,7 +140,7 @@ export const mmss = (ms) => {
  * survives reloads because it is computed from the stored start), then a short
  * done/skipped state; null when there is nothing to show.
  * @param {any} rec Today's record. @param {number} now
- * @returns {{mode: 'running'|'overdue'|'done'|'skipped', time: string} | null}
+ * @returns {{mode: 'running'|'overdue'|'done'|'skipped', time: string, late?: {h: number, m: number}} | null}
  */
 export function proteinBar(rec, now) {
   const ps = proteinState(rec, now);
@@ -138,6 +149,7 @@ export function proteinBar(rec, now) {
     const at = ps.state === 'done' ? rec.proteinAt : rec.proteinSkip;
     return now - at < PROTEIN_ANSWERED_SHOW && now >= at ? { mode: ps.state, time: '' } : null;
   }
+  if (ps.state === 'overdue') return { mode: ps.state, time: '', late: lateParts(ps.over ?? 0) };
   return { mode: ps.state, time: mmss(ps.left) };
 }
 

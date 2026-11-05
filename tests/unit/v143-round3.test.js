@@ -51,3 +51,27 @@ test('a breakfast with another meal left keeps the quest; quests that are still 
   syncRewards();
   assert.equal(ledger()[`quest:${today}:breakfast`]?.amt, 10, 'breakfast still done');
 });
+
+test('a late meal shows how late it is: „+41 мин“, „+1 ч 05 мин“ (pill, sheet, Home banner)', async () => {
+  const { lateParts, proteinBar, MIN } = await import('../../src/features/daily/logic.js');
+  const { setLang, t } = await import('../../src/core/i18n.js');
+  const { lateText, withLate } = await import('../../src/features/daily/views/mealsheet.js');
+  await setLang('bg');
+  assert.deepEqual(lateParts(41 * MIN + 59_000), { h: 0, m: 41 });
+  assert.deepEqual(lateParts(0), { h: 0, m: 1 }, 'never „+0“');
+  assert.equal(lateText(lateParts(41 * MIN)), '+41 мин');
+  assert.equal(lateText(lateParts(59 * MIN + 59_000)), '+59 мин');
+  assert.equal(lateText(lateParts(60 * MIN)), '+1 ч 00 мин');
+  assert.equal(lateText(lateParts(65 * MIN)), '+1 ч 05 мин');
+  assert.equal(lateText(lateParts(135 * MIN)), '+2 ч 15 мин');
+  const start = Date.UTC(2026, 10, 5, 5, 0);
+  const b = withLate(proteinBar({ proteinStart: start }, start + 71 * MIN));
+  assert.equal(b?.time, '+41 мин', 'the banner / pill text');
+  assert.notEqual(b?.time, '00:00');
+  assert.equal(t('mealPill.over', { time: b?.time }), 'Времето изтече · +41 мин', 'the sheet header');
+  assert.equal(t('home.proteinOver', { time: b?.time }), 'Времето изтече · +41 мин · изяж 30 г протеин');
+  assert.equal(withLate(proteinBar({ proteinStart: start }, start + 10 * MIN))?.time, '20:00', 'running unchanged');
+  await setLang('en');
+  assert.equal(lateText(lateParts(65 * MIN)), '+1 h 05 min');
+  await setLang('bg');
+});

@@ -17,7 +17,7 @@ import { level, quests, stats } from '../../motivation/api.js';
 import { activeWorkout, nextPlan, planFor, planMinutes, planName, sessions, startWorkout } from '../../workouts/api.js';
 import { backupDue, canInstall, installApp } from '../../profile/api.js';
 import { day, goodnight, isEvening, morningPending, proteinBar, tuckedIn } from '../../daily/api.js';
-import { mealAte, mealSkip } from '../../daily/views/mealsheet.js';
+import { mealAte, mealSkip, withLate } from '../../daily/views/mealsheet.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 import { dayRows } from '../../food/api.js';
 import { cardActions, mealsCard, sleepCard, stepsCard } from '../../day/views/cards.js';
@@ -29,7 +29,7 @@ import { otterLine } from '../otter.js';
  * After 30 min it turns dark red and only the 00:00 blinks, until she answers. Only the
  * `.ptime` text node is updated every second (see mount) — no re-render, no flicker.
  */
-const barNow = () => (dailySettings().protein ? proteinBar(day(), Date.now()) : null);
+const barNow = () => (dailySettings().protein ? withLate(proteinBar(day(), Date.now())) : null);
 
 function proteinBarCard() {
   const b = barNow();
@@ -252,7 +252,7 @@ ${
       timer = window.setInterval(() => {
         const b = barNow();
         if ((b?.mode ?? '') !== mode) return void ((mode = b?.mode ?? ''), emit('ui:refresh'));
-        const n = b?.mode === 'running' ? el.querySelector('.pbar .ptime') : null;
+        const n = b?.mode === 'running' || b?.mode === 'overdue' ? el.querySelector('.pbar .ptime') : null;
         if (n && n.textContent !== b?.time) n.textContent = b?.time ?? '';
       }, 1000);
     },

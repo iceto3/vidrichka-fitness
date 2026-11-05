@@ -18,8 +18,21 @@ import { closeNotifications } from '../notify.js';
 import { BREAKFAST_LOGGER, day, proteinSkip, setAteAt } from '../api.js';
 import { checkAteAt, pendingMeal } from '../mealtime.js';
 
+/**
+ * How late, as shown on the pill, the sheet and the Home banner: „+41 мин“, „+1 ч 05 мин“.
+ * @param {{h: number, m: number}} late
+ */
+export const lateText = (late) =>
+  late.h ? t('late.hm', { h: late.h, mm: String(late.m).padStart(2, '0') }) : t('late.m', { m: late.m });
+
+/**
+ * A countdown (running: the time left) or, once the window has passed, how late it is.
+ * @template {{time: string, late?: {h: number, m: number}|null}} T @param {T|null} b @returns {T|null}
+ */
+export const withLate = (b) => (b?.late ? { ...b, time: lateText(b.late) } : b);
+
 /** The pending meal now (the Home banner's countdown), or null. */
-export const mealNow = () => pendingMeal(day(), Date.now(), !!dailySettings().protein);
+export const mealNow = () => withLate(pendingMeal(day(), Date.now(), !!dailySettings().protein));
 
 /** Open the logger for the meal (what the banner's „Изядох“ has done since 1.2.1). */
 const toLogger = () => {
