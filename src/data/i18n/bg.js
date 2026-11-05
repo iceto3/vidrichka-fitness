@@ -1252,7 +1252,7 @@ export default {
   'mealTime.save': 'Запиши и продължи',
   'mealTime.err.invalid': 'Избери час.',
   'mealTime.err.future': 'Този час още не е дошъл – избери по-ранен.',
-  'mealTime.err.early': 'Това е преди началото на таймера – избери по-късен час.',
+  'mealTime.err.early': 'Избери час след старта на таймера.',
   'mealChart.title': 'Хранене навреме',
   'mealChart.sub': 'протеинова закуска · последните 7 дни',
   'mealChart.onTime': 'навреме',

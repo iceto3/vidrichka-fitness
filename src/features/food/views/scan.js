@@ -118,7 +118,7 @@ export function openScanner(onFood, onManual) {
       () => html`<div class="row between"><h2 class="h2">${t('food.scan')}</h2><button class="iconbtn" data-close aria-label="${t('common.close')}">${ic('close', 20)}</button></div>
 <div class="scanbox mt12"><video id="scanvid" playsinline muted autoplay></video><div class="scanframe" aria-hidden="true"></div></div>
 <p class="b small mt10 center" id="scanstatus" role="status">${status}</p>
-<form class="row gap8 mt12" data-act="noop"><input class="input f1" id="bcode" inputmode="numeric" pattern="[0-9]*" placeholder="${t('scan.typeCode')}" value="${code}" aria-label="${t('scan.typeCode')}">
+<form class="row gap8 mt12" data-act="noop" novalidate><input class="input f1" id="bcode" inputmode="numeric" pattern="[0-9]*" placeholder="${t('scan.typeCode')}" value="${code}" aria-label="${t('scan.typeCode')}">
 <button class="btn sm" type="button" data-act="lookup">${t('scan.lookup')}</button></form>
 <button class="btn${missing ? '' : ' sec'} w100 mt12" data-act="manual">${ic('edit', 18)}${name ? t('food.enterSelf') : missing ? t('scan.addManual', { code: missing }) : t('food.manual')}</button>`,
     mount: async () => {

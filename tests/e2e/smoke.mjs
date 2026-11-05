@@ -3632,6 +3632,19 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
   await layer.locator('.ateerr').waitFor();
   assert.match(await layer.locator('.ateerr').innerText(), /още не е дошъл/);
   assert.ok(await layer.locator('.ateok').isDisabled(), 'no future time');
+  // round 3: before the start → only the app's own message (ти form), never a browser popup
+  await tin.fill('04:10');
+  await page.waitForFunction(() => /след старта/.test(document.querySelector('#layer .ateerr')?.textContent ?? ''));
+  assert.equal((await layer.locator('.ateerr').innerText()).trim(), 'Избери час след старта на таймера.');
+  assert.deepEqual(
+    await tin.evaluate((e) => [
+      e.validity.valid,
+      e.validationMessage,
+      ...['min', 'max', 'required', 'pattern', 'step'].map((a) => e.hasAttribute(a)),
+    ]),
+    [true, '', false, false, false, false, false],
+    'no native validation on the time field',
+  );
   await tin.fill('07:40');
   await page.waitForFunction(() => !document.querySelector('#layer .ateerr'));
   assert.equal(await layer.locator('.ateok').isDisabled(), false);
