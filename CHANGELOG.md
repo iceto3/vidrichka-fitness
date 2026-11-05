@@ -32,6 +32,14 @@ All notable changes to this project are documented here. The format follows
 - **Food search** matches words, not one exact substring: case-insensitive, Bulgarian word forms (пилешки / пилешко / пилешките), „гърди“ = breast (so „пилешки гърди“ finds **Пилешко филе**) and „бут“ = „бедро“. Built-in foods come first, then your own products, then Open Food Facts. Nutrition data unchanged.
 - **A late breakfast's row time** is the time from **Кога яде?**, not the save time.
 
+### Fixed (tester round 3)
+
+- **„Отмени“ always undoes** (food, sleep and every other delete with the undo pill). Cause: the pill can be swiped away, and a press that moved more than 8 px (|dx| + dy) counted as a swipe, so the click was swallowed and nothing came back, while the pill stayed. A finger, or the mouse in Chrome's device mode, easily moves that much during a tap. Now only a real swipe dismisses (more than 40 px sideways or 30 px down), anything under 24 px is a tap and undoes on release, without waiting for the click; the pill no longer moves while it is pressed, and a click after the touch cannot fall through to what is under it.
+- **XP follows the quests:** a quest of today that is no longer done (e.g. its breakfast deleted) gives its XP back – „Запиши закуската“ too, not only the protein quest – and Undo grants it once more. Earlier days and quests that are still done are never touched.
+- **Кога яде?** shows only the app's own messages, in the ти form: „Избери час след старта на таймера.“ (and „Този час още не е дошъл – избери по-ранен.“). The time fields have no browser constraints (no min/max/pattern), and the barcode form is `novalidate`, so no browser popup can appear.
+- **Open tabs stay in sync:** after a change is saved, the other open tabs of the app re-read just those rows (BroadcastChannel per channel/database) and re-render. A re-read never writes or re-announces (no loops), and a row with a local write still on its way is not overwritten (no lost writes). A restore / „Изтрий всичко“ in one tab reloads everything in the others; a language/theme change follows too.
+- **A late meal shows how late it is** instead of a frozen 00:00: the pill „Закуска +41 мин“ (from 60 min: „+1 ч 05 мин“), the sheet „Времето изтече · +41 мин“ and the Начало banner „Времето изтече · +41 мин · изяж 30 г протеин“, counted up from the end of the 30-minute window.
+
 ## [1.4.2] – 2026-10-28
 
 ### Added
