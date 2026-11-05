@@ -3,6 +3,7 @@
  * + custom/online cached), usage stats for "most used" ordering.
  * @module features/food/api
  */
+import { searchFoods } from './search.js';
 import { all, get, kv, put, remove, setKv, uid } from '../../core/store.js';
 import { emit } from '../../core/bus.js';
 import { L } from '../../core/i18n.js';
@@ -232,10 +233,8 @@ export function quickPicks() {
  * @param {string} q
  */
 export function searchLocal(q) {
-  const s = q.trim().toLowerCase();
-  if (!s) return [];
-  const pool = [...FOODS, ...all('foods')];
-  return pool
-    .filter((f) => (typeof f.name === 'string' ? f.name : `${f.name.en} ${f.name.bg}`).toLowerCase().includes(s))
-    .slice(0, 30);
+  // 1.4.3 round 2: by words (stems, гърди = филе), built-in foods first (see ./search.js)
+  return searchFoods(FOODS, all('foods'), q, (/** @type {any} */ f) =>
+    typeof f.name === 'string' ? f.name : `${f.name.en} ${f.name.bg}`,
+  );
 }
