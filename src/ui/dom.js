@@ -109,8 +109,10 @@ function morphNode(a, b) {
   for (const { name, value } of [...y.attributes]) {
     if (x.getAttribute(name) === value) continue;
     x.setAttribute(name, value);
-    // 1.4.3 (round 2): never overwrite what is being typed in a focused field
-    if (name === 'value' && 'value' in x && document.activeElement !== x) x.value = value;
+    // 1.4.3 (round 2): a focused typed time field (.t24i) keeps what is being typed (its own
+    // change handler writes the formatted time); other fields reflect a new value (e.g. a clamp)
+    if (name === 'value' && 'value' in x && !(document.activeElement === x && x.classList.contains('t24i')))
+      x.value = value;
   }
   for (const { name } of [...x.attributes])
     // 1.4.1: a <details> the user opened (e.g. Подробно за мускулите) stays open across re-renders
