@@ -12,7 +12,7 @@ import { currentPath } from '../../core/router.js';
 import { dailySettings } from '../../core/settings.js';
 import { all, fromOtherTab } from '../../core/store.js';
 import { dayKey } from '../../core/dates.js';
-import { proteinOnTime } from './logic.js';
+import { proteinOnTime, proteinQuest } from './logic.js';
 
 register(
   'routes',
@@ -28,6 +28,16 @@ register('quests', {
   go: 'morning',
   show: () => dailySettings().protein && dailySettings().morning,
   done: (/** @type {any} */ s) => proteinOnTime(s.dayRec),
+  // 1.4.3 (part A): on time 15 XP, up to 30 min late ticked „+N мин“ 8 XP, later „пропуснато“
+  state: (/** @type {any} */ s) => {
+    const q = proteinQuest(s.dayRec, Date.now());
+    return {
+      done: q.state === 'done' || q.state === 'late',
+      xp: q.xp,
+      missed: q.state === 'missed',
+      lateMin: q.state === 'late' ? q.delayMin : 0,
+    };
+  },
 });
 
 /** Start the in-app side of the daily rhythm (after the store is loaded). */
@@ -61,13 +71,14 @@ export async function startDaily() {
   on(
     'settings:changed',
     (/** @type {Record<string, any>} */ p) =>
-      ('daily' in p || 'lang' in p || 'userName' in p) && notify.syncDaily().catch(() => {}),
+      ('daily' in p || 'proteinBreakfast' in p || 'lang' in p || 'userName' in p) && notify.syncDaily().catch(() => {}),
   );
   // 1.4.3 (tester): protein switched on after this morning's wake-up was recorded
-  on(
-    'settings:changed',
-    (/** @type {Record<string, any>} */ p) => 'daily' in p && api.proteinFromWake() && emit('daily:changed'),
-  );
+  // (part A: also the protein breakfast switch in Profile; switched off, its notifications close)
+  on('settings:changed', (/** @type {Record<string, any>} */ p) => {
+    if (('daily' in p || 'proteinBreakfast' in p) && api.proteinFromWake()) emit('daily:changed');
+    if ('proteinBreakfast' in p && !dailySettings().protein) notify.closeNotifications(['protein']).catch(() => {});
+  });
   if (api.proteinFromWake()) emit('daily:changed');
   api.catchUpProtein();
   // 1.4.3: the meal pill above the nav on the other tabs (same countdown as the Home banner)

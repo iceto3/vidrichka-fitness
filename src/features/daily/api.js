@@ -131,6 +131,8 @@ export function proteinLogged(row, now = Date.now()) {
     return true;
   }
   if (!rec.proteinStart || rec.proteinAt || rec.proteinSkip) return false;
+  // 1.4.3 (part A): the protein breakfast switched off in Profile → a breakfast is just a breakfast
+  if (!dailySettings().protein) return false;
   if (!proteinYes(now)) return false;
   if (u) patchDay(id, { proteinUndo: null });
   ateTimeOnRow(row);

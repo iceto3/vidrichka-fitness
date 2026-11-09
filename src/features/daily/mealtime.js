@@ -43,18 +43,6 @@ export function pendingMeal(rec, now, enabled = true) {
 export const pillVisible = (s) =>
   !!s.pending && !!s.tab && s.tab !== 'home' && !s.navHidden && !s.workout && !PILL_HIDDEN_ROUTES.test(s.path ?? '');
 
-/**
- * Pill size from the scroll direction: shrinks when scrolling down (past a few pixels),
- * expands when scrolling up or back at the top. Small jitters keep the current state.
- * @param {boolean} mini Current state. @param {number} prevY @param {number} y
- */
-export function pillMini(mini, prevY, y) {
-  if (y <= 8) return false;
-  if (y - prevY > 6) return true;
-  if (prevY - y > 6) return false;
-  return mini;
-}
-
 /** Planned time of the protein breakfast (end of its window), or null. @param {any} rec */
 export const plannedAt = (rec) => (rec?.proteinStart ? rec.proteinStart + PROTEIN_WINDOW * MIN : null);
 
@@ -130,32 +118,58 @@ export function mealTiming(rec, today) {
   return { status: 'pending', planned, actual: null, delayMin: 0 };
 }
 
+/** 1.4.3 (part A): a breakfast with at least this much protein (g) is a protein breakfast. */
+export const PROTEIN_MIN_G = 30;
+
 /**
- * The last `n` days (oldest first) with their meal timing.
- * @param {Record<string, any>} recs Day records by id. @param {string} today @param {number} [n]
- * @returns {{day: string, t: MealTiming | null}[]}
+ * Protein (g, whole) in a day's breakfast rows, or null when no breakfast food was saved that
+ * day (older days whose rows are gone: unknown, never „low“). Water rows are ignored.
+ * @param {{meal?: string, type?: string, p?: number}[]} [rows] That day's food rows.
  */
-export function timingDays(recs, today, n = 7) {
-  const end = parseDay(today);
-  return Array.from({ length: n }, (_, i) => {
-    const day = dayKey(addDays(end, i - n + 1));
-    return { day, t: mealTiming(recs[day], today) };
-  });
+export function breakfastProtein(rows) {
+  const b = (rows ?? []).filter((r) => r.meal === TIMED_MEAL && r.type !== 'water');
+  return b.length ? Math.round(b.reduce((a, r) => a + (Number(r.p) || 0), 0)) : null;
 }
 
 /**
- * Summary below the chart: on time / answered-or-missed meals, and the average delay of the
- * late ones (minutes, rounded; null when none was late). Pending and empty days are left out.
- * @param {{t: MealTiming | null}[]} days
+ * The last `n` days (oldest first) with their meal timing and (1.4.3 part A) the protein of
+ * that day's breakfast (`protein`: grams or null when unknown).
+ * @param {Record<string, any>} recs Day records by id. @param {string} today @param {number} [n]
+ * @param {Record<string, any[]>} [food] Food rows by day.
+ * @returns {{day: string, t: MealTiming | null, protein: number | null}[]}
+ */
+export function timingDays(recs, today, n = 7, food = {}) {
+  const end = parseDay(today);
+  return Array.from({ length: n }, (_, i) => {
+    const day = dayKey(addDays(end, i - n + 1));
+    return { day, t: mealTiming(recs[day], today), protein: breakfastProtein(food[day]) };
+  });
+}
+
+/** Was a day's breakfast a protein one (eaten, ≥ PROTEIN_MIN_G)? @param {{t: MealTiming | null, protein?: number | null}} d */
+export const isProteinDay = (d) =>
+  !!d.t && (d.t.status === 'ontime' || d.t.status === 'late') && (d.protein ?? 0) >= PROTEIN_MIN_G;
+
+/** Eaten, but with less protein than PROTEIN_MIN_G (known grams only). @param {{t: MealTiming | null, protein?: number | null}} d */
+export const isLowProtein = (d) =>
+  !!d.t && (d.t.status === 'ontime' || d.t.status === 'late') && d.protein != null && d.protein < PROTEIN_MIN_G;
+
+/**
+ * Summary below the chart: on time / answered-or-missed meals, protein breakfasts of those
+ * days (1.4.3 part A), and the average delay of the late ones (minutes, rounded; null when
+ * none was late). Pending and empty days are left out.
+ * @param {{t: MealTiming | null, protein?: number | null}[]} days
  */
 export function timingSummary(days) {
-  const done = days.map((d) => d.t).filter((x) => x && x.status !== 'pending');
-  const late = done.filter((x) => x?.status === 'late');
+  const counted = days.filter((d) => d.t && d.t.status !== 'pending');
+  const done = counted.map((d) => /** @type {MealTiming} */ (d.t));
+  const late = done.filter((x) => x.status === 'late');
   return {
-    onTime: done.filter((x) => x?.status === 'ontime').length,
+    onTime: done.filter((x) => x.status === 'ontime').length,
     total: done.length,
     late: late.length,
-    missed: done.filter((x) => x?.status === 'missed').length,
-    avgDelay: late.length ? Math.round(late.reduce((a, x) => a + (x?.delayMin ?? 0), 0) / late.length) : null,
+    missed: done.filter((x) => x.status === 'missed').length,
+    protein: counted.filter(isProteinDay).length,
+    avgDelay: late.length ? Math.round(late.reduce((a, x) => a + x.delayMin, 0) / late.length) : null,
   };
 }

@@ -51,13 +51,31 @@ export const DEFAULTS = {
   lastBackup: 0,
   stepGoal: 8000, // 1.3.4: daily steps challenge (entered by hand – a web app can't read Health/Fit)
   shareFoods: true, // 1.3.4: send manually entered foods (name + per-100 g values only) anonymously
+  proteinBreakfast: true, // 1.4.3: protein within 30 min of waking (countdown, pill, banner, reminders, quest, chart)
 };
 
 /** Current settings merged over defaults. @returns {Settings} */
 export const settings = () => ({ ...DEFAULTS, ...kv('settings', {}) });
 
-/** Daily-rhythm settings, merged over DAILY so new keys get defaults. @returns {typeof DAILY} */
-export const dailySettings = () => ({ ...DAILY, ...settings().daily });
+/**
+ * 1.4.3: is the protein breakfast switched on (Profile)? Missing = on (existing users keep it,
+ * no migration). @returns {boolean}
+ */
+export const proteinBreakfastOn = () => settings().proteinBreakfast !== false;
+
+/** Daily-rhythm settings as stored (the Reminders editor reads and writes these). @returns {typeof DAILY} */
+export const storedDailySettings = () => ({ ...DAILY, ...settings().daily });
+
+/**
+ * Daily-rhythm settings in effect, merged over DAILY so new keys get defaults. With the
+ * protein breakfast switched off in Profile, `protein` reads false everywhere (countdown,
+ * pill, banner, reminders, push, quest); the stored reminder choice is kept for when it is
+ * switched on again. @returns {typeof DAILY}
+ */
+export const dailySettings = () => {
+  const d = storedDailySettings();
+  return proteinBreakfastOn() ? d : { ...d, protein: false };
+};
 
 /**
  * Update one or more settings.

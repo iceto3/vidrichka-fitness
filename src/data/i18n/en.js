@@ -1248,9 +1248,22 @@ export default {
   'nutr.legendTitle': 'Abbreviations',
   'nutr.legendOpen': 'What the abbreviations mean',
   'nutr.legendNote': 'Values are grams in the portion eaten. "–" means the food has no such value.',
-  'whatsNew.pill143':
-    'A breakfast timer pill above the bottom menu – visible on every tab, it shrinks while you scroll.',
+  'whatsNew.pill143': 'A breakfast timer pill above the bottom menu – visible on every tab.',
   'whatsNew.timing143': 'A late meal is saved with the time you ate, and Progress › Charts shows when you ate on time.',
   'whatsNew.nutr143':
     'Every food in the list shows protein, carbs, fat, creatine, fiber and salt – ⓘ explains the abbreviations.',
+  // 1.4.3 part A
+  'profile.proteinBreakfast': 'Protein breakfast',
+  'profile.proteinBreakfastSub': '30 g of protein within 30 min of waking – timer, reminders, quest and chart.',
+  'quest.lateN': '+{n} min',
+  'quest.missed': 'missed',
+  'mealChart.lowProtein': 'low protein · {n} g',
+  'mealChart.lowLegend': 'low protein',
+  'mealChart.pending': 'pending',
+  'mealChart.proteinSum': 'protein {n}/{total}',
+  'food.gramsMinus': '{n} g less',
+  'food.gramsPlus': '{n} g more',
+  'whatsNew.protein143':
+    'The protein breakfast can be switched off in Profile, and Meals on time also shows how much protein there was.',
+  'whatsNew.grams143': 'Change grams by −10, −5, +5 and +10, and every meal shows its total protein, carbs and fat.',
 };

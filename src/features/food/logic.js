@@ -307,3 +307,21 @@ export function validateFood(v) {
   if (typed('salt') && !errors.salt) values.salt = n.salt;
   return { errors, warn, est, values };
 }
+
+/** 1.4.3 (part A): the grams steppers' buttons (add sheet and diary-row edit), in grams. */
+export const GRAM_STEPS = /** @type {const} */ ([-10, -5, 5, 10]);
+/** Largest portion in grams. */
+export const GRAM_MAX = 5000;
+
+/**
+ * Grams after a stepper button (`d` grams) or a typed value (`typed`), kept within 0…GRAM_MAX.
+ * Typed text is rounded to whole grams; text that is not a number gives 0. Pure.
+ * @param {number} g Current grams. @param {{d?: number, typed?: string}} change
+ */
+export function nextGrams(g, change) {
+  const v =
+    change.typed != null
+      ? Math.round(parseFloat(String(change.typed).replace(',', '.')) || 0)
+      : g + Number(change.d || 0);
+  return Math.min(GRAM_MAX, Math.max(0, v));
+}

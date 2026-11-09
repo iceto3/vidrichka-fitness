@@ -21,9 +21,15 @@ export const EVENING_H = 19;
 export const ESTIMATE_FROM_H = 20;
 /** Opening the morning page before 16:00 records the wake-up. */
 export const MORNING_END_H = 16;
-/** Protein countdown (min) and the extra minutes a "yes" still counts as on time. */
+/** Protein countdown (min). */
 export const PROTEIN_WINDOW = 30;
-export const PROTEIN_GRACE = 15;
+/**
+ * 1.4.3 (part A): minutes after the window a protein breakfast still ticks the quest, as late
+ * („+N мин“, fewer XP). Later (or skipped) it is missed. Replaces the old 15-min grace.
+ */
+export const PROTEIN_LATE_MAX = 30;
+/** XP of the protein quest: on time / late (within PROTEIN_LATE_MAX). Missed gives none. */
+export const PROTEIN_XP = /** @type {const} */ ({ done: 15, late: 8 });
 /** Protein reminders, minutes after waking. */
 export const PROTEIN_STEPS = [10, 20, 30];
 
@@ -89,14 +95,39 @@ export function fillBedtime(rec) {
   return bed ? { bed, bedEst: true } : null;
 }
 
+/** When the protein breakfast was eaten: the typed time of a late meal, else when it was logged. @param {any} rec */
+const eatenAt = (rec) => Number(rec?.mealTimes?.breakfast?.actual) || rec?.proteinAt;
+
 /**
- * Was the protein "yes" within the window (+ grace)? 1.4.3: a late meal's typed time
- * (`mealTimes.breakfast.actual`) counts instead of the moment it was logged. @param {any} rec
+ * Was the protein breakfast eaten within the 30-min window? 1.4.3: a late meal's typed time
+ * (`mealTimes.breakfast.actual`) counts instead of the moment it was logged; since part A
+ * there is no grace (late meals are handled by `proteinQuest`). @param {any} rec
  */
-export const proteinOnTime = (rec) => {
-  const at = Number(rec?.mealTimes?.breakfast?.actual) || rec?.proteinAt;
-  return !!(rec?.proteinStart && rec.proteinAt && at - rec.proteinStart <= (PROTEIN_WINDOW + PROTEIN_GRACE) * MIN);
-};
+export const proteinOnTime = (rec) =>
+  !!(rec?.proteinStart && rec.proteinAt && eatenAt(rec) - rec.proteinStart <= PROTEIN_WINDOW * MIN);
+
+/**
+ * 1.4.3 (part A): the protein quest of a day.
+ *   done   – eaten within 30 min of waking: PROTEIN_XP.done (15)
+ *   late   – eaten up to PROTEIN_LATE_MAX min after the window: ticked with „+N мин“, PROTEIN_XP.late (8)
+ *   missed – skipped, eaten later, or not eaten once that time has passed: greyed „пропуснато“, 0
+ *   open   – still possible (no countdown yet, running, or overdue up to the limit)
+ * @param {any} rec The day's record. @param {number} now
+ * @returns {{state: 'done'|'late'|'missed'|'open', delayMin: number, xp: number}}
+ */
+export function proteinQuest(rec, now) {
+  const open = { state: /** @type {const} */ ('open'), delayMin: 0, xp: 0 };
+  if (!rec?.proteinStart) return open;
+  const planned = Number(rec.mealTimes?.breakfast?.planned) || rec.proteinStart + PROTEIN_WINDOW * MIN;
+  if (rec.proteinAt) {
+    const d = Math.round((eatenAt(rec) - planned) / MIN);
+    if (d <= 0) return { state: 'done', delayMin: 0, xp: PROTEIN_XP.done };
+    if (d <= PROTEIN_LATE_MAX) return { state: 'late', delayMin: d, xp: PROTEIN_XP.late };
+    return { state: 'missed', delayMin: d, xp: 0 };
+  }
+  if (rec.proteinSkip || now - planned > PROTEIN_LATE_MAX * MIN) return { state: 'missed', delayMin: 0, xp: 0 };
+  return open;
+}
 
 /**
  * Protein countdown state.

@@ -230,14 +230,14 @@ async function run(name, browser, P) {
   await layer.locator('#grams').waitFor();
   await settle();
   await tag('#layer .panel');
-  await tag('#layer [data-act="g"][data-d="1"]');
+  await tag('#layer [data-act="g"][data-d="10"]');
   const g0 = await layer.locator('#grams').inputValue();
-  await layer.locator('[data-act="g"][data-d="1"]').click();
-  await layer.locator('[data-act="g"][data-d="1"]').click();
+  await layer.locator('[data-act="g"][data-d="10"]').click();
+  await layer.locator('[data-act="g"][data-d="10"]').click();
   await settle();
   assert.notEqual(await layer.locator('#grams').inputValue(), g0, '+ changes the grams');
   assert.ok(await same('#layer .panel'), 'grams sheet panel is kept on + (no flicker)');
-  assert.ok(await same('#layer [data-act="g"][data-d="1"]'), '+ button node is kept');
+  assert.ok(await same('#layer [data-act="g"][data-d="10"]'), '+ button node is kept');
   const anims = await page.evaluate(
     () =>
       document
@@ -350,6 +350,7 @@ async function run(name, browser, P) {
   await v143fixes(page, h, name);
   await v143r2(page, h);
   await v143r3(page, h, name, ctx);
+  await v143a(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -1580,7 +1581,7 @@ async function v132(page, { go, settle, clearCel, layer }) {
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    26,
+    28, // 1.4.3 part A: +2 items
     'the 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -1894,7 +1895,7 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   assert.match(txt, /Обичайният ти обяд/);
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    23,
+    25, // 1.4.3 part A: +2 items
     'the 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -2007,8 +2008,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    21,
-    'three 1.4.3 and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
+    23,
+    'five 1.4.3 (part A: +2) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
   );
   await page.waitForTimeout(700);
   await shot('whats-new-134');
@@ -3608,7 +3609,7 @@ async function v142(page, { go, settle, shot, layer, dayField }) {
 }
 
 /**
- * 1.4.3: the meal pill (other tabs, shrink/expand on scroll, its Изядох/Пропуснах sheet,
+ * 1.4.3: the meal pill (other tabs, full size while scrolling, its Изядох/Пропуснах sheet,
  * never over the nav), the late-meal time entry (default now, no future times), the
  * Прогрес chart + summary and the abbreviated nutrients with their legend (Bulgarian UI).
  * @param {import('playwright-core').Page} page
@@ -3728,24 +3729,18 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
   await page.waitForTimeout(250);
   await shot('mealpill-tab');
 
-  // scroll down → clock circle, scroll up → full pill
+  // 1.4.3 part A: scrolling never shrinks the pill – it stays full size with its text
   await go('progress/trends');
   await pill.waitFor({ state: 'visible' });
-  for (const y of [200, 500, 800]) {
+  const full = /** @type {any} */ (await pill.boundingBox());
+  for (const y of [200, 500, 800, 400]) {
     await page.evaluate((y) => scrollTo(0, y), y);
-    await page.waitForTimeout(80);
+    await page.waitForTimeout(120);
   }
-  await page.waitForFunction(() => document.getElementById('mealpill')?.classList.contains('mini'));
-  assert.equal(await pill.locator('.mptx').isVisible(), false, 'shrunk: only the clock');
-  const mb = /** @type {any} */ (await pill.boundingBox());
-  assert.ok(Math.abs(mb.width - mb.height) < 2, 'a circle');
-  await page.waitForTimeout(250);
-  await shot('mealpill-mini');
-  for (const y of [600, 400]) {
-    await page.evaluate((y) => scrollTo(0, y), y);
-    await page.waitForTimeout(80);
-  }
-  await page.waitForFunction(() => !document.getElementById('mealpill')?.classList.contains('mini'));
+  assert.equal(await pill.evaluate((e) => e.classList.contains('mini')), false, 'never mini');
+  assert.ok(await pill.locator('.mptx').isVisible(), 'the meal and time stay visible');
+  const after = /** @type {any} */ (await pill.boundingBox());
+  assert.ok(Math.abs(after.width - full.width) < 2, `same width (${full.width} → ${after.width})`);
 
   // the sheet: Изядох / Пропуснах (the banner's actions)
   await go('food');
@@ -3864,7 +3859,7 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
   assert.deepEqual(st, ['ontime', 'late', 'missed', 'ontime', 'late', 'ontime', 'late']);
   const ctext = await ch.innerText();
   assert.match(ctext, /Хранене навреме/);
-  assert.match(ctext, /навреме 3\/7/);
+  assert.match(ctext, /навреме 3\/7 · протеинови \d\/7 · средно закъснение/);
   assert.match(ctext, /средно закъснение 20 мин/);
   const lateTags = await ch.locator('svg .mclate').allTextContents();
   assert.deepEqual(lateTags, ['+15 мин', '+35 мин', '+10 мин']);
@@ -3897,6 +3892,265 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
   await shot('meal-legend');
   await closeAllSheets(page, layer, settle);
   console.log(
-    '  ✔ 1.4.3 meal pill (other tabs, above the nav, shrinks/expands, sheet), late time entry (now, no future), Прогрес chart + summary, nutrient rows + legend',
+    '  ✔ 1.4.3 meal pill (other tabs, above the nav, stays full size, sheet), late time entry (now, no future), Прогрес chart + summary, nutrient rows + legend',
+  );
+}
+
+/**
+ * 1.4.3 part A (390 px; the grams sheet also at 360 px): the protein breakfast switch in
+ * Profile (off hides the Home bar, the quest and the chart; on brings them back), the
+ * −10/−5/+5/+10 grams stepper, the meal totals line in Храна, „Хранене навреме“ with the
+ * protein, and the graded protein quest (late „+N мин“ 8 XP, „пропуснато“).
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function v143a(page, { go, settle, shot, layer, rows, clearCel }) {
+  const vp = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const putRows = (/** @type {string} */ store, /** @type {any[]} */ recs) =>
+    page.evaluate(
+      ({ store, recs }) =>
+        new Promise((res, rej) => {
+          const r = indexedDB.open('vidrichka-fitness');
+          r.onerror = () => rej(r.error);
+          r.onsuccess = () => {
+            const tx = r.result.transaction(store, 'readwrite');
+            for (const x of recs) tx.objectStore(store).put(x);
+            tx.oncomplete = () => (r.result.close(), res(null));
+          };
+        }),
+      { store, recs },
+    );
+  const reopen = async () => {
+    await page.reload();
+    await page.locator('#nav .t').first().waitFor();
+    await settle();
+    await closeAllSheets(page, layer, settle);
+    await clearCel();
+  };
+  const D = '2026-11-12';
+  const ts = (/** @type {string} */ hm) => new Date(`${D}T${hm}:00+02:00`).getTime();
+  const proteinQuest = page.locator('.quest[data-go="morning"]');
+
+  // a late protein breakfast (typed 07:44, window ended 07:30): ticked „+14 мин“, +8 XP
+  await page.clock.setSystemTime(new Date(`${D}T07:50:00+02:00`));
+  const old = /** @type {any} */ ((await rows('days')).find((x) => x.id === D) ?? {});
+  await putRows('days', [
+    {
+      ...old,
+      id: D,
+      wake: ts('07:00'),
+      ack: ts('07:00'),
+      proteinStart: ts('07:00'),
+      proteinAt: ts('07:48'),
+      proteinCelebrated: true,
+      mealTimes: { breakfast: { planned: ts('07:30'), actual: ts('07:44') } },
+    },
+  ]);
+  await putRows('food', [
+    {
+      id: 'parta-bf',
+      date: D,
+      meal: 'breakfast',
+      ts: ts('07:44'),
+      time: '07:44',
+      foodId: 'chicken_breast',
+      name: { bg: 'Пилешко филе', en: 'Chicken breast' },
+      emoji: '🍗',
+      grams: 120,
+      kcal: 198,
+      p: 37.2,
+      c: 0,
+      f: 4.3,
+    },
+    {
+      id: 'parta-bf2',
+      date: D,
+      meal: 'breakfast',
+      ts: ts('07:45'),
+      time: '07:45',
+      name: { bg: 'Ориз', en: 'Rice' },
+      emoji: '🍚',
+      grams: 50,
+      kcal: 65,
+      p: 1.3,
+      c: 14.1,
+      f: 0.2,
+    },
+  ]);
+  await reopen();
+  await go('home');
+  await proteinQuest.waitFor();
+  const qt = await proteinQuest.innerText();
+  assert.match(qt, /Протеин до 30 мин след ставане[\s\S]*\+14 мин/, qt);
+  assert.match(qt, /\+8 XP/, 'late: 8 XP');
+  assert.equal(await proteinQuest.locator('.qbox.done').count(), 1, 'ticked');
+  await page.waitForFunction(
+    (d) => {
+      const r = indexedDB.open('vidrichka-fitness');
+      return new Promise((res) => {
+        r.onsuccess = () => {
+          const g = r.result.transaction('kv').objectStore('kv').get('xp');
+          g.onsuccess = () => (r.result.close(), res(g.result?.value?.[`quest:${d}:protein`]?.amt === 8));
+        };
+      });
+    },
+    D,
+    { timeout: 5000 },
+  );
+  await proteinQuest.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(250);
+  await shot('parta-quest-late');
+
+  // Храна: the meal totals line under the food names
+  await go('food');
+  const tot = page.locator('.meal[data-m="breakfast"] .mtot');
+  await tot.waitFor();
+  assert.equal((await tot.innerText()).trim(), '● пр 39 · ● вх 14 · ● мз 5');
+  assert.deepEqual(await tot.locator('span').evaluateAll((e) => e.map((x) => x.className)), ['cp', 'cc', 'cf']);
+  const tb = /** @type {any} */ (await tot.boundingBox());
+  assert.ok(tb.height <= 22, `one line (${tb.height})`);
+  await page.locator('.food .meals').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(200);
+  await shot('parta-meals-totals');
+
+  // the grams stepper: −10 −5 [grams] +5 +10 on one row at 360 and 390 px
+  for (const w of [360, 390]) {
+    await page.setViewportSize({ width: w, height: 844 });
+    await go('food/add/lunch');
+    await page.locator('.cat').first().click();
+    await layer.locator('[data-act="pick"]').first().click();
+    await layer.locator('#grams').waitFor();
+    await settle();
+    const ds = await layer.locator('.gstep [data-act="g"]').evaluateAll((e) => e.map((x) => x.getAttribute('data-d')));
+    assert.deepEqual(ds, ['-10', '-5', '5', '10']);
+    const geo = await layer.locator('.gstep').evaluate((st) => {
+      const r = st.getBoundingClientRect();
+      const kids = [...st.children].map((c) => c.getBoundingClientRect());
+      return {
+        rows: new Set(kids.map((k) => Math.round(k.top + k.height / 2))).size,
+        inside: kids.every((k) => k.left >= r.left - 0.5 && k.right <= r.right + 0.5),
+        right: r.right,
+        input: /** @type {HTMLElement} */ (st.querySelector('input')).getBoundingClientRect().width,
+      };
+    });
+    assert.equal(geo.rows, 1, `${w}px: one row`);
+    assert.ok(geo.inside && geo.right <= w, `${w}px: inside (${JSON.stringify(geo)})`);
+    assert.ok(geo.input >= 56, `${w}px: room for 4 digits (${geo.input})`);
+    const g = layer.locator('#grams');
+    const v0 = Number(await g.inputValue());
+    await layer.locator('[data-act="g"][data-d="5"]').click();
+    assert.equal(Number(await g.inputValue()), v0 + 5);
+    await layer.locator('[data-act="g"][data-d="-10"]').click();
+    assert.equal(Number(await g.inputValue()), v0 - 5);
+    await layer.locator('[data-act="g"][data-d="10"]').click();
+    await layer.locator('[data-act="g"][data-d="-5"]').click();
+    assert.equal(Number(await g.inputValue()), v0);
+    await g.fill('4998');
+    await g.dispatchEvent('change');
+    await layer.locator('[data-act="g"][data-d="5"]').click();
+    assert.equal(await g.inputValue(), '5000', 'max 5000');
+    await g.fill(String(v0));
+    await g.dispatchEvent('change');
+    await page.waitForTimeout(250);
+    if (w === 390) await shot('parta-grams-add');
+    await closeAllSheets(page, layer, settle);
+  }
+  // the diary-row edit sheet has the same stepper
+  await go('food');
+  await page.locator('.meal[data-m="breakfast"]').click();
+  await layer.locator('.mealitems .itembtn').first().click();
+  await layer.locator('#egrams').waitFor();
+  assert.deepEqual(
+    await layer.locator('.itemedit .gstep [data-act="g"]').evaluateAll((e) => e.map((x) => x.getAttribute('data-d'))),
+    ['-10', '-5', '5', '10'],
+  );
+  await layer.locator('.itemedit [data-act="g"][data-d="5"]').click();
+  assert.equal(await layer.locator('#egrams').inputValue(), '125');
+  await page.waitForTimeout(250);
+  await shot('parta-grams-edit');
+  await closeAllSheets(page, layer, settle);
+
+  // „Хранене навреме“ with the protein of each breakfast
+  await go('progress/trends');
+  const ch = page.locator('.ch-meals');
+  await ch.waitFor();
+  const ctext = await ch.innerText();
+  assert.match(ctext, /навреме \d\/\d · протеинови \d\/\d · (средно закъснение \d+ мин|без закъснения)/, ctext);
+  assert.match(ctext, /малко протеин/, 'legend');
+  assert.ok(await ch.locator('svg .mcg').count(), 'protein grams under the days');
+  await page.addStyleTag({ content: '#nav,#mealpill{display:none!important}' }).then(async (hs) => {
+    await ch.evaluate((n) => n.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(200);
+    await shot('parta-mealchart');
+    await hs.evaluate((e) => e.remove());
+  });
+
+  // missed: skipped → greyed „пропуснато“, no XP
+  await putRows('days', [
+    {
+      .../** @type {any} */ ((await rows('days')).find((x) => x.id === D)),
+      proteinAt: null,
+      mealTimes: {},
+      proteinSkip: ts('07:20'),
+    },
+  ]);
+  await reopen();
+  await go('home');
+  await page.locator('.quest.missed[data-go="morning"]').waitFor();
+  assert.match(await proteinQuest.innerText(), /пропуснато/);
+  assert.equal(await proteinQuest.locator('.qbox.done').count(), 0);
+  assert.equal(await proteinQuest.locator('.xp').count(), 0, 'no XP chip');
+  assert.equal(await proteinQuest.locator('.struck').count(), 0, 'greyed, not struck through');
+  await proteinQuest.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(250);
+  await shot('parta-quest-missed');
+
+  // Profile: the protein breakfast switch (on by default)
+  await go('profile');
+  const sw = page.locator('#proteinbf .toggle');
+  await sw.waitFor();
+  assert.equal(await sw.getAttribute('aria-checked'), 'true', 'on by default');
+  assert.match(await page.locator('#proteinbf').innerText(), /Протеинова закуска/);
+  await page.locator('#proteinbf').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(250);
+  await shot('parta-profile-toggle');
+  await sw.click();
+  await settle();
+  assert.equal(await page.locator('#proteinbf .toggle').getAttribute('aria-checked'), 'false');
+  // off: no quest, no chart, no protein reminder row
+  await go('home');
+  await page.locator('.quests').waitFor();
+  assert.equal(await proteinQuest.count(), 0, 'no protein quest');
+  assert.equal(await page.locator('.pbar').count(), 0, 'no banner');
+  await go('progress/trends');
+  await page.locator('.ch-food').waitFor();
+  assert.equal(await page.locator('.ch-meals').count(), 0, 'no chart');
+  await go('profile/reminders');
+  await page.locator('.dailyset').waitFor();
+  assert.doesNotMatch(await page.locator('.dailyset').innerText(), /Напомняния за протеин/);
+  // a new day with protein off: waking up starts no countdown, no pill
+  const D2 = '2026-11-13';
+  await page.clock.setSystemTime(new Date(`${D2}T07:05:00+02:00`));
+  await go('morning');
+  await page.waitForTimeout(600);
+  assert.equal(await page.locator('.pcard').count(), 0, 'no protein card');
+  const d2 = /** @type {any} */ ((await rows('days')).find((x) => x.id === D2));
+  assert.ok(d2?.wake, 'the wake-up is recorded');
+  assert.equal(d2?.proteinStart ?? null, null, 'no countdown');
+  await go('food');
+  await page.waitForTimeout(1200);
+  assert.equal(await page.locator('#mealpill').isVisible(), false, 'no pill');
+  // on again: the countdown starts from the wake-up
+  await go('profile');
+  await page.locator('#proteinbf .toggle').click();
+  await settle();
+  assert.equal(await page.locator('#proteinbf .toggle').getAttribute('aria-checked'), 'true');
+  await go('home');
+  await page.locator('.pbar').waitFor();
+  assert.equal(await proteinQuest.count(), 1, 'the quest is back');
+  await page.setViewportSize(vp ?? { width: 412, height: 915 });
+  console.log(
+    '  ✔ 1.4.3 part A: protein switch (off/on), pill full size, −10/−5/+5/+10 grams (360/390), meal totals, chart protein, late „+14 мин“ 8 XP / „пропуснато“',
   );
 }

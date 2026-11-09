@@ -14,7 +14,6 @@ import {
   hmOn,
   mealTiming,
   pendingMeal,
-  pillMini,
   pillVisible,
   plannedAt,
   timingDays,
@@ -40,7 +39,7 @@ test('1.4.3: version, What’s new entry, strings in both languages, no English 
   assert.equal(NOTES[0].v, '1.4.3');
   assert.deepEqual(
     NOTES[0].items.map(([, k]) => k),
-    ['whatsNew.pill143', 'whatsNew.timing143', 'whatsNew.nutr143'],
+    ['whatsNew.pill143', 'whatsNew.timing143', 'whatsNew.nutr143', 'whatsNew.protein143', 'whatsNew.grams143'],
   );
   const keys = Object.keys(bg).filter((k) => /^(mealPill|mealTime|mealChart|nutr)\.|143$/.test(k));
   assert.ok(keys.length >= 30);
@@ -89,15 +88,6 @@ test('pill visibility: other tabs only, pending only, not in a workout, not on t
   assert.equal(pillVisible({ ...base, path: 'food/add/lunch' }), true);
 });
 
-test('pill shrinks on scroll down, expands on scroll up and at the top', () => {
-  assert.equal(pillMini(false, 0, 40), true);
-  assert.equal(pillMini(true, 400, 300), false);
-  assert.equal(pillMini(false, 100, 104), false); // jitter keeps the state
-  assert.equal(pillMini(true, 100, 97), true);
-  assert.equal(pillMini(true, 20, 5), false); // back at the top
-  assert.equal(pillMini(true, 0, 0), false);
-});
-
 test('late time entry: default now, no future, not before the countdown', () => {
   const now = T0 + 90 * MIN; // 09:30
   assert.equal(hmOn(TODAY, '09:05'), T0 + 65 * MIN);
@@ -137,10 +127,14 @@ test('timing classification: planned = end of the window, late with +N min', () 
   assert.equal(mealTiming(rec(), TODAY)?.status, 'pending');
   assert.equal(mealTiming({ id: TODAY }, TODAY), null);
   assert.equal(mealTiming(null, TODAY), null);
-  // the streak's on-time rule follows the typed time (45 min incl. grace)
+  // the streak's on-time rule follows the typed time (part A: 30 min, no grace)
+  assert.equal(
+    proteinOnTime(rec({ proteinAt: T0 + 90 * MIN, mealTimes: { breakfast: { planned, actual: T0 + 25 * MIN } } })),
+    true,
+  );
   assert.equal(
     proteinOnTime(rec({ proteinAt: T0 + 90 * MIN, mealTimes: { breakfast: { planned, actual: T0 + 40 * MIN } } })),
-    true,
+    false,
   );
   assert.equal(proteinOnTime(rec({ proteinAt: T0 + 90 * MIN })), false);
 });
@@ -170,8 +164,8 @@ test('chart days and summary: on time n/total, average delay of the late ones', 
     days.map((d) => d.t?.status ?? null),
     ['ontime', 'late', 'missed', null, 'late', 'missed', 'pending'],
   );
-  assert.deepEqual(timingSummary(days), { onTime: 1, total: 5, late: 2, missed: 2, avgDelay: 20 });
-  assert.deepEqual(timingSummary([]), { onTime: 0, total: 0, late: 0, missed: 0, avgDelay: null });
+  assert.deepEqual(timingSummary(days), { onTime: 1, total: 5, late: 2, missed: 2, protein: 0, avgDelay: 20 });
+  assert.deepEqual(timingSummary([]), { onTime: 0, total: 0, late: 0, missed: 0, protein: 0, avgDelay: null });
   assert.equal(timingSummary(days.slice(0, 1)).avgDelay, null);
   // the Bulgarian summary text
   assert.equal(t('mealChart.summary', { n: 5, total: 7 }), 'навреме 5/7');

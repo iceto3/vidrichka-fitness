@@ -509,15 +509,6 @@
   color: #ffd4d4;
   animation: pblink 1s steps(1, end) infinite;
 }
-/* scrolled down: only the clock, in a circle */
-.mealpill.mini {
-  width: 40px;
-  padding: 0 6px;
-  gap: 0;
-}
-.mealpill.mini .mptx {
-  display: none;
-}
 /* the page gets the pill's room at the bottom, so the last card is never under it */
 body.has-mpill #page {
   padding-bottom: calc(var(--nav-h) + 66px);

@@ -180,8 +180,8 @@ ${mealsCard(dayKey())}
 ${quests().map(
   (
     q,
-  ) => html`<button class="quest" ${raw(q.id === 'breakfast' && dayRows(dayKey()).some((r) => r.meal === 'breakfast') ? 'data-act="dayMeal" data-m="breakfast"' : `data-go="${esc(q.go ?? 'home')}"`)}><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
-<span class="f1 b${q.isDone ? ' struck' : ''}">${t(q.label, q.vars)}${/** @type {any} */ (q.vars).goal != null ? html` <span class="muted small">(${t('home.progressOf', q.vars)})</span>` : ''}</span><span class="xp">+${q.xp} XP</span></button>`,
+  ) => html`<button class="quest${q.missed ? ' missed' : ''}" ${raw(q.id === 'breakfast' && dayRows(dayKey()).some((r) => r.meal === 'breakfast') ? 'data-act="dayMeal" data-m="breakfast"' : `data-go="${esc(q.go ?? 'home')}"`)}><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
+<span class="f1 b${q.isDone ? ' struck' : ''}">${t(q.label, q.vars)}${/** @type {any} */ (q.vars).goal != null ? html` <span class="muted small">(${t('home.progressOf', q.vars)})</span>` : ''}${q.lateMin ? html` <span class="qlate small num">${t('quest.lateN', { n: q.lateMin })}</span>` : ''}</span>${q.missed ? html`<span class="qmissed xs b">${t('quest.missed')}</span>` : html`<span class="xp">+${q.isDone ? q.gain : q.xp} XP</span>`}</button>`,
 )}</section>
 <button class="card mt12 challenge" data-go="progress/lifts"><div class="row between"><span class="row gap8"><span class="sq gold">${ic('target', 18, 2.4)}</span><span class="b">${t('home.challenge', { month: fmtDate(now, { month: 'long' }) })}</span></span><span class="xs b muted num">${s.monthWorkouts}/${s.monthTarget}</span></div>
 <div class="muted xs b mt6 left">${s.monthWorkouts >= s.monthTarget ? t('home.challengeDone') : t('home.challengeBody', { n: s.monthTarget, xp: 100 })}</div>${bar(s.monthWorkouts / s.monthTarget, 'var(--gold)', 'mt8')}</button>

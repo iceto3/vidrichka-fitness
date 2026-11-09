@@ -154,6 +154,7 @@ ${srow(
 ${srow('target', 'teal', t('profile.weeklyGoal'), t('profile.weeklyGoalSub'), stepper({ act: 'goal', value: s.weeklyGoal, label: t('profile.weeklyGoal') }))}
 ${srow('steps', 'orange', t('steps.goal'), t('steps.goalSub'), stepper({ act: 'sgoal', value: s.stepGoal, label: t('steps.goal') }), 'id="stepgoal"')}
 <button class="srow" data-act="nutrition"><span class="sic green">${ic('food', 19, 2.2)}</span><span class="t left"><span class="st block">${t('profile.nutrition')}</span><span class="muted xs b">${fmtNum(s.kcalGoal)} ${t('unit.kcal')} · ${t('food.p')} ${s.proteinGoal} · ${t('food.c')} ${s.carbsGoal} · ${t('food.f')} ${s.fatGoal} · ${t('profile.waterN', { n: s.waterGoal })}</span></span>${ic('right', 17, 2.2, 'var(--muted)')}</button>
+${srow('sun', 'gold', t('profile.proteinBreakfast'), t('profile.proteinBreakfastSub'), toggle(s.proteinBreakfast !== false, 'tg', t('profile.proteinBreakfast'), { k: 'proteinBreakfast' }), 'id="proteinbf"')}
 ${srow('timer', 'blue', t('profile.restAlert'), canVibrate() ? t('profile.restAlertSub') : t('profile.noVibrate'), html`<div class="row gap8"><span class="muted">${ic('volume', 17, 2.2)}</span>${toggle(s.restSound, 'tg', t('profile.sound'), { k: 'restSound' })}${canVibrate() ? html`<span class="muted">${ic('vibrate', 17, 2.2)}</span>${toggle(s.restVibrate, 'tg', t('profile.vibration'), { k: 'restVibrate' })}` : ''}</div>`)}
 ${srow('gift', 'gold', t('profile.celebrationSounds'), t('profile.celebrationSoundsSub'), toggle(s.celebrationSounds, 'tg', t('profile.celebrationSounds'), { k: 'celebrationSounds' }))}
 ${srow(
@@ -206,7 +207,9 @@ ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic t
       if (v !== cur) (recordGoal(v), setSettings({ weeklyGoal: v }));
     },
     tg: (el) => {
-      const k = /** @type {'restSound'|'restVibrate'|'celebrationSounds'|'shareFoods'} */ (el.dataset.k);
+      const k = /** @type {'restSound'|'restVibrate'|'celebrationSounds'|'shareFoods'|'proteinBreakfast'} */ (
+        el.dataset.k
+      );
       setSettings({ [k]: !settings()[k] });
     },
     sgoal: (el, ev) => {

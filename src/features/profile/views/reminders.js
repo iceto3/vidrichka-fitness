@@ -5,7 +5,7 @@
  */
 import { html } from '../../../ui/dom.js';
 import { t, weekdayName } from '../../../core/i18n.js';
-import { dailySettings, settings, setSettings } from '../../../core/settings.js';
+import { proteinBreakfastOn, settings, setSettings, storedDailySettings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { timeInput, toggle, topBar } from '../../../ui/components.js';
 import { notify } from '../../../ui/feedback.js';
@@ -59,7 +59,7 @@ export default () => {
   };
   /** Update one daily-rhythm setting (see drow keys). @param {string} k @param {(cur: any) => any} fn */
   const setDaily = (k, fn) => {
-    const d = structuredClone(dailySettings()),
+    const d = structuredClone(storedDailySettings()),
       [a, i] = k.split('.');
     if (i != null) d[a][Number(i)] = fn(d[a][Number(i)]);
     else d[a] = fn(d[a]);
@@ -70,7 +70,7 @@ export default () => {
     tab: 'profile',
     render: () => {
       const r = settings().reminders,
-        d = dailySettings(),
+        d = storedDailySettings(),
         s = support();
       const how = pushOn()
         ? 'reminders.push'
@@ -94,7 +94,12 @@ ${pushSupport().configured ? pushCard() : ''}
 <div class="card dailyset">
 ${drow('wake', t('daily.wake'), d.wake, d.morning, t('daily.wakeSub'))}
 ${d.morning ? drow('loud', t('daily.loud'), d.loud, d.loudOn !== false, t('daily.loudSub')) : ''}
-<div class="row between gap8 drow mt10"><div class="f1"><div class="b small">${t('daily.protein')}</div><div class="muted xs b">${t('daily.proteinSub')}</div></div>${toggle(d.protein, 'dtog', t('daily.protein'), { k: 'protein' })}</div>
+${
+  // 1.4.3: no protein reminders while the protein breakfast is off in Profile
+  proteinBreakfastOn()
+    ? html`<div class="row between gap8 drow mt10"><div class="f1"><div class="b small">${t('daily.protein')}</div><div class="muted xs b">${t('daily.proteinSub')}</div></div>${toggle(d.protein, 'dtog', t('daily.protein'), { k: 'protein' })}</div>`
+    : ''
+}
 ${d.water.map((w, i) => drow(`water.${i}`, t('daily.water', { n: i + 1 }), w.time, w.on))}
 ${drow('checkinAm', t('daily.checkinAm'), d.checkinAm.time, d.checkinAm.on, t('daily.checkinAmSub'))}
 ${drow('checkinPm', t('daily.checkinPm'), d.checkinPm.time, d.checkinPm.on, t('daily.checkinPmSub'))}

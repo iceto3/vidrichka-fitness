@@ -223,6 +223,34 @@
   font-weight: 700;
 }
 /* grams sheet */
+/* 1.4.3 (part A): −10 −5 [grams] +5 +10 on one row, also at 360 px */
+.step.big.gstep {
+  gap: 4px;
+}
+.step.big.gstep .sb.gsb {
+  width: 44px;
+  height: 52px;
+  flex: none;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.2px;
+  padding: 0;
+}
+.step.big.gstep .sv {
+  min-width: 64px;
+}
+.step.big.gstep input {
+  font-size: 26px;
+}
+@media (max-width: 370px) {
+  .step.big.gstep .sb.gsb {
+    width: 41px;
+  }
+  .step.big.gstep input {
+    font-size: 24px;
+  }
+}
 .kcalbig {
   font-size: 26px;
   font-weight: 800;

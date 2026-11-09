@@ -47,6 +47,15 @@
  * @property {(ctx: any) => boolean} done       Completed today?
  * @property {(ctx: any) => string} [detail]    Optional progress text.
  * @property {string} [go]                      Route to open when tapped.
+ * @property {(ctx: any) => QuestState} [state] 1.4.3: graded quest – overrides `done`/`xp` for today
+ */
+
+/**
+ * @typedef {object} QuestState
+ * @property {boolean} done    Ticked.
+ * @property {number} xp       XP it gives in this state (0 when missed).
+ * @property {boolean} [missed] Can no longer be done today (greyed „пропуснато“, no XP).
+ * @property {number} [lateMin] Ticked late: shown as „+N мин“.
  */
 
 /** @type {{tabs: Tab[], routes: Route[], badges: Badge[], quests: Quest[], progressTabs: any[], settings: any[]}} */

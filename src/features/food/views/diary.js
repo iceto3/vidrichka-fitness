@@ -85,6 +85,21 @@ export function openMeal(meal, date) {
   });
 }
 
+/**
+ * 1.4.3 (part A): the meal's protein / carbs / fat under its foods in the meals overview:
+ * „● пр 42 · ● вх 1 · ● мз 44“ (whole grams, no unit, the macro colours of the grams sheet).
+ * @param {{p: number, c: number, f: number}} tot
+ */
+export const mealTotalsLine = (tot) =>
+  html`<span class="muted small b num block ellip mtot">${[
+    ['cp', 'nutr.p', tot.p],
+    ['cc', 'nutr.c', tot.c],
+    ['cf', 'nutr.f', tot.f],
+  ].map(
+    ([cls, k, v], i) =>
+      html`${i ? ' · ' : ''}<span class="${String(cls)}">●</span> ${t(String(k))} ${fmtNum(Math.round(Number(v) || 0))}`,
+  )}</span>`;
+
 /** @returns {import('../../../core/registry.js').View} */
 export default () => ({
   tab: 'food',
@@ -140,7 +155,7 @@ ${creatineCard(view.date)}
       if (!items.length)
         return html`<button class="meal" data-go="food/add/${m}"><span class="mic muted-bg">${ic('plus', 20, 2.4)}</span><span class="f1"><span class="b muted block">${t(`meal.${m}`)}</span><span class="muted xs b">${t('food.nothing')}</span></span></button>`;
       return html`<button class="meal" data-act="meal" data-m="${m}"><span class="mic" style="background:${bg}">${emo}</span><span class="f1 minw0"><span class="row gap8"><span class="b">${t(`meal.${m}`)}</span><span class="muted xs b">${items[0].time}</span></span>
-<span class="muted small b ellip block">${items.map((r) => foodName(r)).join(', ')}</span></span><span class="b num nowrap">${fmtNum(totals(items).kcal)} <span class="muted xs">${t('unit.kcal')}</span></span></button>`;
+<span class="muted small b ellip block">${items.map((r) => foodName(r)).join(', ')}</span>${mealTotalsLine(totals(items))}</span><span class="b num nowrap">${fmtNum(totals(items).kcal)} <span class="muted xs">${t('unit.kcal')}</span></span></button>`;
     })}</div>
 <button class="btn w100 mt12" data-go="food/add/${mealFor()}">${ic('plus', 20, 2.8)}${t('food.add')}</button>
 <div class="row center-j mt12"><button class="link trashlink" data-go="food/trash">${ic('trash', 16, 2.2)} ${t('trash.title')}${trashList().length ? ` (${trashList().length})` : ''}</button></div>

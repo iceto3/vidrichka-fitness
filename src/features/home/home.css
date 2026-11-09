@@ -158,6 +158,28 @@
   color: #f5c451;
   background: #3a3016;
 }
+/* 1.4.3 (part A): a protein quest ticked late shows „+N мин“ (not struck), a missed one is greyed */
+.qlate {
+  display: inline-block;
+  font-weight: 800;
+  color: #c2410c;
+}
+.dark .qlate {
+  color: #f59e5b;
+}
+.quest.missed {
+  opacity: 0.55;
+}
+.quest.missed .qbox {
+  border-style: dashed;
+}
+.qmissed {
+  color: var(--muted);
+  background: var(--soft);
+  padding: 4px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
 .challenge,
 .recapcard {
   display: block;

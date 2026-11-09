@@ -88,7 +88,18 @@ export const quests = () => {
   const s = stats();
   return registry.quests
     .filter((q) => !q.show || q.show(s))
-    .map((q) => ({ ...q, isDone: q.done(s), vars: q.detail?.(s) ?? {} }));
+    .map((q) => {
+      // 1.4.3: a graded quest (state) can be late (fewer XP) or missed (no XP)
+      const st = q.state?.(s);
+      return {
+        ...q,
+        isDone: st ? st.done : q.done(s),
+        gain: st ? st.xp : q.xp,
+        missed: !!st?.missed,
+        lateMin: st?.lateMin ?? 0,
+        vars: q.detail?.(s) ?? {},
+      };
+    });
 };
 
 /** All badges with earned date (or null). */

@@ -18,6 +18,8 @@ export const NOTES = [
       ['clock', 'whatsNew.pill143'],
       ['chart', 'whatsNew.timing143'],
       ['food', 'whatsNew.nutr143'],
+      ['sun', 'whatsNew.protein143'],
+      ['plus', 'whatsNew.grams143'],
     ],
   },
   {

@@ -40,6 +40,16 @@ All notable changes to this project are documented here. The format follows
 - **Open tabs stay in sync:** after a change is saved, the other open tabs of the app re-read just those rows (BroadcastChannel per channel/database) and re-render. A re-read never writes or re-announces (no loops), and a row with a local write still on its way is not overwritten (no lost writes). A restore / „Изтрий всичко“ in one tab reloads everything in the others; a language/theme change follows too.
 - **A late meal shows how late it is** instead of a frozen 00:00: the pill „Закуска +41 мин“ (from 60 min: „+1 ч 05 мин“), the sheet „Времето изтече · +41 мин“ and the Начало banner „Времето изтече · +41 мин · изяж 30 г протеин“, counted up from the end of the 30-minute window.
 
+### Part A (beta)
+
+- **Protein breakfast switch** (Profile › **Протеинова закуска**, on by default; existing users keep it on, no migration). Off: no countdown, meal pill, Home banner, protein reminders (local and push), protein quest, protein card on the morning page, and no **Хранене навреме** card. A breakfast saved while it is off is just a breakfast. The stored **Напомняния за протеин** choice is kept (its row is hidden while the switch is off) and comes back when it is switched on again; a wake-up already recorded today then starts the countdown.
+- **The meal pill always stays full size** (no shrinking to a clock circle while scrolling).
+- **Grams steppers** (add sheet and diary-row edit): **−10 −5 [grams] +5 +10**, typed values still allowed, 0…5000 g, one row at 360 and 390 px (`gramStepper` / `nextGrams`, shared by both sheets).
+- **Храна › Хранения:** under each meal's foods a totals line „● пр 42 · ● вх 1 · ● мз 44“ (whole grams, macro colours).
+- **Protein quest graded:** eaten within 30 min of waking = ticked, 15 XP; up to 30 min after the window = ticked with „+N мин“, 8 XP; later, skipped or not eaten by then = greyed „пропуснато“ (not struck through), no XP. The old 15-min grace is gone. Quests can now carry a `state` (done / XP / missed / late minutes); the reward engine corrects the ledger when the grade changes.
+- **Хранене навреме:** each eaten breakfast shows its protein in grams under the day; under 30 g it is hatched (title „малко протеин · N г“); missed = grey „пропусната“; delay in orange „+N мин“. Summary „навреме 5/7 · протеинови 6/7 · средно закъснение 14 мин“. Days whose breakfast rows are gone count as unknown protein (never „low“).
+- What's new: two 1.4.3 items. Unit tests `tests/unit/v143-parta.test.js`; e2e `v143a` (switch off/on, steppers at 360/390, totals line, chart, late/missed quest).
+
 ## [1.4.2] – 2026-10-28
 
 ### Added

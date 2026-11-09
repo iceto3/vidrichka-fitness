@@ -268,3 +268,24 @@ button.cd:not(.on):active {
 .mclegend .lg {
   color: var(--muted);
 }
+/* 1.4.3 (part A): protein of each breakfast under its day; a low-protein breakfast is hatched */
+.mealchart .mcg {
+  font-size: 9.5px;
+  font-weight: 800;
+  fill: var(--violet, #7c5cff);
+}
+.mealchart .mcg.low {
+  fill: #c2611c;
+}
+.dark .mealchart .mcg.low {
+  fill: #f6a35e;
+}
+.mealchart .mchl {
+  stroke: #fff;
+  stroke-width: 2.4;
+  stroke-opacity: 0.85;
+}
+.mclegend .lg.hatch::before {
+  border-radius: 2px;
+  background: repeating-linear-gradient(45deg, var(--ok) 0 2px, #fff 2px 4px);
+}
