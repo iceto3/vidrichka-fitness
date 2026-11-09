@@ -6,8 +6,8 @@
 import { register } from '../../core/registry.js';
 import { onRestore } from '../../core/trash.js';
 import { on, emit } from '../../core/bus.js';
-import { all, kv } from '../../core/store.js';
-import { dayKey, monthKey } from '../../core/dates.js';
+import { all } from '../../core/store.js';
+import { monthKey } from '../../core/dates.js';
 import { PHOTO_DAY } from '../../data/photos.js';
 import { award, XP } from '../motivation/api.js';
 import { day, patchDay } from '../daily/api.js';
@@ -19,20 +19,17 @@ onRestore('photo', async (e) => (await import('./photos.js')).restoredPhoto(e));
 
 register('progressTabs', { id: 'body', label: 'progress.body', order: 20, load: () => import('./views/body.js') });
 
-/** Awarded today (so a quest done today stays visible, ticked). @param {string} month */
-const setDoneToday = (month) => {
-  const ts = kv('xp', {})[`photoset:${month}`]?.ts;
-  return !!ts && dayKey(ts) === dayKey();
-};
-
-// Monthly 4-pose set: shown from the 1st (PHOTO_DAY) until this month's set is complete.
+// Monthly 4-pose set. 1.4.3 (part B): a „Месечни цели“ quest – shown the whole month from
+// the 1st (PHOTO_DAY), ticked once this month's set is complete (+ the photo-set bonus).
 register('quests', {
   id: 'photos4',
   label: 'quest.photos4',
   xp: 25,
   go: 'progress/body',
-  show: (/** @type {any} */ s) =>
-    Number(s.today.slice(8)) >= PHOTO_DAY && (!photoMonth(s.month).done || setDoneToday(s.month)),
+  order: 21,
+  section: 'monthly',
+  was: ['photos4'],
+  show: (/** @type {any} */ s) => Number(s.today.slice(8)) >= PHOTO_DAY,
   done: (/** @type {any} */ s) => photoMonth(s.month).done,
   detail: (/** @type {any} */ s) => ({ n: photoMonth(s.month).poses.size, goal: 4 }),
 });

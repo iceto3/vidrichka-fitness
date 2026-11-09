@@ -48,6 +48,11 @@
  * @property {(ctx: any) => string} [detail]    Optional progress text.
  * @property {string} [go]                      Route to open when tapped.
  * @property {(ctx: any) => QuestState} [state] 1.4.3: graded quest – overrides `done`/`xp` for today
+ * @property {'daily'|'weekly'|'monthly'} [section] 1.4.3 (part B): Home section and reset period (default daily).
+ * @property {string[]} [was]   1.4.3 (part B): older ids of this quest (their XP this period counts).
+ * @property {boolean} [bar]    1.4.3 (part B): show `detail` as a progress bar.
+ * @property {string} [unit]    1.4.3 (part B): i18n key of the unit after n/goal.
+ * @property {number} [order]   Sort order.
  */
 
 /**

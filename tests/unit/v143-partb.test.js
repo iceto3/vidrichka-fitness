@@ -1,7 +1,7 @@
 // 1.4.3 part B: B1 meals per day (five meals, switches, enabled-only picking).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { setKv } from '../../src/core/store.js';
+import { setKv } from '../../src/core/store.js'; // (more store helpers below)
 import { setLang, t } from '../../src/core/i18n.js';
 import {
   MEALS_ON,
@@ -202,4 +202,115 @@ test('B2: partial → finish with Vidrichka → full; XP corrected once, quest g
   // a partial from yesterday stays partial and can't be finished
   put('sessions', { ...p, id: 'old', endedAt: Date.now() - 864e5 * 1.5 });
   assert.equal(resumable(get('sessions', 'old')), false);
+});
+
+// ---------------------------------------------------------------- B3: daily and monthly goals
+import { QUEST_SECTIONS, questKey, quests } from '../../src/features/motivation/api.js';
+import { syncRewards } from '../../src/features/motivation/rewards.js';
+import { all, remove } from '../../src/core/store.js';
+import '../../src/features/daily/index.js';
+import '../../src/features/steps/index.js';
+
+const clearAll = () => {
+  for (const st of ['food', 'sessions', 'measurements', 'photos', 'days']) all(st).forEach((r) => remove(st, r.id));
+  setKv('xp', {});
+  setKv('active', null);
+  setKv('settings', {});
+};
+const meal = (/** @type {string} */ id, /** @type {string} */ m, p = 0) =>
+  put('food', { id, date: dayKey(), meal: m, ts: Date.now(), time: '08:00', name: 'x', grams: 100, kcal: 100, p });
+
+test('B3: sections – daily (resets each day) and monthly; a weekly one only needs an entry', () => {
+  clearAll();
+  assert.deepEqual(
+    QUEST_SECTIONS.map((s) => s.id),
+    ['daily', 'monthly'],
+  );
+  const s = { today: '2026-11-09', week: '2026-11-09', month: '2026-11' };
+  assert.equal(questKey({ id: 'water' }, s), 'quest:2026-11-09:water');
+  assert.equal(questKey({ id: 'measure', section: 'monthly' }, s), 'quest:2026-11:measure');
+  assert.equal(questKey({ id: 'x', section: 'weekly' }, s), 'quest:2026-11-09:x');
+  const daily = quests('daily').map((q) => q.id);
+  for (const id of [
+    'workout',
+    'meal_breakfast',
+    'meal_lunch',
+    'meal_snack',
+    'meal_dinner',
+    'proteinGoal',
+    'water',
+    'steps',
+  ])
+    assert.ok(daily.includes(id), id);
+  for (const id of ['breakfast', 'meals3', 'measure', 'meal_snack_am', 'photos4']) assert.ok(!daily.includes(id), id);
+  assert.ok(daily.includes('protein'), 'protein within 30 min while the protein breakfast is on');
+  assert.ok(daily.indexOf('meal_breakfast') < daily.indexOf('protein'));
+  assert.ok(daily.indexOf('protein') < daily.indexOf('meal_lunch'));
+  assert.ok(
+    quests('monthly')
+      .map((q) => q.id)
+      .includes('measure'),
+  );
+});
+
+test('B3: one quest per meal that is on; breakfast off also hides the protein quest', () => {
+  clearAll();
+  setSettings({ meals: { ...MEALS_ON, snack_am: true, breakfast: false } });
+  const ids = quests('daily').map((q) => q.id);
+  assert.ok(ids.includes('meal_snack_am'));
+  assert.ok(!ids.includes('meal_breakfast'));
+  assert.ok(!ids.includes('protein'));
+  meal('f1', 'snack_am');
+  assert.equal(quests('daily').find((q) => q.id === 'meal_snack_am')?.isDone, true);
+  syncRewards();
+  assert.equal(kv('xp', {})[`quest:${dayKey()}:meal_snack_am`]?.amt, 5);
+  setKv('settings', {});
+});
+
+test('B3: the day’s protein goal fills from the food diary and ticks at the Profile goal', () => {
+  clearAll();
+  setSettings({ proteinGoal: 120 });
+  meal('f1', 'breakfast', 30.4);
+  meal('f2', 'lunch', 51.8);
+  let q = quests('daily').find((x) => x.id === 'proteinGoal');
+  assert.deepEqual(q?.vars, { n: 82, goal: 120 });
+  assert.equal(q?.isDone, false);
+  assert.equal(q?.bar, true);
+  assert.equal(t('quest.proteinGoal'), 'Протеин за деня');
+  meal('f3', 'dinner', 40);
+  q = quests('daily').find((x) => x.id === 'proteinGoal');
+  assert.equal(q?.isDone, true);
+  syncRewards();
+  assert.equal(kv('xp', {})[`quest:${dayKey()}:proteinGoal`]?.amt, 15);
+  remove('food', 'f3');
+  syncRewards();
+  assert.equal(kv('xp', {})[`quest:${dayKey()}:proteinGoal`], undefined, 'given back when it drops below');
+});
+
+test('B3: monthly measurements stay until done this month; no double XP after the update', () => {
+  clearAll();
+  const month = dayKey().slice(0, 7);
+  let m = quests('monthly').find((x) => x.id === 'measure');
+  assert.equal(m?.isDone, false);
+  put('measurements', { id: 'm1', date: `${month}-01`, waist: 70 });
+  m = quests('monthly').find((x) => x.id === 'measure');
+  assert.equal(m?.isDone, true, 'any day of the month');
+  syncRewards();
+  assert.equal(kv('xp', {})[`quest:${month}:measure`]?.amt, 30);
+  // an old day-keyed measure / breakfast of this period counts as paid
+  setKv('xp', {
+    [`quest:${month}-01:measure`]: { amt: 15, ts: 1 },
+    [`quest:${dayKey()}:breakfast`]: { amt: 10, ts: 1 },
+  });
+  meal('f1', 'breakfast');
+  syncRewards();
+  const l = kv('xp', {});
+  assert.equal(l[`quest:${month}:measure`], undefined);
+  assert.equal(l[`quest:${dayKey()}:meal_breakfast`], undefined);
+  assert.equal(l[`quest:${month}-01:measure`]?.amt, 15, 'kept');
+  assert.equal(l[`quest:${dayKey()}:breakfast`]?.amt, 10, 'kept');
+  // a measurement from last month does not count
+  clearAll();
+  put('measurements', { id: 'm0', date: '2020-01-15', waist: 70 });
+  assert.equal(quests('monthly').find((x) => x.id === 'measure')?.isDone, false);
 });

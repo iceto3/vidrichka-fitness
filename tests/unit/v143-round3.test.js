@@ -19,18 +19,18 @@ test('deleting today’s breakfast gives the „Запиши закуската�
   setKv('xp', { 'quest:2020-01-01:breakfast': { amt: 10, ts: 1 }, 'session:s1': { amt: 50, ts: 2 } });
   row('b1');
   syncRewards();
-  assert.equal(ledger()[`quest:${today}:breakfast`]?.amt, 10, 'ticked → +10');
+  assert.equal(ledger()[`quest:${today}:meal_breakfast`]?.amt, 5, 'ticked → +5 (1.4.3 part B: one quest per meal)');
   const before = xpTotal();
   remove('food', 'b1');
   syncRewards();
-  assert.equal(ledger()[`quest:${today}:breakfast`], undefined, 'un-ticked → its entry is gone');
-  assert.equal(xpTotal(), before - 10, 'and the total drops by exactly its XP');
+  assert.equal(ledger()[`quest:${today}:meal_breakfast`], undefined, 'un-ticked → its entry is gone');
+  assert.equal(xpTotal(), before - 5, 'and the total drops by exactly its XP');
   assert.ok(ledger()['quest:2020-01-01:breakfast'] && ledger()['session:s1'], 'other days / workouts kept');
   syncRewards();
-  assert.equal(xpTotal(), before - 10, 'syncing again changes nothing');
+  assert.equal(xpTotal(), before - 5, 'syncing again changes nothing');
   row('b1'); // Undo puts the same row back
   syncRewards();
-  assert.equal(ledger()[`quest:${today}:breakfast`]?.amt, 10, 'Undo → granted again');
+  assert.equal(ledger()[`quest:${today}:meal_breakfast`]?.amt, 5, 'Undo → granted again');
   assert.equal(xpTotal(), before, 'back to the same total');
   syncRewards();
   assert.equal(xpTotal(), before, 'never twice');
@@ -49,7 +49,7 @@ test('a breakfast with another meal left keeps the quest; quests that are still 
   assert.equal(xpTotal(), t0, 'another breakfast entry is left: still done');
   remove('food', 'l1');
   syncRewards();
-  assert.equal(ledger()[`quest:${today}:breakfast`]?.amt, 10, 'breakfast still done');
+  assert.equal(ledger()[`quest:${today}:meal_breakfast`]?.amt, 5, 'breakfast still done');
 });
 
 test('a late meal shows how late it is: „+41 мин“, „+1 ч 05 мин“ (pill, sheet, Home banner)', async () => {

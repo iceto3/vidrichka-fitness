@@ -84,5 +84,10 @@ test('"Ate it" leads to the Food logger on breakfast — also from the notificat
   const click = sw.slice(sw.indexOf("addEventListener('notificationclick'"));
   assert.ok(click.includes(`route = '${BREAKFAST_LOGGER}'`), 'sw.js opens the same route after protein-yes');
   const quests = readFileSync('src/features/motivation/quests.js', 'utf8');
-  assert.match(quests, /id: 'breakfast'[^\n]*todayMeals\.has\('breakfast'\)/, 'logging breakfast completes the quest');
+  // 1.4.3 part B: one quest per meal that is on (meal_breakfast …)
+  assert.match(
+    quests,
+    /id: `meal_\$\{m\}`[\s\S]*done: \(s\) => s\.todayMeals\.has\(m\)/,
+    'logging breakfast completes the quest',
+  );
 });

@@ -90,15 +90,37 @@ export function stats() {
     days: all('days'),
     goalAt,
     waterGoal: settings().waterGoal,
+    proteinGoal: settings().proteinGoal,
     level: level().level,
   });
   return cache;
 }
 
-/** Today's quests with completion state. */
-export const quests = () => {
+/**
+ * 1.4.3 (part B): quest sections on Home, in order. A section's quests reset per its period
+ * (`questKey`). To add „Седмични цели“: put `{id: 'weekly', title: 'home.weeklyGoals'}` here
+ * and register quests with `section: 'weekly'` (period: the Monday of the week, `stats().week`).
+ * @type {{id: 'daily'|'weekly'|'monthly', title: string}[]}
+ */
+export const QUEST_SECTIONS = [
+  { id: 'daily', title: 'home.quests' },
+  { id: 'monthly', title: 'home.monthlyGoals' },
+];
+
+/** Period of a section: the day, the week's Monday or the month. @param {string|undefined} section @param {any} s */
+export const questPeriod = (section, s) => (section === 'monthly' ? s.month : section === 'weekly' ? s.week : s.today);
+
+/** XP ledger id of a quest in its current period. @param {{id: string, section?: string}} q @param {any} s */
+export const questKey = (q, s) => `quest:${questPeriod(q.section, s)}:${q.id}`;
+
+/**
+ * The current quests with completion state (default: every section; `section` filters).
+ * @param {string} [section]
+ */
+export const quests = (section) => {
   const s = stats();
   return registry.quests
+    .filter((q) => !section || (q.section ?? 'daily') === section)
     .filter((q) => !q.show || q.show(s))
     .map((q) => {
       // 1.4.3: a graded quest (state) can be late (fewer XP) or missed (no XP)

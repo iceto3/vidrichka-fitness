@@ -85,12 +85,12 @@ test('every 1.3.2 string exists in both languages, Bulgarian wording as agreed',
       k,
     ),
   );
-  assert.equal(keys.length, 18);
+  assert.equal(keys.length, 19); // 1.4.3 part B: + mealTo.snack_am
   for (const k of keys) assert.ok(k in en, k);
   assert.equal(bg['manual.errOver100'], 'Най-много 100 г на 100 г продукт.'); // 1.3.3 wording
   assert.equal(
     bg['food.tapAgain'].replace('{meal}', bg['mealTo.snack']),
-    'Докосни пак, за да добавиш към междинното хранене',
+    'Докосни пак, за да добавиш към следобедното междинно', // 1.4.3 part B: two snacks
   );
   // Bulgarian UI has no Latin "g" unit left in the food strings
   for (const [k, v] of Object.entries(bg))

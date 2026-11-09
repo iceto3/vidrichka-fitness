@@ -13,7 +13,7 @@ import { addDays, dayKey, monthKey, startOfWeek } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { bar, ring } from '../../../ui/components.js';
 import { messageFor, moodFor, otter, otterName } from '../../mascot/api.js';
-import { level, quests, stats } from '../../motivation/api.js';
+import { QUEST_SECTIONS, level, quests, stats } from '../../motivation/api.js';
 import {
   activeWorkout,
   nextPlan,
@@ -88,6 +88,44 @@ function dailyCards() {
       ),
     );
   return out;
+}
+
+/**
+ * One quest row. 1.4.3 (part B): a meal quest whose meal has entries opens that meal; a
+ * quest with `bar` (the day's protein) shows n/goal with its unit and a progress bar.
+ * @param {ReturnType<typeof quests>[number]} q
+ */
+function questRow(q) {
+  const v = /** @type {any} */ (q.vars),
+    meal = q.id.startsWith('meal_') ? q.id.slice(5) : '',
+    tap =
+      meal && dayRows(dayKey()).some((r) => r.meal === meal)
+        ? `data-act="dayMeal" data-m="${esc(meal)}"`
+        : `data-go="${esc(q.go ?? 'home')}"`;
+  const prog =
+    v.goal != null
+      ? html` <span class="muted small num">(${t('home.progressOf', v)}${q.unit ? ` ${t(q.unit)}` : ''})</span>`
+      : '';
+  return html`<button class="quest${q.missed ? ' missed' : ''}" data-q="${q.id}" ${raw(tap)}><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
+<span class="f1 minw0 b${q.isDone ? ' struck' : ''}"><span class="block">${t(q.label, q.vars)}${prog}${q.lateMin ? html` <span class="qlate small num">${t('quest.lateN', { n: q.lateMin })}</span>` : ''}${q.note ? html` <span class="qlate qnote small">${t(q.note)}</span>` : ''}</span>${q.bar && v.goal ? bar(Math.min(1, v.n / v.goal), q.isDone ? 'var(--ok)' : '#7C5CFF', 'mt6 qbar') : ''}</span>${q.missed ? html`<span class="qmissed xs b">${t('quest.missed')}</span>` : html`<span class="xp">+${q.isDone ? q.gain : q.xp} XP</span>`}</button>`;
+}
+
+/**
+ * 1.4.3 (part B): a Home quest section – „Дневни цели“ (with the level bar), „Месечни цели“
+ * (with the month), later „Седмични цели“ (see QUEST_SECTIONS). Empty sections are hidden.
+ * @param {(typeof QUEST_SECTIONS)[number]} sec @param {ReturnType<typeof level>} lv
+ */
+function questSection(sec, lv) {
+  const qs = quests(sec.id);
+  if (!qs.length) return '';
+  const head =
+    sec.id === 'daily'
+      ? html`<div class="row gap6"><div class="lvl sm" aria-label="${t('home.level', { n: lv.level })}">${lv.level}</div><div class="bar w96">${raw(`<i style="width:${lv.pct * 100}%;background:var(--gold)"></i>`)}</div><span class="xs b muted num">${fmtNum(lv.into)}/${fmtNum(lv.need)} XP</span></div>`
+      : sec.id === 'monthly'
+        ? html`<span class="xs b muted">${fmtDate(new Date(), { month: 'long' })}</span>`
+        : '';
+  return html`<section class="card mt12 quests q-${sec.id}" aria-label="${t(sec.title)}"><div class="row between qhead"><h2 class="h3 xb">${t(sec.title)}</h2>${head}</div>
+${qs.map(questRow)}</section>`;
 }
 
 /** Render `**bold**` segments of a translated string as highlighted spans. @param {string} s */
@@ -198,14 +236,7 @@ ${workoutCard()}
 ${stepsCard(dayKey())}
 ${sleepCard(dayKey())}
 ${mealsCard(dayKey())}
-<section class="card mt12 quests" aria-label="${t('home.quests')}"><div class="row between qhead"><h2 class="h3 xb">${t('home.quests')}</h2>
-<div class="row gap6"><div class="lvl sm" aria-label="${t('home.level', { n: lv.level })}">${lv.level}</div><div class="bar w96">${raw(`<i style="width:${lv.pct * 100}%;background:var(--gold)"></i>`)}</div><span class="xs b muted num">${fmtNum(lv.into)}/${fmtNum(lv.need)} XP</span></div></div>
-${quests().map(
-  (
-    q,
-  ) => html`<button class="quest${q.missed ? ' missed' : ''}" ${raw(q.id === 'breakfast' && dayRows(dayKey()).some((r) => r.meal === 'breakfast') ? 'data-act="dayMeal" data-m="breakfast"' : `data-go="${esc(q.go ?? 'home')}"`)}><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
-<span class="f1 b${q.isDone ? ' struck' : ''}">${t(q.label, q.vars)}${/** @type {any} */ (q.vars).goal != null ? html` <span class="muted small">(${t('home.progressOf', q.vars)})</span>` : ''}${q.lateMin ? html` <span class="qlate small num">${t('quest.lateN', { n: q.lateMin })}</span>` : ''}${q.note ? html` <span class="qlate qnote small">${t(q.note)}</span>` : ''}</span>${q.missed ? html`<span class="qmissed xs b">${t('quest.missed')}</span>` : html`<span class="xp">+${q.isDone ? q.gain : q.xp} XP</span>`}</button>`,
-)}</section>
+${QUEST_SECTIONS.map((sec) => questSection(sec, lv))}
 <button class="card mt12 challenge" data-go="progress/lifts"><div class="row between"><span class="row gap8"><span class="sq gold">${ic('target', 18, 2.4)}</span><span class="b">${t('home.challenge', { month: fmtDate(now, { month: 'long' }) })}</span></span><span class="xs b muted num">${s.monthWorkouts}/${s.monthTarget}</span></div>
 <div class="muted xs b mt6 left">${s.monthWorkouts >= s.monthTarget ? t('home.challengeDone') : t('home.challengeBody', { n: s.monthTarget, xp: 100 })}</div>${bar(s.monthWorkouts / s.monthTarget, 'var(--gold)', 'mt8')}</button>
 ${showRecap ? html`<button class="card mt12 row gap12 recapcard" data-act="recap" data-m="${prevMonth}"><span class="sq violet">${ic('gift', 20, 2.2)}</span><span class="f1 left"><span class="b block">${t('home.recapTitle', { month: fmtDate(new Date(prevMonth + '-15'), { month: 'long' }) })}</span><span class="muted xs b">${t('home.recapBody')}</span></span>${ic('right', 18, 2.2, 'var(--muted)')}</button>` : ''}

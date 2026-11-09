@@ -351,6 +351,7 @@ async function run(name, browser, P) {
   await v143r2(page, h);
   await v143r3(page, h, name, ctx);
   await v143a(page, h);
+  await v143b(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -437,7 +438,7 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer, dayFi
   await settle();
   await go('home');
   await page.locator('.pbar.done').waitFor();
-  await page.locator('.quest[data-m="breakfast"] .qbox.done').waitFor();
+  await page.locator('.quest[data-q="meal_breakfast"] .qbox.done').waitFor();
   console.log('  ✔ Home protein bar ticks in place → "Ate it" → celebration → breakfast logger → quest done');
   // From here on, answer "Later" whenever a reminder prompt pops up in the way (on a slow CI
   // runner one can appear between steps, exactly as it would for a person).
@@ -777,7 +778,7 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
 
   // Monthly quest on Home
   await go('home');
-  const quest = page.locator('.quest[data-go="progress/body"]');
+  const quest = page.locator('.quest[data-q="photos4"]');
   await quest.waitFor();
   assert.match(await quest.innerText(), /Monthly progress photos[\s\S]*0\/4|0 of 4/i);
   await quest.evaluate((e) => e.scrollIntoView({ block: 'center' }));
@@ -856,7 +857,7 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   console.log(`  ✔ photo session: 4 slots, EXIF date, add several, move, delete; small → big (${seen.join(' → ')})`);
   assert.match(await page.locator('.pmonth').innerText(), /Done for October/);
   await go('home');
-  assert.equal(await page.locator('.quest[data-go="progress/body"] .qbox.done').count(), 1, 'quest done today');
+  assert.equal(await page.locator('.quest[data-q="photos4"] .qbox.done').count(), 1, 'quest done today');
 
   // A second, older session (EXIF 1 Sep) → timeline order + before/after by date
   await go('progress/body');
@@ -1498,7 +1499,7 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   assert.equal(await chip.getAttribute('aria-pressed'), 'true');
   assert.match(
     await page.locator('.combohint').innerText(),
-    /Баница 100 г[\s\S]*Докосни пак, за да добавиш към междинното хранене/,
+    /Баница 100 г[\s\S]*Докосни пак, за да добавиш към следобедното междинно/,
   );
   assert.equal((await dayFood()).filter((r) => r.meal === 'snack').length, snack0, 'first tap only selects');
   await page.waitForTimeout(300);
@@ -1510,7 +1511,7 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   assert.equal(snack1.length, snack0 + combo.items.length, 'second tap adds the whole combination');
   assert.match(
     await page.locator('.toast').innerText(),
-    /Добавено в междинно/,
+    /Добавено в следобедно междинно/,
     'the toast survives its own navigation',
   );
   assert.equal(await page.locator('.undopill').count(), 0, 'no Undo for an add');
@@ -1581,7 +1582,7 @@ async function v132(page, { go, settle, clearCel, layer }) {
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    28, // 1.4.3 part A: +2 items
+    31, // 1.4.3 part A: +2 items, part B: +3
     'the 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -1895,7 +1896,7 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   assert.match(txt, /Обичайният ти обяд/);
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    25, // 1.4.3 part A: +2 items
+    28, // 1.4.3 part A: +2 items, part B: +3
     'the 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -2008,8 +2009,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    23,
-    'five 1.4.3 (part A: +2) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
+    26,
+    'eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
   );
   await page.waitForTimeout(700);
   await shot('whats-new-134');
@@ -2710,13 +2711,13 @@ async function v143r2(page, { go, settle, shot, layer, rows, clearCel }) {
   assert.equal(d.mealTimes?.breakfast, undefined, 'meal time cleared');
   assert.equal((await xp())['quest:2026-11-05:protein'], undefined, 'quest XP taken back');
   // round 3: „Запиши закуската“ is un-ticked as well, so its XP goes too
-  assert.equal((await xp())['quest:2026-11-05:breakfast'], undefined, 'breakfast quest XP taken back');
+  assert.equal((await xp())['quest:2026-11-05:meal_breakfast'], undefined, 'breakfast quest XP taken back');
   await page.locator('.undopill').tap();
   await settle();
   d = await day5();
   assert.ok(d.proteinAt, 'Undo restores proteinAt');
   assert.ok((await xp())['quest:2026-11-05:protein'], 'and the quest XP');
-  assert.ok((await xp())['quest:2026-11-05:breakfast'], 'and the breakfast quest XP');
+  assert.ok((await xp())['quest:2026-11-05:meal_breakfast'], 'and the breakfast quest XP');
   await closeAllSheets(page, layer, settle);
   await openBreakfast();
   await layer.locator('.lrow', { hasText: 'Пилешко филе' }).first().locator('[data-act="del"]').click();
@@ -3302,7 +3303,9 @@ async function v141(page, { go, settle, shot, layer, clearCel }, name, ctx) {
     await go('home');
     await clearCel();
     if (!(await page.locator('.wtop').count())) {
-      await page.locator('.wcard [data-act="start"]').first().click();
+      // 1.4.3 part B: Home has no start button after a workout today – start from Тренировки
+      await go('workouts');
+      await page.locator('[data-act="start"]').first().click();
       await page.locator('.wtop').waitFor();
     }
     await page.locator('[data-act="howTo"]').first().click();
@@ -4153,4 +4156,219 @@ async function v143a(page, { go, settle, shot, layer, rows, clearCel }) {
   console.log(
     '  ✔ 1.4.3 part A: protein switch (off/on), pill full size, −10/−5/+5/+10 grams (360/390), meal totals, chart protein, late „+14 мин“ 8 XP / „пропуснато“',
   );
+}
+
+/**
+ * 1.4.3 part B: meals per day (Profile switches, 360/390 px), Home daily goals with the
+ * protein bar, „Месечни цели“, a partial workout finished with Vidrichka the same day, and
+ * Home „Тренировката е готова“.
+ * @param {import('playwright-core').Page} page
+ * @param {any} h helpers from run()
+ */
+async function v143b(page, { go, settle, shot, layer, clearCel }) {
+  const vp = page.viewportSize();
+  const putRows = (/** @type {string} */ store, /** @type {any[]} */ recs) =>
+    page.evaluate(
+      ({ store, recs }) =>
+        new Promise((res, rej) => {
+          const r = indexedDB.open('vidrichka-fitness');
+          r.onerror = () => rej(r.error);
+          r.onsuccess = () => {
+            const tx = r.result.transaction(store, 'readwrite');
+            for (const x of recs) tx.objectStore(store).put(x);
+            tx.oncomplete = () => (r.result.close(), res(null));
+          };
+        }),
+      { store, recs },
+    );
+  const reopen = async () => {
+    await page.reload();
+    await page.locator('#nav .t').first().waitFor();
+    await settle();
+    await closeAllSheets(page, layer, settle);
+    await clearCel();
+  };
+  const D = '2026-11-13';
+  await page.clock.setSystemTime(new Date(`${D}T10:45:00+02:00`));
+  await putRows('kv', [{ id: 'active', value: null }]); // a workout left open by an earlier step
+  await reopen();
+  const tog = (/** @type {string} */ m) => page.locator(`#mealsset [data-meal="${m}"] .toggle`);
+
+  // B1: Profile › Хранения през деня – five switches, the morning snack off by default
+  for (const w of [360, 390]) {
+    await page.setViewportSize({ width: w, height: 844 });
+    await go('profile');
+    await page.locator('#mealsset').waitFor();
+    assert.deepEqual(
+      await page.locator('#mealsset [data-meal]').evaluateAll((e) => e.map((x) => x.getAttribute('data-meal'))),
+      ['breakfast', 'snack_am', 'lunch', 'snack', 'dinner'],
+    );
+    const fit = await page.locator('#mealsset').evaluate((c) => {
+      const r = c.getBoundingClientRect();
+      return [...c.querySelectorAll('.toggle')].every((tg) => tg.getBoundingClientRect().right <= r.right + 0.5);
+    });
+    assert.ok(fit, `${w}px: switches inside the card`);
+  }
+  assert.equal(await tog('snack_am').getAttribute('aria-checked'), 'false', 'morning snack off by default');
+  assert.match(await page.locator('#mealsset').innerText(), /Сутрешно междинно[\s\S]*Следобедно междинно/);
+  await tog('snack_am').click();
+  await settle();
+  assert.equal(await tog('snack_am').getAttribute('aria-checked'), 'true');
+  assert.equal(await page.locator('#proteinbf').count(), 1, 'protein breakfast row while breakfast is on');
+  await page.locator('#mealsset').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(250);
+  await shot('partb-profile-meals');
+
+  // breakfast off → the protein breakfast row goes; the last meal can't be switched off
+  for (const m of ['breakfast', 'lunch', 'snack', 'dinner']) (await tog(m).click(), await settle());
+  assert.equal(await page.locator('#proteinbf').count(), 0, 'no protein breakfast without breakfast');
+  await tog('snack_am').click();
+  await settle();
+  assert.equal(await tog('snack_am').getAttribute('aria-checked'), 'true', 'the last meal stays on');
+  assert.match(await page.locator('.toast').last().innerText(), /Поне едно хранене/);
+  // a hidden meal keeps its past entries (part A logged breakfast on the 12th)
+  await go('day/2026-11-12');
+  await page.locator('.dayworkouts, .meal').first().waitFor();
+  assert.ok(await page.locator('.meal[data-m="breakfast"]').count(), 'breakfast of the 12th still shown');
+  assert.equal(await page.locator('.meal[data-m="lunch"]').count(), 0, 'lunch off and empty: hidden');
+  await go('profile');
+  for (const m of ['breakfast', 'lunch', 'snack', 'dinner']) (await tog(m).click(), await settle());
+  assert.equal(await page.locator('#proteinbf').count(), 1);
+  // Храна: the morning snack has its section
+  await go('food');
+  await page.locator('.meal[data-m="snack_am"]').waitFor();
+  assert.deepEqual(
+    await page.locator('.food .meal[data-m]').evaluateAll((e) => e.map((x) => x.getAttribute('data-m'))),
+    ['breakfast', 'snack_am', 'lunch', 'snack', 'dinner'],
+  );
+
+  // B3: Home „Дневни цели“ – a goal per meal, the day's protein bar 82/120 г; „Месечни цели“
+  const row = (
+    /** @type {string} */ id,
+    /** @type {string} */ m,
+    /** @type {number} */ p,
+    /** @type {string} */ hm,
+  ) => ({
+    id,
+    date: D,
+    meal: m,
+    ts: new Date(`${D}T${hm}:00+02:00`).getTime(),
+    time: hm,
+    name: { bg: 'Скир', en: 'Skyr' },
+    emoji: '🥛',
+    grams: 200,
+    kcal: 130,
+    p,
+    c: 8,
+    f: 0.4,
+  });
+  await putRows('food', [row('partb-1', 'snack_am', 30, '10:30'), row('partb-2', 'breakfast', 52, '08:10')]);
+  await reopen();
+  await go('home');
+  const daily = page.locator('.quests.q-daily');
+  await daily.waitFor();
+  assert.match(await daily.locator('h2').innerText(), /Дневни цели/);
+  const ids = await daily.locator('.quest').evaluateAll((e) => e.map((x) => x.getAttribute('data-q')));
+  for (const id of [
+    'workout',
+    'meal_breakfast',
+    'meal_snack_am',
+    'meal_lunch',
+    'meal_snack',
+    'meal_dinner',
+    'proteinGoal',
+    'water',
+    'steps',
+  ])
+    assert.ok(ids.includes(id), `${id} in ${ids}`);
+  assert.ok(!ids.includes('measure') && !ids.includes('meals3') && !ids.includes('breakfast'), String(ids));
+  const pg = daily.locator('[data-q="proteinGoal"]');
+  assert.match(await pg.innerText(), /Протеин за деня \(82\/120 г\)/);
+  assert.equal(await pg.locator('.qbar').count(), 1, 'progress bar');
+  assert.equal(await pg.locator('.qbox.done').count(), 0);
+  assert.equal(await daily.locator('[data-q="meal_snack_am"] .qbox.done').count(), 1, 'logged meal ticked');
+  for (const w of [360, 390]) {
+    await page.setViewportSize({ width: w, height: 844 });
+    await settle();
+    const over = await daily.evaluate((s) => {
+      const r = s.getBoundingClientRect();
+      return [...s.querySelectorAll('.quest .xp')].some((x) => x.getBoundingClientRect().right > r.right + 0.5);
+    });
+    assert.ok(!over, `${w}px: XP chips inside`);
+  }
+  await pg.evaluate((n) => n.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(250);
+  await shot('partb-home-daily');
+  const monthly = page.locator('.quests.q-monthly');
+  assert.match(await monthly.locator('h2').innerText(), /Месечни цели/);
+  assert.match(await monthly.innerText(), /Месечни мерки/);
+  assert.equal(await monthly.locator('[data-q="photos4"]').count(), 1);
+  await monthly.evaluate((n) => n.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(250);
+  await shot('partb-home-monthly');
+
+  // B2: a partial workout → „Довърши тренировката с Видричка“ → full → „Тренировката е готова“
+  await page.locator('.wcard [data-act="start"]').click();
+  await page.locator('.done-b.go').waitFor();
+  const skip = async () => {
+    const r = page.locator('.restbar [data-act="skip"]');
+    if (await r.count()) await r.click();
+  };
+  for (let k = 0; k < 2; k++) (await page.locator('.done-b.go').click(), await skip());
+  await page.locator('.wtop [data-act="finish"]').click();
+  await layer.locator('[data-act="ok"]').click();
+  await page.locator('.summary').waitFor();
+  await clearCel();
+  assert.match(await page.locator('.summary .chip.warm').innerText(), /Непълна/);
+  const rb = page.locator('.summary .resumebtn');
+  assert.match(await rb.innerText(), /Довърши тренировката с Видричка/);
+  await rb.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(250);
+  await shot('partb-partial-summary');
+  await page.locator('.summary [data-go="home"]').last().click();
+  await settle();
+  await clearCel();
+  const wp = page.locator('.wcard.wpartial');
+  await wp.waitFor();
+  assert.equal(await page.locator('.wcard [data-act="start"]').count(), 0);
+  assert.match(await wp.innerText(), /2 от \d+ серии/);
+  assert.match(await page.locator('.q-daily [data-q="workout"]').innerText(), /непълна/);
+  await wp.evaluate((n) => n.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(250);
+  await shot('partb-home-partial');
+  // the calendar and the day view offer it too
+  await go('progress/calendar');
+  await page.locator('.cal').waitFor();
+  assert.equal(await page.locator('.resumebtn').count(), 1, 'calendar');
+  await go(`day/${D}`);
+  await page.locator('.dayworkouts .resumebtn').waitFor();
+  await page.locator('.dayworkouts .resumebtn').click();
+  await page.locator('.wtop').waitFor();
+  const first = await page.locator('.set').evaluateAll((e) => e.findIndex((x) => x.classList.contains('active')));
+  assert.equal(first, 2, 'resumes at the first unfinished set');
+  assert.equal(await page.locator('.set.done').count(), 2, 'done sets kept');
+  const total = await page.locator('.set').count();
+  const need = Math.max(3, Math.ceil(total / 2));
+  while ((await page.locator('.set.done').count()) < need) (await page.locator('.done-b.go').click(), await skip());
+  await page.locator('.wtop [data-act="finish"]').click();
+  await layer.locator('[data-act="ok"]').click();
+  await page.locator('.summary').waitFor();
+  await clearCel();
+  assert.equal(await page.locator('.summary .resumebtn').count(), 0);
+  assert.equal(await page.locator('.summary .chip.warm').count(), 0, 'no longer partial');
+  await page.locator('.summary [data-go="home"]').last().click();
+  await settle();
+  await clearCel();
+  const wd = page.locator('.wcard.wdone');
+  await wd.waitFor();
+  assert.match(await wd.innerText(), /Тренировката е готова/);
+  const nx = wd.locator('.wnext');
+  if (await nx.count()) assert.match(await nx.innerText(), /^Следващата ти тренировка е във? \S+: .+/);
+  assert.equal(await page.locator('.wcard [data-act="start"]').count(), 0, 'no Тренирай button');
+  assert.doesNotMatch(await page.locator('.q-daily [data-q="workout"]').innerText(), /непълна/);
+  assert.match(await page.locator('.q-daily [data-q="workout"]').innerText(), /\+50 XP/);
+  await wd.evaluate((n) => n.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(250);
+  await shot('partb-home-done');
+  if (vp) await page.setViewportSize(vp);
 }

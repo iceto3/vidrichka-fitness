@@ -13,7 +13,7 @@ register('quests', {
   label: 'quest.steps',
   xp: 20,
   go: 'home?steps',
-  order: 1,
+  order: 10,
   done: (/** @type {any} */ s) => (s.dayRec?.steps ?? 0) >= goal(),
   detail: (/** @type {any} */ s) => ({ n: s.dayRec?.steps ?? 0, goal: goal() }),
 });

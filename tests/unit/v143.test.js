@@ -47,6 +47,7 @@ test('1.4.3: version, What’s new entry, strings in both languages, no English 
       'whatsNew.grams143',
       'whatsNew.meals143',
       'whatsNew.workout143',
+      'whatsNew.goals143',
     ],
   );
   const keys = Object.keys(bg).filter((k) => /^(mealPill|mealTime|mealChart|nutr)\.|143$/.test(k));

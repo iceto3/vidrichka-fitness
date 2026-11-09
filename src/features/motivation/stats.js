@@ -3,7 +3,7 @@
  * Pure: takes plain data, returns derived numbers — easy to unit test.
  * @module features/motivation/stats
  */
-import { addDays, dayKey, daysBetween, monthKey, parseDay } from '../../core/dates.js';
+import { addDays, dayKey, daysBetween, monthKey, parseDay, startOfWeek } from '../../core/dates.js';
 import { weeklyStreak } from './streak.js';
 
 /**
@@ -15,6 +15,7 @@ import { weeklyStreak } from './streak.js';
  * @property {any[]} [days]        Daily-rhythm rows ({id: day, wake, proteinStart, proteinAt, bed…}).
  * @property {(week: string) => number} goalAt
  * @property {number} waterGoal
+ * @property {number} [proteinGoal] 1.4.3 (part B): grams a day (Profile › Nutrition).
  * @property {number} [level]
  * @property {Date} [now]
  */
@@ -69,6 +70,8 @@ export function computeStats(i) {
   return {
     today,
     month,
+    /** 1.4.3 (part B): Monday of this week – the period key of a future weekly section. */
+    week: dayKey(startOfWeek(now)),
     level: i.level ?? 1,
     totalWorkouts: sessions.length,
     totalKg: all.reduce((a, s) => a + (s.volume || 0), 0),
@@ -85,6 +88,11 @@ export function computeStats(i) {
     waterGoal: i.waterGoal,
     measurements: i.measurements.length,
     measuredToday: lastMeasure?.date === today,
+    /** 1.4.3 (part B): the monthly measurements goal. */
+    measuredThisMonth: i.measurements.some((m) => String(m.date).slice(0, 7) === month),
+    /** 1.4.3 (part B): today's protein from the food diary (g, rounded) and the day's goal. */
+    todayProtein: Math.round(meals.filter((f) => f.date === today).reduce((a, f) => a + (Number(f.p) || 0), 0)),
+    proteinGoal: i.proteinGoal ?? 0,
     daysSinceMeasure: lastMeasure ? daysBetween(parseDay(lastMeasure.date), now) : null,
     photos: i.photos.length,
     /** Today's daily-rhythm record (wake, protein, check-ins) or null. */

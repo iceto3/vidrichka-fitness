@@ -26,6 +26,7 @@ register('quests', {
   label: 'quest.protein',
   xp: 15,
   go: 'morning',
+  order: 2.5, // 1.4.3 (part B): right after the breakfast quest
   show: () => dailySettings().protein && dailySettings().morning,
   done: (/** @type {any} */ s) => proteinOnTime(s.dayRec),
   // 1.4.3 (part A): on time 15 XP, up to 30 min late ticked „+N мин“ 8 XP, later „пропуснато“
