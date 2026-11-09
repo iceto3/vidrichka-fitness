@@ -9,16 +9,16 @@ import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { empty, topBar } from '../../../ui/components.js';
 import { confirmDialog } from '../../../ui/sheet.js';
-import { foodName, savedMeals } from '../api.js';
+import { currentMeal, foodName, savedMeals } from '../api.js';
 import { addCombo, deleteCombo, openRenameCombo } from './combo.js';
-import { mealFor, totals } from '../logic.js';
+import { totals } from '../logic.js';
 
 /** @returns {import('../../../core/registry.js').View} */
 export default () => ({
   tab: 'food',
   render: () => {
     const list = savedMeals(),
-      slot = mealFor();
+      slot = currentMeal();
     return html`<div class="content">${topBar(t('food.regularMeals'), t('food.logInto', { meal: t(`meal.${slot}`) }))}
 ${
   list.length
@@ -36,7 +36,7 @@ ${
   },
   actions: {
     log: (el) => {
-      if (addCombo(el.dataset.id ?? '', mealFor())) emit('nav', { path: 'food' });
+      if (addCombo(el.dataset.id ?? '', currentMeal())) emit('nav', { path: 'food' });
       return false;
     },
     rename: (el) => {

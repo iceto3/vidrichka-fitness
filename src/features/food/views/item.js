@@ -13,6 +13,7 @@ import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
 import { deleteWithUndo } from '../../../ui/undo.js';
 import { editRow, foodById, foodName } from '../api.js';
 import { MEALS, missingValues, scaleRow } from '../logic.js';
+import { enabledMeals } from '../../../core/settings.js';
 import { extraLine, fixFood, gramStepper, gramsFrom, macroLine } from './grams.js';
 import { missingNotice } from './notice.js';
 
@@ -55,7 +56,10 @@ ${extraLine(n)}
 ${missingNotice(missingValues(food() ?? row), { button: !!food() })}
 <div class="xs xb muted caps mt16">${t('food.moveTo')}</div>
 <div class="mt6">${seg(
-        MEALS.map(([m]) => ({ value: m, label: t(`meal.${m}`) })),
+        // 1.4.3 (part B): the meals in use (+ the row's own meal), short names so five fit
+        MEALS.map(([m]) => m)
+          .filter((m) => m === row.meal || m === meal || enabledMeals().includes(m))
+          .map((m) => ({ value: m, label: t(`mealShort.${m}`) })),
         meal,
         'meal',
         'seg mealseg',

@@ -39,7 +39,14 @@ test('1.4.3: version, What’s new entry, strings in both languages, no English 
   assert.equal(NOTES[0].v, '1.4.3');
   assert.deepEqual(
     NOTES[0].items.map(([, k]) => k),
-    ['whatsNew.pill143', 'whatsNew.timing143', 'whatsNew.nutr143', 'whatsNew.protein143', 'whatsNew.grams143'],
+    [
+      'whatsNew.pill143',
+      'whatsNew.timing143',
+      'whatsNew.nutr143',
+      'whatsNew.protein143',
+      'whatsNew.grams143',
+      'whatsNew.meals143',
+    ],
   );
   const keys = Object.keys(bg).filter((k) => /^(mealPill|mealTime|mealChart|nutr)\.|143$/.test(k));
   assert.ok(keys.length >= 30);

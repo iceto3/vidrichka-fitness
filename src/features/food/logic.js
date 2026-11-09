@@ -4,13 +4,21 @@
  * @module features/food/logic
  */
 
-/** Meal slots in display order with typical start hours. */
+/**
+ * Meal slots in display order with typical start hours. 1.4.3 (part B): five meals – the
+ * morning snack (`snack_am`, new, off by default) and the afternoon snack (`snack`, the old
+ * „Междинно“, id kept for existing entries). Which are used: core/settings `enabledMeals`.
+ */
 export const MEALS = /** @type {const} */ ([
   ['breakfast', 4],
+  ['snack_am', 10],
   ['lunch', 11],
   ['snack', 15],
   ['dinner', 18],
 ]);
+
+/** The four meals of older versions (the default when no list of enabled meals is given). */
+export const DEFAULT_MEALS = ['breakfast', 'lunch', 'snack', 'dinner'];
 
 /**
  * 1.4.0: the time given to food added to a PAST day (it used to be 12:00 for every meal,
@@ -18,6 +26,7 @@ export const MEALS = /** @type {const} */ ([
  */
 export const MEAL_TIME = /** @type {Record<string, string>} */ ({
   breakfast: '08:00',
+  snack_am: '10:30',
   lunch: '13:00',
   snack: '16:00',
   dinner: '19:00',
@@ -33,13 +42,41 @@ export const mealTs = (date, meal, today, now = Date.now()) =>
 /** Emoji tile + background per meal slot. */
 export const MEAL_STYLE = {
   breakfast: ['🥣', '#FFF2D9'],
+  snack_am: ['🍎', '#E6F3FF'],
   lunch: ['🍗', '#E3F5EA'],
   snack: ['🥜', '#EEE8FF'],
   dinner: ['🍝', '#FFE9E3'],
 };
 
-/** Meal that fits a time of day. @param {Date} [d] */
-export const mealFor = (d = new Date()) => [...MEALS].reverse().find(([, h]) => d.getHours() >= h)?.[0] ?? 'snack';
+/**
+ * Start hour of a meal among the enabled ones: with the morning snack on, lunch starts at 12
+ * (the morning snack gets 10–12), else at 11 as before. @param {string} m @param {string[]} enabled
+ */
+const startHour = (m, enabled) =>
+  m === 'lunch' && enabled.includes('snack_am') ? 12 : (MEALS.find(([id]) => id === m)?.[1] ?? 0);
+
+/**
+ * Meal that fits a time of day, chosen only from the enabled meals (1.4.3 part B). In the
+ * small hours (before 04:00) it is the afternoon snack as before, else the last enabled meal.
+ * @param {Date} [d] @param {string[]} [enabled] Enabled meal ids (default: the four classic meals).
+ */
+export function mealFor(d = new Date(), enabled = DEFAULT_MEALS) {
+  const list = MEALS.map(([m]) => m).filter((m) => enabled.includes(m));
+  if (!list.length) return 'snack';
+  const h = d.getHours();
+  return (
+    [...list].reverse().find((m) => h >= startHour(m, list)) ??
+    (list.includes('snack') ? 'snack' : list[list.length - 1])
+  );
+}
+
+/**
+ * Meals to list for a day: the enabled ones plus any disabled meal that has entries that day
+ * (hidden meals keep their past entries visible), in the day's order.
+ * @param {string[]} enabled @param {{meal?: string}[]} [rows] That day's food rows.
+ */
+export const mealsForDay = (enabled, rows = []) =>
+  MEALS.map(([m]) => m).filter((m) => enabled.includes(m) || rows.some((r) => r.meal === m));
 
 /** Is `v` a known (finite, non-negative) amount? Missing fiber/salt means "unknown". @param {any} v */
 export const known = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0;

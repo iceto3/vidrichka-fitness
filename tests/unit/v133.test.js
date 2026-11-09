@@ -134,7 +134,7 @@ test('suggested combination names agree with the meal; shorter over-100 text; 1.
       k,
     ),
   );
-  assert.equal(keys.length, 16);
+  assert.equal(keys.length, 17); // 1.4.3 part B: + the morning snack
   for (const k of keys) assert.ok(k in en, k);
   assert.ok(!('food.usualMeal' in bg));
 });

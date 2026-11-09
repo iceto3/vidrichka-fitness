@@ -201,3 +201,9 @@ a.srow {
   color: var(--accent-d);
   vertical-align: middle;
 }
+
+/* 1.4.3 (part B): meals of the day */
+.mealsnote {
+  padding: 2px 16px 14px;
+  line-height: 1.4;
+}

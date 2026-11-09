@@ -277,6 +277,7 @@ export default {
   'food.usualMeal.lunch': 'Your usual lunch',
   'food.usualMeal.dinner': 'Your usual dinner',
   'food.usualMeal.snack': 'Your usual snack',
+  'food.usualMeal.snack_am': 'Your usual morning snack',
   'food.logNow': 'Log now',
   'food.noMeals': 'Save a meal you eat often to log it with one tap.',
   'food.deleteMeal': 'Delete saved meal?',
@@ -307,7 +308,8 @@ export default {
   'foodcat.other': 'Dishes & more',
   'meal.breakfast': 'Breakfast',
   'meal.lunch': 'Lunch',
-  'meal.snack': 'Snack',
+  'meal.snack': 'Afternoon snack',
+  'meal.snack_am': 'Morning snack',
   'meal.dinner': 'Dinner',
   'scan.point': 'Point the camera at a barcode',
   'scan.starting': 'Starting camera…',
@@ -1266,4 +1268,15 @@ export default {
   'whatsNew.protein143':
     'The protein breakfast can be switched off in Profile, and Meals on time also shows how much protein there was.',
   'whatsNew.grams143': 'Change grams by −10, −5, +5 and +10, and every meal shows its total protein, carbs and fat.',
+  // 1.4.3 part B1: meals per day
+  'mealShort.breakfast': 'Breakfast',
+  'mealShort.snack_am': 'Morning',
+  'mealShort.lunch': 'Lunch',
+  'mealShort.snack': 'Afternoon',
+  'mealShort.dinner': 'Dinner',
+  'profile.mealsTitle': 'Meals of the day',
+  'profile.mealSnackAmSub': 'Between breakfast and lunch',
+  'profile.mealsNote': 'Meals that are off are hidden, but their old entries stay on the days that have them.',
+  'profile.mealsOneOn': 'At least one meal has to stay on.',
+  'whatsNew.meals143': 'Choose your meals in Profile – including a morning snack if you need one.',
 };

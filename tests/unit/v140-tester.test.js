@@ -82,7 +82,13 @@ test('the online block is never stuck on "Searching…" for a finished search', 
 });
 
 test("food for a past day gets the meal's usual time; today keeps the real time", () => {
-  assert.deepEqual(MEAL_TIME, { breakfast: '08:00', lunch: '13:00', snack: '16:00', dinner: '19:00' });
+  assert.deepEqual(MEAL_TIME, {
+    breakfast: '08:00',
+    snack_am: '10:30',
+    lunch: '13:00',
+    snack: '16:00',
+    dinner: '19:00',
+  });
   const at = (/** @type {string} */ meal) => new Date(mealTs('2026-10-20', meal, '2026-10-28')).getHours();
   assert.equal(at('breakfast'), 8);
   assert.equal(at('lunch'), 13);

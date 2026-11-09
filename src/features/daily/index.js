@@ -71,13 +71,15 @@ export async function startDaily() {
   on(
     'settings:changed',
     (/** @type {Record<string, any>} */ p) =>
-      ('daily' in p || 'proteinBreakfast' in p || 'lang' in p || 'userName' in p) && notify.syncDaily().catch(() => {}),
+      ('daily' in p || 'proteinBreakfast' in p || 'meals' in p || 'lang' in p || 'userName' in p) &&
+      notify.syncDaily().catch(() => {}),
   );
   // 1.4.3 (tester): protein switched on after this morning's wake-up was recorded
   // (part A: also the protein breakfast switch in Profile; switched off, its notifications close)
   on('settings:changed', (/** @type {Record<string, any>} */ p) => {
-    if (('daily' in p || 'proteinBreakfast' in p) && api.proteinFromWake()) emit('daily:changed');
-    if ('proteinBreakfast' in p && !dailySettings().protein) notify.closeNotifications(['protein']).catch(() => {});
+    const prot = 'proteinBreakfast' in p || 'meals' in p; // part B: breakfast off = protein off
+    if (('daily' in p || prot) && api.proteinFromWake()) emit('daily:changed');
+    if (prot && !dailySettings().protein) notify.closeNotifications(['protein']).catch(() => {});
   });
   if (api.proteinFromWake()) emit('daily:changed');
   api.catchUpProtein();

@@ -280,6 +280,7 @@ export default {
   'food.usualMeal.lunch': 'Обичайният ти обяд',
   'food.usualMeal.dinner': 'Обичайната ти вечеря',
   'food.usualMeal.snack': 'Обичайното ти междинно хранене',
+  'food.usualMeal.snack_am': 'Обичайното ти сутрешно междинно',
   'food.logNow': 'Запиши',
   'food.noMeals': 'Запази хранене, което ядеш често, и го записвай с едно докосване.',
   'food.deleteMeal': 'Да изтрия ли запазеното хранене?',
@@ -310,7 +311,8 @@ export default {
   'foodcat.other': 'Ястия и други',
   'meal.breakfast': 'Закуска',
   'meal.lunch': 'Обяд',
-  'meal.snack': 'Междинно',
+  'meal.snack': 'Следобедно междинно',
+  'meal.snack_am': 'Сутрешно междинно',
   'meal.dinner': 'Вечеря',
   'scan.point': 'Насочи камерата към баркода',
   'scan.starting': 'Пускам камерата…',
@@ -1304,4 +1306,15 @@ export default {
     'Протеиновата закуска може да се изключи от Профила, а Хранене навреме показва и колко протеин е имало.',
   'whatsNew.grams143':
     'Грамовете се сменят с −10, −5, +5 и +10, а храненията показват общия протеин, въглехидрати и мазнини.',
+  // 1.4.3 part B1: meals per day
+  'mealShort.breakfast': 'Закуска',
+  'mealShort.snack_am': 'Сутрешно',
+  'mealShort.lunch': 'Обяд',
+  'mealShort.snack': 'Следобедно',
+  'mealShort.dinner': 'Вечеря',
+  'profile.mealsTitle': 'Хранения през деня',
+  'profile.mealSnackAmSub': 'Между закуската и обяда',
+  'profile.mealsNote': 'Изключените хранения не се показват, но старите им записи остават в дните, в които ги има.',
+  'profile.mealsOneOn': 'Поне едно хранене трябва да остане включено.',
+  'whatsNew.meals143': 'Избери храненията си в Профила – и сутрешно междинно, ако ти трябва.',
 };

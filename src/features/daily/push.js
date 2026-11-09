@@ -213,6 +213,7 @@ export async function startPush() {
     (/** @type {Record<string, any>} */ p) =>
       ('daily' in p ||
         'proteinBreakfast' in p || // 1.4.3: the protein breakfast switch (Profile) stops/starts its pushes
+        'meals' in p || // part B: breakfast switched off turns the protein breakfast off
         'lang' in p ||
         'gender' in p ||
         'userName' in p ||

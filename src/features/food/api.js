@@ -9,7 +9,8 @@ import { emit } from '../../core/bus.js';
 import { L } from '../../core/i18n.js';
 import { dayKey, hhmm } from '../../core/dates.js';
 import { FOODS, FOOD_CATEGORIES, QUICK_PICKS } from '../../data/foods.js';
-import { known, mealTs, portion, scaleRow } from './logic.js';
+import { known, mealFor, mealTs, portion, scaleRow } from './logic.js';
+import { enabledMeals } from '../../core/settings.js';
 
 export { FOODS, FOOD_CATEGORIES, QUICK_PICKS };
 
@@ -23,6 +24,9 @@ export const foodById = (id) => local.get(id) ?? get('foods', id);
 
 /** Localized food name. @param {{name: any}} f */
 export const foodName = (f) => L(f.name);
+
+/** 1.4.3 (part B): the meal for now, among the meals switched on in Profile. */
+export const currentMeal = () => mealFor(new Date(), enabledMeals());
 
 /** Diary rows for a day (water excluded), by time. @param {string} date */
 export const dayRows = (date) =>
