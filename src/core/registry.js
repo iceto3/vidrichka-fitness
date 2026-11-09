@@ -56,6 +56,7 @@
  * @property {number} xp       XP it gives in this state (0 when missed).
  * @property {boolean} [missed] Can no longer be done today (greyed „пропуснато“, no XP).
  * @property {number} [lateMin] Ticked late: shown as „+N мин“.
+ * @property {string} [note]  1.4.3 (part B): i18n key of a short note next to the label (e.g. „непълна“).
  */
 
 /** @type {{tabs: Tab[], routes: Route[], badges: Badge[], quests: Quest[], progressTabs: any[], settings: any[]}} */

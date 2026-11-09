@@ -9,7 +9,7 @@ import { hasData, readDays } from '../../day/api.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { empty } from '../../../ui/components.js';
-import { planName, sessions } from '../../workouts/api.js';
+import { planName, resumable, resumeButton, sessions } from '../../workouts/api.js';
 
 const state = { y: new Date().getFullYear(), m: new Date().getMonth() };
 
@@ -65,7 +65,7 @@ ${
 <span class="muted xs b">${fmtDate(s.endedAt, { weekday: 'short', day: 'numeric', month: 'short' })} · ${durationMin(s.durationSec)} ${t('unit.min')} · ${fmtVolume(s.volume).text}</span></span>
 ${s.partial ? html`<span class="chip chip-sm">${t('summary.partial')}</span>` : ''}
 ${s.prs.length ? html`<span class="chip warm chip-sm">${ic('trophy', 13, 2.4)}${s.prs.length}</span>` : ''}${ic('right', 16, 2.2, 'var(--muted)')}</button>`,
-      )}</div>`
+      )}</div>${list.filter(resumable).map((s) => resumeButton(s, 'w100 mt10'))}`
     : empty('calendar', t('calendar.none'))
 }`;
   },

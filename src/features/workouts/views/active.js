@@ -100,7 +100,7 @@ export default () => {
       const w = activeWorkout();
       if (!w)
         return html`<div class="content center mt20"><p class="b">${t('workout.none')}</p><button class="btn mt16" data-go="workouts">${t('workouts.title')}</button></div>`;
-      const act = activeSet(w.items);
+      const act = activeSet(w.items, w.resumed?.at);
       const total = w.items.reduce((/** @type {number} */ a, /** @type {WItem} */ it) => a + it.sets.length, 0);
       const left = w.items.reduce(
         (/** @type {number} */ a, /** @type {WItem} */ it) => a + it.sets.filter((s) => !s.done).length,

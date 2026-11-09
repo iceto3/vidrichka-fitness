@@ -21,6 +21,7 @@ export const NOTES = [
       ['sun', 'whatsNew.protein143'],
       ['plus', 'whatsNew.grams143'],
       ['food', 'whatsNew.meals143'],
+      ['dumbbell', 'whatsNew.workout143'],
     ],
   },
   {

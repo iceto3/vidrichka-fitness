@@ -9,9 +9,10 @@ import { trash } from '../../core/trash.js';
 import { fmtDate } from '../../core/i18n.js';
 import { exById } from '../library/api.js';
 import { bodyWeight } from '../body/api.js';
-import { award, isCompleteWorkout, setAward, xpForWorkout } from '../motivation/api.js';
+import { award, isCompleteWorkout, raiseAward, setAward, xpForWorkout } from '../motivation/api.js';
+import { dayKey } from '../../core/dates.js';
 import { activeWorkout, planName, sessions } from './api.js';
-import { clampKg, detectPRs, estimateKcal, recomputeAfterDelete, sessionMet, summarize } from './logic.js';
+import { canResume, clampKg, detectPRs, estimateKcal, recomputeAfterDelete, sessionMet, summarize } from './logic.js';
 
 /** @typedef {import('./logic.js').WItem} WItem */
 
@@ -96,22 +97,29 @@ export const discard = () => setKv('active', null);
 export function finish() {
   const w = activeWorkout();
   if (!w) return null;
+  // 1.4.3 (part B): a resumed partial workout keeps its start, adds the time of both parts
+  // and replaces its saved session (PRs against the history without itself).
+  const r = w.resumed ?? null;
   const endedAt = Date.now(),
-    durationSec = Math.round((endedAt - w.startedAt) / 1000);
+    durationSec = (r?.durationSec ?? 0) + Math.round((endedAt - w.startedAt) / 1000);
   const items = w.items.filter((/** @type {WItem} */ it) => it.sets.some((s) => s.done));
   const totals = summarize(w.items, exById);
-  const prs = detectPRs(items, sessions(), exById);
+  const prs = detectPRs(
+    items,
+    sessions().filter((s) => s.id !== w.id),
+    exById,
+  );
   const bodyKg = bodyWeight();
   const kcal = estimateKcal(sessionMet(items, exById), bodyKg, durationSec);
   // Too few sets → saved as a partial workout: per-set XP only, no workout bonus, and it
   // does not count for the streak / weekly goal (see motivation/xp.js).
   const partial = !isCompleteWorkout(totals);
-  const xp = xpForWorkout({ setsDone: totals.setsDone, prs: prs.length, partial });
+  const xp = xpForWorkout({ setsDone: totals.setsDone, setsPlanned: totals.setsPlanned, prs: prs.length, partial });
   const session = {
     id: w.id,
     planId: w.planId,
     name: w.name,
-    startedAt: w.startedAt,
+    startedAt: r?.startedAt ?? w.startedAt,
     endedAt,
     durationSec,
     items: w.items,
@@ -125,8 +133,32 @@ export function finish() {
   put('sessions', session);
   setKv('active', null);
   emit('workout:finished', session); // → medium celebration (queued before any level-up)
-  award(`session:${session.id}`, xp);
+  if (r)
+    raiseAward(`session:${session.id}`, xp); // the rest of the bonus, never twice
+  else award(`session:${session.id}`, xp);
   return session;
+}
+
+/**
+ * 1.4.3 (part B): „Довърши тренировката с Видричка“ – reopen today's partial workout as the
+ * active workout. Its done sets stay done; the set to do next is its first unfinished set.
+ * Finishing it replaces the saved session (full once enough sets are done).
+ * @param {string} id @returns {boolean} False if it can't be resumed (another day, full, or a workout is running).
+ */
+export function resumeSession(id) {
+  const s = get('sessions', id);
+  if (!canResume(s, dayKey(), (ts) => dayKey(new Date(ts)), !!activeWorkout())) return false;
+  const now = Date.now();
+  setKv('active', {
+    id: s.id,
+    planId: s.planId,
+    name: s.name,
+    startedAt: now,
+    items: structuredClone(s.items),
+    rest: null,
+    resumed: { startedAt: s.startedAt, durationSec: s.durationSec ?? 0, at: now },
+  });
+  return true;
 }
 
 /**

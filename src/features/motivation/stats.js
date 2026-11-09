@@ -60,6 +60,12 @@ export function computeStats(i) {
   const perMonth = {};
   workoutDays.forEach((d) => (perMonth[d.slice(0, 7)] = (perMonth[d.slice(0, 7)] ?? 0) + 1));
   const target = (/** @type {string} */ m) => i.goalAt(`${m}-01`) * 4;
+  // 1.4.3 (part B): today's best partial workout (most of its plan done) – the workout quest's share.
+  const partialToday =
+    all
+      .filter((s) => s.partial && dayKey(s.endedAt) === today)
+      .map((s) => ({ setsDone: s.setsDone ?? 0, setsPlanned: s.setsPlanned ?? s.setsDone ?? 0 }))
+      .sort((a, b) => b.setsDone / Math.max(1, b.setsPlanned) - a.setsDone / Math.max(1, a.setsPlanned))[0] ?? null;
   return {
     today,
     month,
@@ -69,6 +75,7 @@ export function computeStats(i) {
     prCount: all.reduce((a, s) => a + (s.prs?.length || 0), 0),
     streak: weeklyStreak(workoutDays, i.goalAt, now),
     workedOutToday: workoutDays.includes(today),
+    partialToday,
     prToday: all.some((s) => dayKey(s.endedAt) === today && s.prs?.length),
     daysSinceWorkout: last ? daysBetween(last.endedAt, now) : null,
     lastSession: last ?? null,

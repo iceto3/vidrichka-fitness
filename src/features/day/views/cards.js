@@ -10,7 +10,8 @@
  */
 import { html, raw } from '../../../ui/dom.js';
 import { L, fmtDate, fmtDuration, fmtNum, t } from '../../../core/i18n.js';
-import { kv, setKv } from '../../../core/store.js';
+import { get, kv, setKv } from '../../../core/store.js';
+import { resumeButton } from '../../workouts/api.js';
 import { dayKey, durationMin, hmComplete, parseDay, parseHM, stepHM } from '../../../core/dates.js';
 import { enabledMeals, settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
@@ -393,7 +394,7 @@ ${
         ) => html`<button class="lrow" data-go="history/${w.id}"><span class="f1 left minw0"><span class="b block">${L(w.name) || '—'}</span>
 <span class="muted xs b">${t('day.workoutLine', { ex: w.exercises, sets: w.setsDone, min: durationMin(w.durationSec), vol: fmtNum(w.volume) })}</span></span>
 ${w.partial ? html`<span class="chip chip-sm">${t('summary.partial')}</span>` : ''}${w.prs ? html`<span class="chip warm chip-sm">${ic('trophy', 13, 2.4)}${w.prs}</span>` : ''}${ic('right', 16, 2.2, 'var(--muted)')}</button>`,
-      )}</div>`
+      )}</div>${list.filter((w) => w.partial).map((w) => resumeButton(get('sessions', w.id), 'w100 mt8'))}`
     : html`<p class="muted small b mt8">${t('day.noWorkout')}</p>`
 }</section>`;
 }

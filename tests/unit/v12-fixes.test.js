@@ -118,13 +118,16 @@ test('#7 a live set toast is not queued again while it is on screen', async () =
   assert.equal(played.length, 1);
 });
 
-test('#8 too few sets → partial: per-set XP only, and it does not count as a workout', () => {
+test('#8 too few sets → partial: a share of the bonus (1.4.3 B), and it does not count as a workout', () => {
   assert.equal(minSetsForWorkout(17), 9);
   assert.equal(minSetsForWorkout(4), 3);
   assert.equal(minSetsForWorkout(2), 2);
   assert.equal(isCompleteWorkout({ setsDone: 1, setsPlanned: 17 }), false);
   assert.equal(isCompleteWorkout({ setsDone: 9, setsPlanned: 17 }), true);
-  assert.equal(xpForWorkout({ setsDone: 1, prs: 1, partial: true }), XP.perSet, '1.1 gave +72 XP for 1 of 17 sets');
+  // 1.4.3 part B: a partial workout gets its done share of the bonus (1/17 × 50 = 3) + sets + PRs
+  // (1.1 gave the full +72 XP for 1 of 17 sets; 1.2–1.4.2 gave per-set XP only).
+  assert.equal(xpForWorkout({ setsDone: 1, setsPlanned: 17, prs: 1, partial: true }), 3 + XP.perSet + XP.pr);
+  assert.equal(xpForWorkout({ setsDone: 1, prs: 1, partial: true }), XP.perSet + XP.pr, 'no plan size known: no share');
   const now = new Date(2026, 9, 21, 12);
   const s = computeStats({
     sessions: [{ endedAt: now.getTime() - 1000, volume: 100, prs: [], setsDone: 1, partial: true }],

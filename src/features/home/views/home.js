@@ -14,7 +14,17 @@ import { ic } from '../../../ui/icons.js';
 import { bar, ring } from '../../../ui/components.js';
 import { messageFor, moodFor, otter, otterName } from '../../mascot/api.js';
 import { level, quests, stats } from '../../motivation/api.js';
-import { activeWorkout, nextPlan, planFor, planMinutes, planName, sessions, startWorkout } from '../../workouts/api.js';
+import {
+  activeWorkout,
+  nextPlan,
+  planFor,
+  planMinutes,
+  planName,
+  resumableToday,
+  resumeButton,
+  sessions,
+  startWorkout,
+} from '../../workouts/api.js';
 import { backupDue, canInstall, installApp } from '../../profile/api.js';
 import { day, goodnight, isEvening, morningPending, proteinBar, tuckedIn } from '../../daily/api.js';
 import { mealAte, mealSkip, withLate } from '../../daily/views/mealsheet.js';
@@ -106,6 +116,19 @@ function workoutCard() {
   const s = stats(),
     plan = planFor(),
     next = nextPlan();
+  // 1.4.3 (part B): a full workout today → „Тренировката е готова“ + the next one (no start
+  // button); a partial one today → „Довърши тренировката с Видричка“ (only the same day).
+  if (s.workedOutToday && !activeWorkout())
+    return html`<div class="wcard mt12 wdone"><div class="deco"></div><div class="deco2"></div>
+<div class="row between rel"><span class="chip glass caps">${t('home.doneToday')}</span>${ic('check', 26, 2.6, 'rgba(255,255,255,.85)')}</div>
+<div class="wtitle rel">${t('home.workoutDone')}</div>
+${next ? html`<div class="wsub rel wnext">${t('home.nextWorkout', { on: t(`home.onDay${(next.date.getDay() + 6) % 7}`), plan: planName(next.plan) })}</div>` : ''}</div>`;
+  const part = activeWorkout() ? null : resumableToday();
+  if (part)
+    return html`<div class="wcard mt12 wpartial"><div class="deco"></div><div class="deco2"></div>
+<div class="row between rel"><span class="chip glass caps">${t('summary.partial')}</span>${ic('dumbbell', 26, 2.2, 'rgba(255,255,255,.8)')}</div>
+<div class="wtitle rel">${planName(part)}</div><div class="wsub rel">${t('home.partialSets', { n: part.setsDone, of: part.setsPlanned })}</div>
+${resumeButton(part, 'white mt14 w100 rel')}</div>`;
   const p = s.workedOutToday || !plan ? (next?.plan ?? plan) : plan;
   if (!p)
     return html`<div class="wcard mt12"><div class="deco"></div><div class="deco2"></div><div class="rel"><div class="wtitle">${t('home.noPlans')}</div>
@@ -181,7 +204,7 @@ ${quests().map(
   (
     q,
   ) => html`<button class="quest${q.missed ? ' missed' : ''}" ${raw(q.id === 'breakfast' && dayRows(dayKey()).some((r) => r.meal === 'breakfast') ? 'data-act="dayMeal" data-m="breakfast"' : `data-go="${esc(q.go ?? 'home')}"`)}><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
-<span class="f1 b${q.isDone ? ' struck' : ''}">${t(q.label, q.vars)}${/** @type {any} */ (q.vars).goal != null ? html` <span class="muted small">(${t('home.progressOf', q.vars)})</span>` : ''}${q.lateMin ? html` <span class="qlate small num">${t('quest.lateN', { n: q.lateMin })}</span>` : ''}</span>${q.missed ? html`<span class="qmissed xs b">${t('quest.missed')}</span>` : html`<span class="xp">+${q.isDone ? q.gain : q.xp} XP</span>`}</button>`,
+<span class="f1 b${q.isDone ? ' struck' : ''}">${t(q.label, q.vars)}${/** @type {any} */ (q.vars).goal != null ? html` <span class="muted small">(${t('home.progressOf', q.vars)})</span>` : ''}${q.lateMin ? html` <span class="qlate small num">${t('quest.lateN', { n: q.lateMin })}</span>` : ''}${q.note ? html` <span class="qlate qnote small">${t(q.note)}</span>` : ''}</span>${q.missed ? html`<span class="qmissed xs b">${t('quest.missed')}</span>` : html`<span class="xp">+${q.isDone ? q.gain : q.xp} XP</span>`}</button>`,
 )}</section>
 <button class="card mt12 challenge" data-go="progress/lifts"><div class="row between"><span class="row gap8"><span class="sq gold">${ic('target', 18, 2.4)}</span><span class="b">${t('home.challenge', { month: fmtDate(now, { month: 'long' }) })}</span></span><span class="xs b muted num">${s.monthWorkouts}/${s.monthTarget}</span></div>
 <div class="muted xs b mt6 left">${s.monthWorkouts >= s.monthTarget ? t('home.challengeDone') : t('home.challengeBody', { n: s.monthTarget, xp: 100 })}</div>${bar(s.monthWorkouts / s.monthTarget, 'var(--gold)', 'mt8')}</button>

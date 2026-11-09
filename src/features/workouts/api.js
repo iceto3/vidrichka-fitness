@@ -5,9 +5,12 @@
  */
 import { all, get, kv, put, setKv, uid } from '../../core/store.js';
 import { L } from '../../core/i18n.js';
-import { weekdayMon } from '../../core/dates.js';
+import { dayKey, weekdayMon } from '../../core/dates.js';
+import { html } from '../../ui/dom.js';
+import { ic } from '../../ui/icons.js';
+import { t } from '../../core/i18n.js';
 import { PLANS } from '../../data/workouts.js';
-import { estimateMinutes, newItems } from './logic.js';
+import { canResume, estimateMinutes, newItems } from './logic.js';
 
 export { estimateMinutes };
 
@@ -46,6 +49,25 @@ export function nextPlan() {
 
 /** The in-progress workout, or null. */
 export const activeWorkout = () => kv('active', null);
+
+/**
+ * 1.4.3 (part B): can this saved workout be finished now (a partial one of today, no workout
+ * running)? @param {any} s
+ */
+export const resumable = (s) => canResume(s, dayKey(), (ts) => dayKey(new Date(ts)), !!activeWorkout());
+
+/** 1.4.3 (part B): today's newest partial workout that can still be finished, or null. */
+export const resumableToday = () => sessions().find(resumable) ?? null;
+
+/**
+ * 1.4.3 (part B): the „Довърши тренировката с Видричка“ button (shown wherever a partial
+ * workout is, only while it can be finished – the same day). The `resume/:id` route does it.
+ * @param {any} s A saved session. @param {string} [cls] Extra classes.
+ */
+export const resumeButton = (s, cls = '') =>
+  resumable(s)
+    ? html`<button class="btn resumebtn ${cls}" data-go="resume/${s.id}">${ic('play', 18, 2.2)}${t('workout.resumeVidrichka')}</button>`
+    : '';
 
 /**
  * Start a workout from a plan (or resume the active one).

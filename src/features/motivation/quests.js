@@ -4,12 +4,30 @@
  * @module features/motivation/quests
  */
 import { register } from '../../core/registry.js';
+import { XP, partialShare } from './xp.js';
 
 /** @typedef {import('./stats.js').Stats} Stats */
-/** @type {{id: string, xp: number, go: string, show?: (s: Stats) => boolean, done: (s: Stats) => boolean, detail?: (s: Stats) => Record<string, number>}[]} */
+/** @type {{id: string, xp: number, go: string, show?: (s: Stats) => boolean, done: (s: Stats) => boolean, detail?: (s: Stats) => Record<string, number>, state?: (s: Stats) => import('../../core/registry.js').QuestState}[]} */
 export const QUESTS = [
   { id: 'breakfast', xp: 10, go: 'food/add/breakfast', done: (s) => s.todayMeals.has('breakfast') },
-  { id: 'workout', xp: 50, go: 'workouts', done: (s) => s.workedOutToday },
+  {
+    id: 'workout',
+    xp: XP.workout,
+    go: 'workouts',
+    done: (s) => s.workedOutToday,
+    // 1.4.3 (part B): a partial workout ticks it with „непълна“ and the done share of the XP;
+    // finished the same day it becomes full and gets the rest (the ledger entry is corrected).
+    state: (s) =>
+      s.workedOutToday
+        ? { done: true, xp: XP.workout }
+        : s.partialToday
+          ? {
+              done: true,
+              xp: partialShare(s.partialToday.setsDone, s.partialToday.setsPlanned),
+              note: 'quest.partialNote',
+            }
+          : { done: false, xp: XP.workout },
+  },
   {
     id: 'water',
     xp: 10,

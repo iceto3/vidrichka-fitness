@@ -106,3 +106,100 @@ test('B1: voice entries go only to meals that are on', () => {
     'no list given: unchanged',
   );
 });
+
+// ---------------------------------------------------------------- B2: partial workouts
+import { XP, partialShare, xpForWorkout } from '../../src/features/motivation/xp.js';
+import { activeSet, canResume } from '../../src/features/workouts/logic.js';
+import { get, kv, put } from '../../src/core/store.js';
+import { activeWorkout, resumable, resumableToday, seedPlans, startWorkout } from '../../src/features/workouts/api.js';
+import { finish, resumeSession, toggleDone } from '../../src/features/workouts/session.js';
+import { computeStats } from '../../src/features/motivation/stats.js';
+import { QUESTS } from '../../src/features/motivation/quests.js';
+import { dayKey } from '../../src/core/dates.js';
+
+test('B2: partial XP = done share of 50 + 2/set + full PR XP', () => {
+  assert.equal(partialShare(6, 15), 20);
+  assert.equal(partialShare(1, 17), 3);
+  assert.equal(partialShare(0, 10), 0);
+  assert.equal(partialShare(20, 10), 50, 'never more than the bonus');
+  assert.equal(xpForWorkout({ setsDone: 6, setsPlanned: 15, prs: 1, partial: true }), 20 + 6 * XP.perSet + XP.pr);
+  assert.equal(xpForWorkout({ setsDone: 10, setsPlanned: 15, prs: 0 }), 50 + 20, 'full unchanged');
+  assert.equal(xpForWorkout({ setsDone: 0, setsPlanned: 15, prs: 0, partial: true }), 0);
+});
+
+test('B2: a resumed workout starts at its first unfinished set; only today, only partial', () => {
+  const S = (/** @type {boolean} */ done, /** @type {number} */ at = 0) => ({
+    w: 10,
+    r: 10,
+    done,
+    doneAt: done ? at : undefined,
+  });
+  const items = /** @type {any} */ ([
+    { exId: 'a', rest: 60, target: { reps: 10, weight: 10 }, sets: [S(true, 100), S(true, 200), S(false)] },
+    { exId: 'b', rest: 60, target: { reps: 10, weight: 10 }, sets: [S(true, 300), S(false), S(false)] },
+  ]);
+  assert.deepEqual(activeSet(items), [1, 1], 'running: after the last done set');
+  assert.deepEqual(activeSet(items, 1000), [0, 2], 'resumed: first unfinished set');
+  const d = (/** @type {number} */ ts) => dayKey(new Date(ts)),
+    now = Date.now(),
+    today = dayKey();
+  assert.equal(canResume({ partial: true, endedAt: now }, today, d), true);
+  assert.equal(canResume({ partial: true, endedAt: now }, today, d, true), false, 'a workout is running');
+  assert.equal(canResume({ partial: true, endedAt: now - 2 * 864e5 }, today, d), false, 'next day: stays partial');
+  assert.equal(canResume({ endedAt: now }, today, d), false, 'full');
+});
+
+test('B2: partial → finish with Vidrichka → full; XP corrected once, quest gets the rest', () => {
+  setKv('xp', {});
+  seedPlans();
+  const w = startWorkout('plan_leg_day');
+  const planned = w.items.reduce((/** @type {number} */ a, /** @type {any} */ it) => a + it.sets.length, 0);
+  for (let j = 0; j < 3; j++) toggleDone(0, j);
+  toggleDone(1, 0);
+  const p = finish();
+  assert.equal(p.partial, true);
+  assert.equal(p.setsDone, 4);
+  assert.equal(p.xp, partialShare(4, planned) + 4 * XP.perSet + XP.pr * p.prs.length);
+  assert.equal(kv('xp', {})[`session:${p.id}`].amt, p.xp);
+  assert.equal(resumable(p), true);
+  assert.equal(resumableToday()?.id, p.id);
+  // the quest: ticked „непълна“ with the same share
+  const workoutQ = /** @type {any} */ (QUESTS.find((q) => q.id === 'workout'));
+  const st0 = computeStats({
+    sessions: [get('sessions', p.id)],
+    food: [],
+    measurements: [],
+    photos: [],
+    goalAt: () => 3,
+    waterGoal: 8,
+  });
+  assert.deepEqual(workoutQ.state(st0), { done: true, xp: partialShare(4, planned), note: 'quest.partialNote' });
+  // resume
+  assert.equal(resumeSession(p.id), true);
+  assert.equal(resumeSession(p.id), false, 'already running');
+  const a = activeWorkout();
+  assert.equal(a.id, p.id);
+  assert.deepEqual(activeSet(a.items, a.resumed.at), [1, 1], 'first unfinished set');
+  for (let i = 1; i < a.items.length; i++)
+    for (let j = 0; j < a.items[i].sets.length; j++) if (!a.items[i].sets[j].done) toggleDone(i, j);
+  const f = finish();
+  assert.equal(f.id, p.id, 'same session, replaced');
+  assert.equal(f.partial, undefined);
+  assert.equal(f.startedAt, p.startedAt, 'keeps the first start');
+  assert.equal(f.xp, XP.workout + planned * XP.perSet + XP.pr * f.prs.length);
+  assert.equal(kv('xp', {})[`session:${p.id}`].amt, f.xp, 'corrected, not added');
+  assert.equal(Object.keys(kv('xp', {})).filter((k) => k.startsWith('session:')).length, 1);
+  const st1 = computeStats({
+    sessions: [get('sessions', p.id)],
+    food: [],
+    measurements: [],
+    photos: [],
+    goalAt: () => 3,
+    waterGoal: 8,
+  });
+  assert.deepEqual(workoutQ.state(st1), { done: true, xp: XP.workout });
+  assert.equal(resumable(f), false);
+  // a partial from yesterday stays partial and can't be finished
+  put('sessions', { ...p, id: 'old', endedAt: Date.now() - 864e5 * 1.5 });
+  assert.equal(resumable(get('sessions', 'old')), false);
+});

@@ -13,7 +13,7 @@ import { levelInfo } from './xp.js';
 import './badges.js';
 import './quests.js';
 
-export { levelInfo, xpForWorkout, isCompleteWorkout, minSetsForWorkout, XP } from './xp.js';
+export { levelInfo, xpForWorkout, isCompleteWorkout, minSetsForWorkout, partialShare, XP } from './xp.js';
 
 /** @type {import('./stats.js').Stats|null} */
 let cache = null;
@@ -68,6 +68,18 @@ export function setAward(id, amt) {
   setKv('xp', ledger);
 }
 
+/**
+ * 1.4.3 (part B): set an XP entry to a new amount and celebrate a level-up it causes (a
+ * partial workout finished later the same day: its entry grows to the full amount, once).
+ * @param {string} id @param {number} amt
+ */
+export function raiseAward(id, amt) {
+  const before = level().level;
+  setAward(id, amt);
+  const after = level().level;
+  if (after > before) emit('level:up', after);
+}
+
 /** Stats context (cached until data changes). */
 export function stats() {
   cache ??= computeStats({
@@ -97,6 +109,7 @@ export const quests = () => {
         gain: st ? st.xp : q.xp,
         missed: !!st?.missed,
         lateMin: st?.lateMin ?? 0,
+        note: st?.note ?? '',
         vars: q.detail?.(s) ?? {},
       };
     });

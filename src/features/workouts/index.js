@@ -5,6 +5,7 @@
  */
 import { register } from '../../core/registry.js';
 import { onRestore } from '../../core/trash.js';
+import { emit } from '../../core/bus.js';
 
 // A workout put back from "Recently deleted" gets its PRs/XP recomputed.
 onRestore('session', async (e) => (await import('./session.js')).restoreSession(e));
@@ -18,6 +19,16 @@ register(
     load: async (p) => (await import('./views/editor.js')).default(/** @type {{id: string}} */ (p)),
   },
   { pattern: 'workout', load: async () => (await import('./views/active.js')).default() },
+  // 1.4.3 (part B): „Довърши тренировката с Видричка“ – reopen today's partial workout.
+  {
+    pattern: 'resume/:id',
+    load: async (p) => {
+      const ok = (await import('./session.js')).resumeSession(String(p.id));
+      if (!ok) emit('toast', { key: 'workout.resumeGone' });
+      setTimeout(() => emit('nav', { path: ok ? 'workout' : 'home', replace: true }));
+      return { render: () => '' };
+    },
+  },
   {
     pattern: 'history/:id',
     load: async (p) => (await import('./views/history.js')).default({ id: String(p.id), tab: 'progress' }),

@@ -36,9 +36,23 @@ export const minSetsForWorkout = (planned) => Math.min(Math.max(1, planned), Mat
 export const isCompleteWorkout = (s) => s.setsDone > 0 && s.setsDone >= minSetsForWorkout(s.setsPlanned);
 
 /**
- * XP earned for a finished workout. A partial workout earns only the per-set XP (no
- * workout bonus, no PR bonus).
- * @param {{setsDone: number, prs: number, partial?: boolean}} s
+ * 1.4.3 (part B): the share of the workout bonus a partial workout earns – the done part of
+ * the planned sets, e.g. 6 of 15 sets → round(6/15 × 50) = 20. Also the daily workout quest's
+ * share. @param {number} setsDone @param {number} setsPlanned
+ */
+export const partialShare = (setsDone, setsPlanned) =>
+  setsDone <= 0 ? 0 : Math.round(Math.min(1, setsDone / Math.max(1, setsPlanned || setsDone)) * XP.workout);
+
+/**
+ * XP earned for a finished workout: the workout bonus + per set + per PR. 1.4.3 (part B): a
+ * partial workout gets the done share of the bonus (`partialShare`), every set and its PRs in
+ * full (before: per-set XP only). Finished later the same day it becomes full and its XP is
+ * corrected to the full amount (no double counting).
+ * @param {{setsDone: number, prs: number, partial?: boolean, setsPlanned?: number}} s
  */
 export const xpForWorkout = (s) =>
-  s.setsDone <= 0 ? 0 : s.partial ? XP.perSet * s.setsDone : XP.workout + XP.perSet * s.setsDone + XP.pr * s.prs;
+  s.setsDone <= 0
+    ? 0
+    : (s.partial ? (s.setsPlanned ? partialShare(s.setsDone, s.setsPlanned) : 0) : XP.workout) +
+      XP.perSet * s.setsDone +
+      XP.pr * s.prs;
