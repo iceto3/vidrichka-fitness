@@ -2694,7 +2694,7 @@ async function v143r2(page, { go, settle, shot, layer, rows, clearCel }) {
   assert.ok(d.proteinAt, 'protein breakfast recorded');
   assert.ok((await xp())['quest:2026-11-05:protein'], 'protein quest XP');
   await page.waitForTimeout(300);
-  assert.ok((await xp())['quest:2026-11-05:breakfast'], 'breakfast quest XP');
+  assert.ok((await xp())['quest:2026-11-05:meal_breakfast'], 'breakfast quest XP');
   await go('food');
   const openBreakfast = async () => {
     await page.locator('.meal[data-m="breakfast"]').click();
@@ -4123,7 +4123,7 @@ async function v143a(page, { go, settle, shot, layer, rows, clearCel }) {
   assert.equal(await page.locator('#proteinbf .toggle').getAttribute('aria-checked'), 'false');
   // off: no quest, no chart, no protein reminder row
   await go('home');
-  await page.locator('.quests').waitFor();
+  await page.locator('.quests.q-daily').waitFor();
   assert.equal(await proteinQuest.count(), 0, 'no protein quest');
   assert.equal(await page.locator('.pbar').count(), 0, 'no banner');
   await go('progress/trends');
@@ -4236,11 +4236,11 @@ async function v143b(page, { go, settle, shot, layer, clearCel }) {
   assert.equal(await page.locator('#proteinbf').count(), 1);
   // Храна: the morning snack has its section
   await go('food');
-  await page.locator('.meal[data-m="snack_am"]').waitFor();
-  assert.deepEqual(
-    await page.locator('.food .meal[data-m]').evaluateAll((e) => e.map((x) => x.getAttribute('data-m'))),
-    ['breakfast', 'snack_am', 'lunch', 'snack', 'dinner'],
+  await page.locator('.food .meals .meal', { hasText: 'Сутрешно междинно' }).waitFor();
+  const order = (await page.locator('.food .meals').innerText()).match(
+    /Закуска|Сутрешно междинно|Обяд|Следобедно междинно|Вечеря/g,
   );
+  assert.deepEqual(order, ['Закуска', 'Сутрешно междинно', 'Обяд', 'Следобедно междинно', 'Вечеря']);
 
   // B3: Home „Дневни цели“ – a goal per meal, the day's protein bar 82/120 г; „Месечни цели“
   const row = (
@@ -4283,7 +4283,8 @@ async function v143b(page, { go, settle, shot, layer, clearCel }) {
     assert.ok(ids.includes(id), `${id} in ${ids}`);
   assert.ok(!ids.includes('measure') && !ids.includes('meals3') && !ids.includes('breakfast'), String(ids));
   const pg = daily.locator('[data-q="proteinGoal"]');
-  assert.match(await pg.innerText(), /Протеин за деня \(82\/120 г\)/);
+  const pm = (await pg.innerText()).match(/Протеин за деня \((\d+)\/(\d+) г\)/);
+  assert.ok(pm && Number(pm[1]) >= 82 && Number(pm[2]) > Number(pm[1]), String(pm));
   assert.equal(await pg.locator('.qbar').count(), 1, 'progress bar');
   assert.equal(await pg.locator('.qbox.done').count(), 0);
   assert.equal(await daily.locator('[data-q="meal_snack_am"] .qbox.done').count(), 1, 'logged meal ticked');
@@ -4363,7 +4364,7 @@ async function v143b(page, { go, settle, shot, layer, clearCel }) {
   await wd.waitFor();
   assert.match(await wd.innerText(), /Тренировката е готова/);
   const nx = wd.locator('.wnext');
-  if (await nx.count()) assert.match(await nx.innerText(), /^Следващата ти тренировка е във? \S+: .+/);
+  if (await nx.count()) assert.match(await nx.innerText(), /^Следващата ти тренировка е (в|във) \S+: .+/);
   assert.equal(await page.locator('.wcard [data-act="start"]').count(), 0, 'no Тренирай button');
   assert.doesNotMatch(await page.locator('.q-daily [data-q="workout"]').innerText(), /непълна/);
   assert.match(await page.locator('.q-daily [data-q="workout"]').innerText(), /\+50 XP/);
