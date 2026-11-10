@@ -47,7 +47,7 @@ export function openItemEdit(id) {
     meal = row.meal;
   openSheet({
     render: () => {
-      const n = scaleRow(row, g || 1);
+      const n = scaleRow(row, g || 1, food());
       return html`<div class="itemedit"><div class="row gap12"><div class="fic lg">${row.emoji ?? '🍽️'}</div>
 <div class="f1 minw0"><h2 class="h2">${foodName(row)}</h2><div class="muted small b">${row.time} · ${t('food.editItem')}</div></div></div>
 <div class="mt14">${gramStepper({ act: 'g', value: g, id: 'egrams' })}</div>

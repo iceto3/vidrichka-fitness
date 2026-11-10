@@ -24,7 +24,9 @@ import {
   searchLocal,
   view,
 } from '../api.js';
-import { known, signature, timesEaten, totals } from '../logic.js';
+import { addMealRedirect, known, signature, timesEaten, totals } from '../logic.js';
+import { enabledMeals } from '../../../core/settings.js';
+import { navigate } from '../../../core/router.js';
 import { openGrams } from './grams.js';
 import { SEARCH_TIMEOUT, offView, search, within } from '../off.js';
 import { deleteFoodRow } from './item.js';
@@ -53,6 +55,21 @@ const foodRow = (
 export default ({ meal }) => {
   const protein = /[?&]protein\b/.test(location.hash);
   if (protein) view.date = dayKey(); // always today's breakfast
+  // 1.4.3 (fixes): a switched-off meal has no add page – open the meal of this time instead
+  // (the `?protein` hint belongs to the breakfast only; a search / scan link keeps its flag).
+  const other = addMealRedirect(
+    meal,
+    enabledMeals(),
+    all('food').some((r) => r.date === view.date && r.meal === meal && r.type !== 'water'),
+  );
+  if (other) {
+    const qs = (location.hash.split('?')[1] ?? '')
+      .split('&')
+      .filter((x) => x && x !== 'protein')
+      .join('&');
+    navigate(`food/add/${other}${qs ? `?${qs}` : ''}`, { replace: true });
+    meal = other;
+  }
   /** @type {any[]} */
   const basket = [];
   /** @type {Map<string, any>} */

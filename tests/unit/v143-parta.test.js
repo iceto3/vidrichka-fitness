@@ -148,7 +148,7 @@ test('grams steppers: −10 / −5 / +5 / +10, typed values, 0…5000', () => {
 });
 
 test('meal totals line in the meals overview: „● пр 42 · ● вх 1 · ● мз 44“', () => {
-  const src = readFileSync('src/features/food/views/diary.js', 'utf8');
+  const src = readFileSync('src/features/food/views/totals.js', 'utf8');
   assert.match(src, /muted small b num block ellip mtot/);
   assert.match(src, /\['cp', 'nutr\.p', tot\.p\]/);
   assert.match(src, /\['cc', 'nutr\.c', tot\.c\]/);

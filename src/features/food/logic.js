@@ -71,6 +71,20 @@ export function mealFor(d = new Date(), enabled = DEFAULT_MEALS) {
 }
 
 /**
+ * 1.4.3 (fixes): the add page of a meal switched off in Profile (an old link, history back,
+ * a `?protein` deep link) opens the meal of this time instead. A switched-off meal that already
+ * has entries on that day (hidden meals keep their entries) still opens as is.
+ * @param {string} meal The meal in the link. @param {string[]} enabled Meals in use.
+ * @param {boolean} hasRows The day already has entries in that meal.
+ * @param {Date} [d] Now (picks the meal of this time).
+ * @returns {string|null} The meal to open instead, or null to keep the link.
+ */
+export function addMealRedirect(meal, enabled, hasRows, d = new Date()) {
+  if (enabled.includes(meal) || (hasRows && MEALS.some(([m]) => m === meal))) return null;
+  return mealFor(d, enabled);
+}
+
+/**
  * Meals to list for a day: the enabled ones plus any disabled meal that has entries that day
  * (hidden meals keep their past entries visible), in the day's order.
  * @param {string[]} enabled @param {{meal?: string}[]} [rows] That day's food rows.
@@ -125,18 +139,24 @@ export const totals = (rows) =>
 /**
  * A diary row (or saved-meal item) at a new weight: every nutrient scales with the grams,
  * unknown fiber/salt stay unknown. Ids, meal, date and time are kept.
+ * 1.4.3 (fixes): with the row's food (catalog or saved food, per 100 g) the values come from
+ * the food, exactly like when it was added (`portion`) – 160 g is the same kcal in the add
+ * sheet and in the edit sheet. Without it (voice / custom rows) they are scaled from the row.
  * @template {{grams: number, kcal: number, p: number, c: number, f: number, fib?: number, salt?: number}} R
  * @param {R} row
  * @param {number} grams
+ * @param {any} [food] The row's food (per 100 g), if known.
  * @returns {R}
  */
-export function scaleRow(row, grams) {
+export function scaleRow(row, grams, food = null) {
   const g = Math.max(1, Math.round(grams));
   if (!(row.grams > 0)) return { ...row, grams: g };
   const per100 = Object.fromEntries(
     ['kcal', 'p', 'c', 'f', 'fib', 'salt'].map((k) => {
-      const v = /** @type {any} */ (row)[k];
-      return [k, known(v) ? (v * 100) / row.grams : undefined];
+      const v = /** @type {any} */ (row)[k],
+        fv = food?.[k];
+      if (!known(v)) return [k, undefined];
+      return [k, known(fv) ? fv : (v * 100) / row.grams];
     }),
   );
   const out = { ...row, grams: g, ...portion(/** @type {any} */ (per100), g) };

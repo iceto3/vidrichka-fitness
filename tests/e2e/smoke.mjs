@@ -4231,6 +4231,20 @@ async function v143b(page, { go, settle, shot, layer, clearCel }) {
   await page.locator('.dayworkouts, .meal').first().waitFor();
   assert.ok(await page.locator('.meal[data-m="breakfast"]').count(), 'breakfast of the 12th still shown');
   assert.equal(await page.locator('.meal[data-m="lunch"]').count(), 0, 'lunch off and empty: hidden');
+  // 1.4.3 (fixes): a switched-off meal's add page (old link, history back, the protein deep
+  // link) opens the meal of this time instead – never „Добави … Закуска“ with breakfast off
+  for (const link of ['food/add/breakfast', 'food/add/breakfast?protein', 'food/add/dinner?q']) {
+    await page.evaluate((h) => (location.hash = `#/${h}`), link);
+    await page.waitForFunction(() => /^#\/food\/add\/snack_am/.test(location.hash));
+    await page.locator('.content h1').first().waitFor();
+    await settle();
+    const sub = await page.locator('h1 + .muted').first().innerText();
+    assert.match(sub, /Сутрешно междинно/, `${link}: ${sub}`);
+    assert.doesNotMatch(sub, /Закуска|Вечеря/, link);
+    assert.equal(await page.evaluate(() => location.hash.includes('protein')), false, 'no protein hint');
+    if (link.endsWith('?q')) assert.match(await page.evaluate(() => location.hash), /\?q$/, 'search flag kept');
+  }
+  await shot('fixes-add-disabled-meal');
   await go('profile');
   for (const m of ['breakfast', 'lunch', 'snack', 'dinner']) (await tog(m).click(), await settle());
   assert.equal(await page.locator('#proteinbf').count(), 1);
@@ -4282,6 +4296,25 @@ async function v143b(page, { go, settle, shot, layer, clearCel }) {
   ])
     assert.ok(ids.includes(id), `${id} in ${ids}`);
   assert.ok(!ids.includes('measure') && !ids.includes('meals3') && !ids.includes('breakfast'), String(ids));
+  // 1.4.3 (fixes): the order of the day – meals (protein breakfast after breakfast), the day's
+  // protein, then workout, water, steps
+  const DAY_ORDER = [
+    'meal_breakfast',
+    'protein',
+    'meal_snack_am',
+    'meal_lunch',
+    'meal_snack',
+    'meal_dinner',
+    'proteinGoal',
+    'workout',
+    'water',
+    'steps',
+  ];
+  assert.deepEqual(
+    ids,
+    DAY_ORDER.filter((id) => ids.includes(id)),
+    `chronological order: ${ids}`,
+  );
   const pg = daily.locator('[data-q="proteinGoal"]');
   const pm = (await pg.innerText()).match(/Протеин за деня \((\d+)\/(\d+) г\)/);
   assert.ok(pm && Number(pm[1]) >= 82 && Number(pm[2]) > Number(pm[1]), String(pm));
@@ -4300,6 +4333,26 @@ async function v143b(page, { go, settle, shot, layer, clearCel }) {
   await pg.evaluate((n) => n.scrollIntoView({ block: 'center' }));
   await page.waitForTimeout(250);
   await shot('partb-home-daily');
+  // 1.4.3 (fixes): the goals in the order of the day, and the Home meals card with the
+  // meal's „● пр · ● вх · ● мз“ line (same as Храна) under each meal that has food
+  await daily.evaluate((n) => n.scrollIntoView({ block: 'start' }));
+  await page.waitForTimeout(250);
+  await shot('fixes-home-daily-order');
+  const hm = page.locator('.homemeals');
+  for (const m of ['breakfast', 'snack_am']) {
+    const tl = hm.locator(`.meal[data-m="${m}"] .mtot`);
+    assert.equal(await tl.count(), 1, `${m}: totals line`);
+    assert.match(await tl.innerText(), /^● пр \d+ · ● вх \d+ · ● мз \d+$/);
+  }
+  assert.equal(await hm.locator('.meal[data-m="lunch"] .mtot').count(), 0, 'no line for an empty meal');
+  const fits = await hm.evaluate((c) => {
+    const r = c.getBoundingClientRect();
+    return [...c.querySelectorAll('.mtot')].every((x) => x.getBoundingClientRect().right <= r.right + 0.5);
+  });
+  assert.ok(fits, 'totals inside the card');
+  await hm.evaluate((n) => n.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(250);
+  await shot('fixes-home-meals-totals');
   const monthly = page.locator('.quests.q-monthly');
   assert.match(await monthly.locator('h2').innerText(), /Месечни цели/);
   assert.match(await monthly.innerText(), /Месечни мерки/);

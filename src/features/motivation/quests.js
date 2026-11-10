@@ -27,7 +27,10 @@ import { XP, partialShare } from './xp.js';
  */
 export const QUEST_XP = { meal: 5, proteinGoal: 15, measure: 30 };
 
-/** Day order of the meal quests (order 2…7, the protein quest sits at 2.5 after breakfast). */
+/**
+ * Day order of the meal quests (order 2…7, the protein quest sits at 2.5 after breakfast); then
+ * „Протеин за деня“ 8, workout 8.5, water 9, steps 10 (steps/index.js).
+ */
 const MEAL_ORDER = { breakfast: 2, snack_am: 4, lunch: 5, snack: 6, dinner: 7 };
 
 /** @type {QuestDef[]} */
@@ -36,7 +39,9 @@ export const QUESTS = [
     id: 'workout',
     xp: XP.workout,
     go: 'workouts',
-    order: 0,
+    // 1.4.3 (fixes): the day's goals in the order of the day – the meals (with the protein
+    // breakfast after breakfast), the day's protein, then the workout, water and steps.
+    order: 8.5,
     done: (s) => s.workedOutToday,
     // 1.4.3 (part B): a partial workout ticks it with „непълна“ and the done share of the XP;
     // finished the same day it becomes full and gets the rest (the ledger entry is corrected).

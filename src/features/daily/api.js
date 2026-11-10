@@ -76,7 +76,18 @@ export function proteinFromWake(now = Date.now()) {
   if (!rec || !dailySettings().protein || rec.proteinStart || rec.proteinAt || rec.proteinSkip) return false;
   const w = [rec.wake, rec.sleepWake].find((x) => typeof x === 'number' && dayKey(x) === id && x <= now + WAKE_SLACK);
   if (w == null) return false;
-  patchDay(id, { proteinStart: Math.min(w, now) });
+  const start = Math.min(w, now);
+  patchDay(id, { proteinStart: start });
+  // 1.4.3 (fixes): a breakfast saved before the wake-up was entered (e.g. the sleep sheet
+  // filled in after eating) is the protein breakfast too, graded by when it was eaten:
+  // on time 15, up to 60 min after the window 8 („+N мин“), later 0 („пропуснато“).
+  const bf = all('food')
+    .filter((r) => r.date === id && r.meal === TIMED_MEAL && r.type !== 'water' && !r.removed && r.ts <= now)
+    .sort((a, b) => b.ts - a.ts)[0];
+  if (bf) {
+    patchDay(id, { proteinAteAt: Math.max(Number(bf.ts) || now, start) });
+    proteinLogged(bf, now);
+  }
   return true;
 }
 

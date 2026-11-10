@@ -129,7 +129,10 @@ export const unlog = (id) => remove('food', id);
 export function editRow(id, change) {
   const before = get('food', id);
   if (!before) return null;
-  let after = change.grams != null && change.grams !== before.grams ? scaleRow(before, change.grams) : { ...before };
+  let after =
+    change.grams != null && change.grams !== before.grams
+      ? scaleRow(before, change.grams, before.foodId ? foodById(before.foodId) : null)
+      : { ...before };
   if (change.meal && change.meal !== before.meal) after = { ...after, meal: change.meal };
   put('food', after);
   return { before, after };

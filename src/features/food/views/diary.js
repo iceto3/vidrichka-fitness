@@ -18,6 +18,9 @@ import { MEAL_STYLE, mealsForDay, totals } from '../logic.js';
 import { enabledMeals } from '../../../core/settings.js';
 import { creatineMg } from '../creatine.js';
 import { nutrientLegend, nutrientLine } from '../nutrients.js';
+import { mealTotalsLine } from './totals.js';
+
+export { mealTotalsLine } from './totals.js';
 
 export { MEAL_STYLE } from '../logic.js';
 
@@ -85,21 +88,6 @@ export function openMeal(meal, date) {
     },
   });
 }
-
-/**
- * 1.4.3 (part A): the meal's protein / carbs / fat under its foods in the meals overview:
- * „● пр 42 · ● вх 1 · ● мз 44“ (whole grams, no unit, the macro colours of the grams sheet).
- * @param {{p: number, c: number, f: number}} tot
- */
-export const mealTotalsLine = (tot) =>
-  html`<span class="muted small b num block ellip mtot">${[
-    ['cp', 'nutr.p', tot.p],
-    ['cc', 'nutr.c', tot.c],
-    ['cf', 'nutr.f', tot.f],
-  ].map(
-    ([cls, k, v], i) =>
-      html`${i ? ' · ' : ''}<span class="${String(cls)}">●</span> ${t(String(k))} ${fmtNum(Math.round(Number(v) || 0))}`,
-  )}</span>`;
 
 /** @returns {import('../../../core/registry.js').View} */
 export default () => ({

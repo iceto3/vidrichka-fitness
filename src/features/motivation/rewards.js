@@ -73,10 +73,17 @@ export function syncRewards() {
 
 /** Start listening for data changes. */
 export function startRewards() {
-  on('store:any', (/** @type {string} */ name) => {
-    if (name === 'kv') return; // our own writes
+  const later = () => {
     clearTimeout(timer);
     timer = setTimeout(syncRewards, 60);
+  };
+  on('store:any', (/** @type {string} */ name) => {
+    if (name === 'kv') return; // our own writes
+    later();
   });
+  // 1.4.3 (fixes): settings live in `kv` too, so a changed goal (water, protein) or a meal
+  // switched on/off in Profile re-checks the quests at once – the level bar never waits for
+  // the next data change. Hidden quests stay untouched; `paidBefore` prevents double pay.
+  on('settings:changed', later);
   setTimeout(syncRewards, 0);
 }
