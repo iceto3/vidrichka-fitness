@@ -82,6 +82,31 @@ test('a breakfast logged after the window asks „Кога яде?“ once; on t
   assert.equal(asks, 1, 'only the first late item asks');
 });
 
+test('a breakfast saved before the wake-up was entered is graded but never asked', () => {
+  reset();
+  remove('days', D);
+  setKv('xp', {});
+  const row = atClock('08:10', (now) =>
+    put('food', {
+      id: 'early',
+      date: D,
+      meal: 'breakfast',
+      ts: now,
+      time: '08:10',
+      name: 'x',
+      grams: 100,
+      kcal: 150,
+      p: 30,
+      c: 1,
+      f: 2,
+    }),
+  );
+  assert.ok(row);
+  atClock('08:10', (now) => (put('days', { id: D, wake: at(D, '07:00') }), api.proteinFromWake(now)));
+  assert.ok(get('days', D).proteinAt, 'recorded');
+  assert.equal(asks, 0);
+});
+
 test('„Сега“ keeps the logged time and is not asked again', () => {
   reset();
   logBreakfast('08:10');

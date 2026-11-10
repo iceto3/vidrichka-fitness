@@ -86,7 +86,7 @@ export function proteinFromWake(now = Date.now()) {
     .sort((a, b) => b.ts - a.ts)[0];
   if (bf) {
     patchDay(id, { proteinAteAt: Math.max(Number(bf.ts) || now, start) });
-    proteinLogged(bf, now);
+    proteinLogged(bf, now, false); // 1.4.4: logged before the countdown existed – nothing to ask
   }
   return true;
 }
@@ -121,10 +121,12 @@ export function proteinYes(now = Date.now()) {
 /**
  * A food row was saved: if it is today's breakfast (not water) while the protein countdown
  * runs, that is the protein breakfast. The quest/XP then follows the usual 30-min window
- * (`proteinOnTime`). @param {any} row @param {number} [now]
+ * (`proteinOnTime`). @param {any} row @param {number} [now] @param {boolean} [ask]
+ * 1.4.4: `ask` = offer „Кога яде?“ when it was logged late (not for a breakfast saved
+ * before the countdown started, see proteinFromWake).
  * @returns {boolean} true if it recorded the protein breakfast.
  */
-export function proteinLogged(row, now = Date.now()) {
+export function proteinLogged(row, now = Date.now(), ask = true) {
   if (!row || row.removed || row.type === 'water' || row.meal !== TIMED_MEAL || row.date !== dayKey(now)) return false;
   const id = dayKey(now),
     rec = day(id);
@@ -148,7 +150,7 @@ export function proteinLogged(row, now = Date.now()) {
   if (u) patchDay(id, { proteinUndo: null });
   ateTimeOnRow(row);
   // 1.4.4: logged after the window without a typed time → „Кога яде?“ (once a day)
-  if (askWhenAte(day(id), now)) emit('meal:whenAte', { meal: TIMED_MEAL });
+  if (ask && askWhenAte(day(id), now)) emit('meal:whenAte', { meal: TIMED_MEAL });
   return true;
 }
 

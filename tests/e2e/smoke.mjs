@@ -247,7 +247,7 @@ async function run(name, browser, P) {
   // Food: category → grams → second item → save-meal prompt
   await go('food');
   await go('food/add/breakfast');
-  await page.locator('.cat').first().click();
+  await page.locator('.cat[data-act="cat"]').first().click();
   await layer.locator('[data-act="pick"]').first().click();
   await layer.locator('#grams').waitFor();
   await settle();
@@ -271,7 +271,7 @@ async function run(name, browser, P) {
   await shot('food-add');
   await layer.locator('[data-act="done"]').click();
   await settle();
-  await page.locator('.cat').nth(1).click();
+  await page.locator('.cat[data-act="cat"]').nth(1).click();
   await layer.locator('[data-act="pick"]').first().click();
   await layer.locator('[data-act="done"]').click();
   await settle();
@@ -1325,7 +1325,7 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   assert.equal(await page.locator('.toast button, .undopill').count(), 0, '1.3.2: an add has no Undo');
   let b = await banica();
   assert.deepEqual([b.grams, b.kcal, b.fib, b.salt, b.meal], [100, 300, 1.5, 1.2, 'breakfast']);
-  await page.locator('.cat').first().click();
+  await page.locator('.cat[data-act="cat"]').first().click();
   await layer.locator('[data-act="pick"]').first().click();
   await layer.locator('[data-act="done"]').click();
   await settle();
@@ -1593,7 +1593,8 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.3/);
+  assert.match(txt, /Какво ново в 1\.4\.4/);
+  assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
   assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
   assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
@@ -1604,8 +1605,8 @@ async function v132(page, { go, settle, clearCel, layer }) {
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    31, // 1.4.3 part A: +2 items, part B: +3
-    'the 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
+    36, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +5
+    'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
   );
   await layer.locator('[data-close]').first().click();
   await settle();
@@ -1910,7 +1911,8 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.3/);
+  assert.match(txt, /Какво ново в 1\.4\.4/);
+  assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
   assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
   assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
@@ -1918,8 +1920,8 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   assert.match(txt, /Обичайният ти обяд/);
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    28, // 1.4.3 part A: +2 items, part B: +3
-    'the 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items',
+    33, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +5
+    'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items',
   );
   await layer.locator('[data-close]').first().click();
   await settle();
@@ -2022,7 +2024,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.3/);
+  assert.match(txt, /Какво ново в 1\.4\.4/);
+  assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
   assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
   assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
@@ -2031,8 +2034,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    26,
-    'eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
+    31,
+    'five 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
   );
   await page.waitForTimeout(700);
   await shot('whats-new-134');
@@ -2164,8 +2167,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   // 5) Sleep card: bedtime + wake-up time (1.4.2, instead of ± hours) + quality
   await go('home');
   await page.locator('.sleepcard').scrollIntoViewIfNeeded();
-  await page.locator('.sleepcard').click();
-  await layer.locator('.sleeptimes').waitFor();
+  // a check-in prompt may open by its timer right here (see clickPastPrompts)
+  await clickPastPrompts(page, layer, settle, page.locator('.sleepcard'), layer.locator('.sleeptimes'));
   const key = await page.evaluate(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -3396,9 +3399,9 @@ async function v141tester(page, { go, settle, shot }, name, ctx) {
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
   // build id: 1.4.1-<hash> / 1.4.1-beta-<hash> from a build, the plain version from the sources
-  const idRe = DIR === '.' ? /^Билд: 1\.4\.3$/ : /^Билд: 1\.4\.3(-beta)?-[0-9a-f]{7,}$/;
+  const idRe = DIR === '.' ? /^Билд: 1\.4\.4$/ : /^Билд: 1\.4\.4(-beta)?-[0-9a-f]{7,}$/;
   const meta = await page.evaluate(
-    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.4.3',
+    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.4.4',
   );
   const foot = page.locator('#pbuild');
   await foot.scrollIntoViewIfNeeded();
@@ -4061,7 +4064,7 @@ async function v143a(page, { go, settle, shot, layer, rows, clearCel }) {
   for (const w of [360, 390]) {
     await page.setViewportSize({ width: w, height: 844 });
     await go('food/add/lunch');
-    await page.locator('.cat').first().click();
+    await page.locator('.cat[data-act="cat"]').first().click();
     await layer.locator('[data-act="pick"]').first().click();
     await layer.locator('#grams').waitFor();
     await settle();

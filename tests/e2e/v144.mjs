@@ -184,7 +184,10 @@ export async function v144(page, h) {
   assert.match(await customTile.innerText(), /Ръчно добавени храни/);
   const sheetOpen = layer.locator('.delmode');
   await clickPast(customTile, sheetOpen);
-  assert.equal(await layer.locator('.flist .fpick').count(), 3);
+  // earlier flows may have added manual foods too: count from what is stored
+  const nCustom = (await rows('foods')).filter((/** @type {any} */ f) => f.source === 'custom').length;
+  assert.ok(nCustom >= 3);
+  assert.equal(await layer.locator('.flist .fpick').count(), nCustom);
   assert.equal(await layer.locator('.flist .fphoto img').count(), 1, 'the thumbnail is shown in the list');
   await sheetShot('v144-custom-list');
 
@@ -218,12 +221,12 @@ export async function v144(page, h) {
   assert.match(await dlg.innerText(), /Да изтрия ли 2 храни\?/);
   await dlg.locator('[data-act="ok"]').click();
   await settle();
-  assert.equal(await layer.locator('.flist .fpick').count(), 1, 'two foods deleted');
-  assert.equal((await rows('foods')).filter((/** @type {any} */ f) => f.source === 'custom').length, 1);
+  assert.equal(await layer.locator('.flist .fpick').count(), nCustom - 2, 'two foods deleted');
+  assert.equal((await rows('foods')).filter((/** @type {any} */ f) => f.source === 'custom').length, nCustom - 2);
   await page.locator('.undopill').click();
   await settle();
   await page.waitForTimeout(300);
-  assert.equal(await layer.locator('.flist .fpick').count(), 3, 'Undo brings both back');
+  assert.equal(await layer.locator('.flist .fpick').count(), nCustom, 'Undo brings both back');
 
   // single delete from the edit screen
   await layer.locator('.fedit[data-id="custom_e2e_1"]').click();
@@ -232,7 +235,7 @@ export async function v144(page, h) {
   assert.match(await dlg.innerText(), /Кекс домашен/);
   await dlg.locator('[data-act="ok"]').click();
   await settle();
-  assert.equal(await layer.locator('.flist .fpick').count(), 2);
+  assert.equal(await layer.locator('.flist .fpick').count(), nCustom - 1);
   assert.ok(!(await rows('foods')).some((/** @type {any} */ f) => f.id === 'custom_e2e_1'));
   await closeAll();
   console.log('  ✔ 1.4.4 C2: custom foods – photo thumbnail, edit, multi-delete + confirm + Undo, single delete');
