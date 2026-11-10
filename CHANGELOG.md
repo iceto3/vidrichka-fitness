@@ -4,6 +4,67 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.3] – 2026-11-04
+
+### Added
+
+- **Meal-reminder pill:** while the breakfast countdown runs (the brown Начало banner), a small pill in the banner's colours floats just above the bottom nav on every tab except Начало. It shows the meal and the same countdown (`pendingMeal` reuses `proteinBar`, no second timer logic) and turns dark red when the time is up. Tapping it opens a bottom sheet with **Изядох** / **Пропуснах**, which run the banner's own actions (`daily/views/mealsheet.js`, shared by both). Scrolling down shrinks it to a clock circle; scrolling up (or back at the top) expands it. It is hidden when nothing is pending, once the meal is answered, during a workout, on pages without the nav and on the breakfast logger itself. It sits left (the „Отмени“ pill is right), respects the safe-area insets, and while it shows the page gets extra room at the bottom so it never covers content or the nav.
+- **Meal timing:** **Изядох** after the 30-minute window (banner or pill) first asks **Кога яде?** with a time picker (default now; future times and times before the countdown are refused inline). Saving the breakfast stores `mealTimes.breakfast = {planned, actual}` on the day (planned = end of the window). Backward compatible: no migration, older days are read from `proteinStart` / `proteinAt` / `proteinSkip`; the streak's on-time rule uses the entered time.
+- **Прогрес › Графики › Хранене навреме:** a per-day chart of the last 7 days drawn as plain SVG (green on time, orange late with „+N мин“, grey missed, dashed while today's is still pending) with a summary such as „навреме 5/7 · средно закъснение 12 мин“ (average over the late meals).
+- **Meal item rows** (Закуска and the other meal lists): line 1 time and grams, line 2 „пр · вх · мз · кр · фб · сл“ (protein, carbs, fat, creatine only when the food has some, fiber, salt; grams, „–“ when unknown). A small ⓘ next to the meal title opens the legend with the full names.
+- What's new entry for 1.4.3. Unit tests in `tests/unit/v143.test.js`; e2e for the pill, its sheet, the time entry, the chart and the nutrient rows.
+
+### Fixed (tester round)
+
+- **A wake-up recorded by hand starts the protein countdown:** a wake-up for today (the morning tap, or **Ставане** typed in the sleep editor) starts the breakfast countdown at that time when protein is on and nothing is answered yet. If the window is already over, it is shown as overdue, so **Изядох** (with the time) and **Пропуснах** work as usual. Past days are never touched. A wake-up corrected in the editor moves an unanswered countdown with it. It is also checked at start-up and when protein is switched on.
+- **Wording follows the profile's gender:** „кога си яла/ял“, „щом и ти си готова/готов“ and „Въведи я сама/сам“ (this one was masculine only). The otter stays „тя“. The night card reads „Лека нощ!“ / „Лягаш ли си? Докосни и {otter} ще се завие 🌙“.
+- **Home install card:** the text gets the full width and **Инсталирай приложението** sits below it (390 and 360 px).
+- **Добави храна:** the title stays on one line. **Готово с храненето** is a full-width button under it.
+- **Sleep times** (and the meal time) are a typed 24-hour field (e.g. „0640“ or „6:40“) with −/+ steps (15 min for sleep, 5 min for meals) instead of the 12-hour AM/PM wheel. Text that isn't a time shows a hint and blocks **Готово**. The „до 16 ч“ rule is unchanged.
+- The **accessibility labels** („Към съдържанието“, „Основно меню“) are translated.
+
+### Fixed (tester round 2)
+
+- **The protein countdown follows the data:** deleting today's breakfast that recorded the protein meal (or moving it to another meal or day) clears it when no other breakfast is left: the countdown, the pill and the Начало bar come back (overdue if the window has passed), „Протеиновата закуска е готова“ and the quest **Протеин до 30 мин след ставане** are un-ticked and their XP is taken back (other quests and XP untouched). **Отмени** restores it all. Deleting today's sleep entry clears a countdown that its wake-up started (when the meal isn't answered yet); its **Отмени** brings it back.
+- **−/+ on time fields step exactly** (5 min for sleep and meals, no snapping to a grid: 06:42 + 5 = 06:47, 06:45 − 5 = 06:40) and wrap at midnight.
+- **Sleep editor:** saves only with **Готово** (closing discards), the sheet no longer jumps when a field is tapped, typing keeps the focus, and tapping a field selects it so typing replaces the whole value. The protein countdown moves on **Готово**.
+- **360 px:** the Вода card puts the glasses on their own row („0/8 чаши · 0 л“ on one line), „Креатин 0 г“ stays on one line with the button below, the Начало **Седмична цел** card is no longer clipped (ring and title on top), and the protein / fibre / salt line in **Хранения днес** has the card's padding.
+- **Food search** matches words, not one exact substring: case-insensitive, Bulgarian word forms (пилешки / пилешко / пилешките), „гърди“ = breast (so „пилешки гърди“ finds **Пилешко филе**) and „бут“ = „бедро“. Built-in foods come first, then your own products, then Open Food Facts. Nutrition data unchanged.
+- **A late breakfast's row time** is the time from **Кога яде?**, not the save time.
+
+### Fixed (tester round 3)
+
+- **„Отмени“ always undoes** (food, sleep and every other delete with the undo pill). Cause: the pill can be swiped away, and a press that moved more than 8 px (|dx| + dy) counted as a swipe, so the click was swallowed and nothing came back, while the pill stayed. A finger, or the mouse in Chrome's device mode, easily moves that much during a tap. Now only a real swipe dismisses (more than 40 px sideways or 30 px down), anything under 24 px is a tap and undoes on release, without waiting for the click; the pill no longer moves while it is pressed, and a click after the touch cannot fall through to what is under it.
+- **XP follows the quests:** a quest of today that is no longer done (e.g. its breakfast deleted) gives its XP back – „Запиши закуската“ too, not only the protein quest – and Undo grants it once more. Earlier days and quests that are still done are never touched.
+- **Кога яде?** shows only the app's own messages, in the ти form: „Избери час след старта на таймера.“ (and „Този час още не е дошъл – избери по-ранен.“). The time fields have no browser constraints (no min/max/pattern), and the barcode form is `novalidate`, so no browser popup can appear.
+- **Open tabs stay in sync:** after a change is saved, the other open tabs of the app re-read just those rows (BroadcastChannel per channel/database) and re-render. A re-read never writes or re-announces (no loops), and a row with a local write still on its way is not overwritten (no lost writes). A restore / „Изтрий всичко“ in one tab reloads everything in the others; a language/theme change follows too.
+- **A late meal shows how late it is** instead of a frozen 00:00: the pill „Закуска +41 мин“ (from 60 min: „+1 ч 05 мин“), the sheet „Времето изтече · +41 мин“ and the Начало banner „Времето изтече · +41 мин · изяж 30 г протеин“, counted up from the end of the 30-minute window.
+
+### Part A (beta)
+
+- **Protein breakfast switch** (Profile › **Протеинова закуска**, on by default; existing users keep it on, no migration). Off: no countdown, meal pill, Home banner, protein reminders (local and push), protein quest, protein card on the morning page, and no **Хранене навреме** card. A breakfast saved while it is off is just a breakfast. The stored **Напомняния за протеин** choice is kept (its row is hidden while the switch is off) and comes back when it is switched on again; a wake-up already recorded today then starts the countdown.
+- **The meal pill always stays full size** (no shrinking to a clock circle while scrolling).
+- **Grams steppers** (add sheet and diary-row edit): **−10 −5 [grams] +5 +10**, typed values still allowed, 0…5000 g, one row at 360 and 390 px (`gramStepper` / `nextGrams`, shared by both sheets).
+- **Храна › Хранения:** under each meal's foods a totals line „● пр 42 · ● вх 1 · ● мз 44“ (whole grams, macro colours).
+- **Protein quest graded:** eaten within 30 min of waking = ticked, 15 XP; up to 30 min after the window = ticked with „+N мин“, 8 XP; later, skipped or not eaten by then = greyed „пропуснато“ (not struck through), no XP. The old 15-min grace is gone. Quests can now carry a `state` (done / XP / missed / late minutes); the reward engine corrects the ledger when the grade changes.
+- **Хранене навреме:** each eaten breakfast shows its protein in grams under the day; under 30 g it is hatched (title „малко протеин · N г“); missed = grey „пропусната“; delay in orange „+N мин“. Summary „навреме 5/7 · протеинови 6/7 · средно закъснение 14 мин“. Days whose breakfast rows are gone count as unknown protein (never „low“).
+- What's new: two 1.4.3 items. Unit tests `tests/unit/v143-parta.test.js`; e2e `v143a` (switch off/on, steppers at 360/390, totals line, chart, late/missed quest).
+
+### Part B (beta)
+
+- **B1 – Meals per day** (Profile › **Хранения**): five meals – Закуска, **Сутрешно междинно** (new, off by default), Обяд, **Следобедно междинно** (the old „Междинно“: existing `snack` entries stay there), Вечеря – each with a switch; the last one can't be switched off. A meal that is off disappears from the diary, Day view, „move to“ and the logger's choices, but a day that already has entries in it still shows them. The meal picked by the time of day and by voice entry is always one that is on (a disabled snack goes to the other snack, else to the current meal). Breakfast off also turns the protein breakfast off (its row is hidden while breakfast is off). No data migration needed: users without the setting get the four meals they had.
+- **B2 – Partial workouts**: XP = round(done sets / planned sets × 50) + 2 per set + 20 per record (before: per-set XP only). The daily workout goal is ticked with **„непълна“** and the same share of its 50 XP. **„Довърши тренировката с Видричка“** on the summary, history, calendar, Day view and Home (only the same day, while no other workout runs) reopens it at its first unfinished set; finishing it replaces the saved workout (it becomes full once enough sets are done) and both its XP entry and the goal's are corrected to the full amount – never counted twice. The next day it stays partial and the button is gone. A full workout today: Home shows **„Тренировката е готова“** (no Тренирай button) and **„Следващата ти тренировка е в [ден]: [план]“**. Streak and weekly goal still count full workouts only.
+- **B3 – Goals**: Home **„Дневни цели“** (reset every day): one goal per meal that is on (5 XP each; replaces „Запиши закуската“ 10 and „3 хранения“ 15), protein within 30 min (only with the protein breakfast on; 15 on time / 8 late, part A), **Протеин за деня** with a bar filled from the food diary (e.g. 82/120 г, ticks at the Profile goal; 15 XP), workout 50 (partial: its share), water 10, steps 20. New **„Месечни цели“** section: **Месечни мерки** (30 XP, any day of the month; the 7-day measurement prompt is gone – measurements can still be entered any time) and **Месечни снимки на прогреса** (25 XP + the 100 XP photo-set bonus), shown all month and ticked when done. Goals are keyed by their section's period (`quest:<day|month>:<id>`); an older id already paid in the same period („breakfast“ today, „measure“/„photos4“ of this month) counts as paid, so updating never pays twice. A „Седмични цели“ section needs only an entry in `QUEST_SECTIONS` and goals with `section: 'weekly'`.
+
+### Fixed (Part A/B beta round)
+
+- **A breakfast saved before the sleep entry counts for „Протеин до 30 мин след ставане“:** when the wake-up is entered later (sleep sheet or the morning tap), today's latest breakfast is graded by when it was eaten – 15 XP on time, 8 XP with „+N мин“ up to 60 min after the 30-minute window, 0 / „пропуснато“ later (same rules as Part A).
+- **Home / Day „Хранения днес“** shows the same „● пр · ● вх · ● мз“ line as Храна under every meal that has food (shared `food/views/totals.js`).
+- **A switched-off meal's add page** (an old link, history back, the protein deep link) opens the meal of this time instead; a hidden meal that already has entries that day still opens.
+- **XP follows settings at once:** changing the water or protein goal or a meal switch re-checks the goals right away (hidden goals untouched, no double pay), so Profile and Home never show different XP.
+- **Same kcal in the add and the edit sheet:** editing grams uses the food's per-100 g values (e.g. 160 g chicken = 264 kcal in both); rows without a known food (voice, custom) scale as before.
+- **Дневни цели in the order of the day:** Закуска, Протеин до 30 мин, Сутрешно междинно, Обяд, Следобедно междинно, Вечеря, Протеин за деня, Тренировка, Вода, Крачки (switched-off items skipped). XP unchanged.
+
 ## [1.4.2] – 2026-10-28
 
 ### Added

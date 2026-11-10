@@ -4,13 +4,88 @@
  * persist in the background. Falls back to memory-only mode if IndexedDB is unavailable.
  * @module core/store
  */
-import { STORES, getAll, getMany, write } from './db.js';
+import { DB_NAME, STORES, getAll, getMany, write } from './db.js';
 import { APP_ID, DATA_VERSION, migrate } from './migrations.js';
 import { emit } from './bus.js';
 
 /** @type {Record<string, Map<string, any>>} */
 const cache = Object.fromEntries(STORES.map((s) => [s, new Map()]));
 let persistent = true;
+
+/**
+ * 1.4.3 (tester round 3): other open tabs of the app. Each tab keeps its own in-memory copy,
+ * so after a write is safely in IndexedDB the tab tells the others which rows changed and
+ * they re-read just those rows (and re-render). A re-read never writes or re-announces, so
+ * there is no ping-pong; a row with a local write still on its way is not re-read (that
+ * newer write lands last and is announced in turn), so no write is lost or undone.
+ * @type {BroadcastChannel|null}
+ */
+let tabs = null;
+/** Local writes per `store id` not yet committed. @type {Map<string, number>} */
+const pending = new Map();
+const pkey = (/** @type {string} */ store, /** @type {string} */ id) => `${store}\u0000${id}`;
+
+/**
+ * Persist one change, then tell the other tabs. @param {string} store @param {string} id
+ * @param {(tx: IDBTransaction) => void} fn
+ */
+function persist(store, id, fn) {
+  const k = pkey(store, id);
+  pending.set(k, (pending.get(k) ?? 0) + 1);
+  write([store], fn)
+    .then(() => tabs?.postMessage({ store, ids: [id] }))
+    .catch(fail)
+    .finally(() => {
+      const n = (pending.get(k) ?? 1) - 1;
+      if (n > 0) pending.set(k, n);
+      else pending.delete(k);
+    });
+}
+
+/**
+ * Start listening to the other tabs (browser only; call after {@link load}).
+ * @returns {() => void} Stop.
+ */
+export function startTabSync() {
+  if (!persistent || tabs || typeof BroadcastChannel !== 'function') return () => {};
+  const bc = new BroadcastChannel(`${DB_NAME}:sync`);
+  tabs = bc;
+  bc.onmessage = (e) => {
+    const m = e.data;
+    if (m?.all) return void reloadAll();
+    if (typeof m?.store === 'string' && STORES.includes(m.store) && Array.isArray(m.ids))
+      reload(
+        m.store,
+        m.ids.filter((/** @type {unknown} */ id) => typeof id === 'string' && !pending.has(pkey(m.store, id))),
+        true,
+      );
+  };
+  return () => (bc.close(), (tabs = null));
+}
+
+/** Another tab replaced everything (restore from a backup, „Изтрий всичко“): re-read it all. */
+async function reloadAll() {
+  const rows = await Promise.all(STORES.map((s) => getAll(s))).catch(() => null);
+  if (!rows) return;
+  STORES.forEach((s, i) => {
+    cache[s].clear();
+    rows[i].forEach((r) => cache[s].set(r.id, r));
+  });
+  remote = true;
+  try {
+    emit('store:replaced');
+    emit('store:any', '*');
+  } finally {
+    remote = false;
+  }
+}
+
+let remote = false;
+/**
+ * True while the store announces changes another tab made (that tab already ran the side
+ * effects, e.g. the protein breakfast bookkeeping, so listeners can skip them).
+ */
+export const fromOtherTab = () => remote;
 
 /** Report a persistence error once per call site without breaking the UI. @param {unknown} err */
 const fail = (err) => {
@@ -52,7 +127,7 @@ export const get = (store, id) => cache[store].get(id);
  */
 export function put(store, row) {
   cache[store].set(row.id, row);
-  if (persistent) write([store], (tx) => tx.objectStore(store).put(row)).catch(fail);
+  if (persistent) persist(store, row.id, (tx) => tx.objectStore(store).put(row));
   emit(`store:${store}`, row);
   emit('store:any', store);
   return row;
@@ -61,29 +136,36 @@ export function put(store, row) {
 /**
  * Re-read rows from IndexedDB into the cache — used after the service worker changed them
  * (e.g. "+1 glass" or "Yes, I ate" tapped on a notification while the app was closed).
+ * Also used for the changes another open tab made (`other`, see {@link startTabSync}).
  * @param {string} store
  * @param {string[]} ids
+ * @param {boolean} [other]
  */
-export async function reload(store, ids) {
-  if (!persistent) return;
+export async function reload(store, ids, other = false) {
+  if (!persistent || !ids.length) return;
   const rows = await getMany(store, ids).catch(() => null);
   if (!rows) return;
   let changed = false;
-  rows.forEach((r, i) => {
-    const old = cache[store].get(ids[i]);
-    if (JSON.stringify(old) === JSON.stringify(r)) return;
-    if (r) cache[store].set(r.id, r);
-    else cache[store].delete(ids[i]);
-    changed = true;
-    emit(`store:${store}`, r ?? { id: ids[i], removed: true });
-  });
-  if (changed) emit('store:any', store);
+  remote = other;
+  try {
+    rows.forEach((r, i) => {
+      const old = cache[store].get(ids[i]);
+      if (JSON.stringify(old) === JSON.stringify(r)) return;
+      if (r) cache[store].set(r.id, r);
+      else cache[store].delete(ids[i]);
+      changed = true;
+      emit(`store:${store}`, r ?? { id: ids[i], removed: true });
+    });
+    if (changed) emit('store:any', store);
+  } finally {
+    remote = false;
+  }
 }
 
 /** Delete a row. @param {string} store @param {string} id */
 export function remove(store, id) {
   cache[store].delete(id);
-  if (persistent) write([store], (tx) => tx.objectStore(store).delete(id)).catch(fail);
+  if (persistent) persist(store, id, (tx) => tx.objectStore(store).delete(id));
   emit(`store:${store}`, { id, removed: true });
   emit('store:any', store);
 }
@@ -131,6 +213,7 @@ export async function replaceAll(snap) {
         cache[s].forEach((r) => os.put(r));
       }),
     );
+  tabs?.postMessage({ all: true });
   emit('store:replaced');
   emit('store:any', '*');
 }

@@ -21,9 +21,15 @@ export const EVENING_H = 19;
 export const ESTIMATE_FROM_H = 20;
 /** Opening the morning page before 16:00 records the wake-up. */
 export const MORNING_END_H = 16;
-/** Protein countdown (min) and the extra minutes a "yes" still counts as on time. */
+/** Protein countdown (min). */
 export const PROTEIN_WINDOW = 30;
-export const PROTEIN_GRACE = 15;
+/**
+ * 1.4.3 (part A): minutes after the window a protein breakfast still ticks the quest, as late
+ * („+N мин“, fewer XP). Later (or skipped) it is missed. Replaces the old 15-min grace.
+ */
+export const PROTEIN_LATE_MAX = 30;
+/** XP of the protein quest: on time / late (within PROTEIN_LATE_MAX). Missed gives none. */
+export const PROTEIN_XP = /** @type {const} */ ({ done: 15, late: 8 });
 /** Protein reminders, minutes after waking. */
 export const PROTEIN_STEPS = [10, 20, 30];
 
@@ -89,14 +95,44 @@ export function fillBedtime(rec) {
   return bed ? { bed, bedEst: true } : null;
 }
 
-/** Was the protein "yes" within the window (+ grace)? @param {any} rec */
+/** When the protein breakfast was eaten: the typed time of a late meal, else when it was logged. @param {any} rec */
+const eatenAt = (rec) => Number(rec?.mealTimes?.breakfast?.actual) || rec?.proteinAt;
+
+/**
+ * Was the protein breakfast eaten within the 30-min window? 1.4.3: a late meal's typed time
+ * (`mealTimes.breakfast.actual`) counts instead of the moment it was logged; since part A
+ * there is no grace (late meals are handled by `proteinQuest`). @param {any} rec
+ */
 export const proteinOnTime = (rec) =>
-  !!(rec?.proteinStart && rec.proteinAt && rec.proteinAt - rec.proteinStart <= (PROTEIN_WINDOW + PROTEIN_GRACE) * MIN);
+  !!(rec?.proteinStart && rec.proteinAt && eatenAt(rec) - rec.proteinStart <= PROTEIN_WINDOW * MIN);
+
+/**
+ * 1.4.3 (part A): the protein quest of a day.
+ *   done   – eaten within 30 min of waking: PROTEIN_XP.done (15)
+ *   late   – eaten up to PROTEIN_LATE_MAX min after the window: ticked with „+N мин“, PROTEIN_XP.late (8)
+ *   missed – skipped, eaten later, or not eaten once that time has passed: greyed „пропуснато“, 0
+ *   open   – still possible (no countdown yet, running, or overdue up to the limit)
+ * @param {any} rec The day's record. @param {number} now
+ * @returns {{state: 'done'|'late'|'missed'|'open', delayMin: number, xp: number}}
+ */
+export function proteinQuest(rec, now) {
+  const open = { state: /** @type {const} */ ('open'), delayMin: 0, xp: 0 };
+  if (!rec?.proteinStart) return open;
+  const planned = Number(rec.mealTimes?.breakfast?.planned) || rec.proteinStart + PROTEIN_WINDOW * MIN;
+  if (rec.proteinAt) {
+    const d = Math.round((eatenAt(rec) - planned) / MIN);
+    if (d <= 0) return { state: 'done', delayMin: 0, xp: PROTEIN_XP.done };
+    if (d <= PROTEIN_LATE_MAX) return { state: 'late', delayMin: d, xp: PROTEIN_XP.late };
+    return { state: 'missed', delayMin: d, xp: 0 };
+  }
+  if (rec.proteinSkip || now - planned > PROTEIN_LATE_MAX * MIN) return { state: 'missed', delayMin: 0, xp: 0 };
+  return open;
+}
 
 /**
  * Protein countdown state.
  * @param {any} rec Today's record. @param {number} now
- * @returns {{state: 'idle'|'running'|'overdue'|'done'|'skipped', left: number, onTime?: boolean}} left in ms
+ * @returns {{state: 'idle'|'running'|'overdue'|'done'|'skipped', left: number, onTime?: boolean, over?: number}} left in ms
  */
 export function proteinState(rec, now) {
   if (!rec?.proteinStart) return { state: 'idle', left: 0 };
@@ -104,8 +140,19 @@ export function proteinState(rec, now) {
   if (rec.proteinSkip) return { state: 'skipped', left: 0 };
   // Clamped: a clock that moved back (time sync, time-zone change) must not show 30:01.
   const left = Math.min(PROTEIN_WINDOW * MIN, rec.proteinStart + PROTEIN_WINDOW * MIN - now);
-  return left > 0 ? { state: 'running', left } : { state: 'overdue', left: 0 };
+  return left > 0 ? { state: 'running', left } : { state: 'overdue', left: 0, over: -left };
 }
+
+/**
+ * 1.4.3 (tester round 3): how late an overdue meal is, counted up from the end of its window
+ * (whole minutes, at least 1), split for display: `{h: 0, m: 41}` → „+41 мин“,
+ * `{h: 1, m: 5}` → „+1 ч 05 мин“ (see `lateText` in the views).
+ * @param {number} ms Time since the window ended.
+ */
+export const lateParts = (ms) => {
+  const min = Math.max(1, Math.floor(Math.max(0, ms) / MIN));
+  return { h: Math.floor(min / 60), m: min % 60 };
+};
 
 /** Where "Ate it" / "Yes, I ate" leads: the Food logger on today's breakfast, with a hint (sw.js uses the same route). */
 export const BREAKFAST_LOGGER = 'food/add/breakfast?protein';
@@ -124,7 +171,7 @@ export const mmss = (ms) => {
  * survives reloads because it is computed from the stored start), then a short
  * done/skipped state; null when there is nothing to show.
  * @param {any} rec Today's record. @param {number} now
- * @returns {{mode: 'running'|'overdue'|'done'|'skipped', time: string} | null}
+ * @returns {{mode: 'running'|'overdue'|'done'|'skipped', time: string, late?: {h: number, m: number}} | null}
  */
 export function proteinBar(rec, now) {
   const ps = proteinState(rec, now);
@@ -133,6 +180,7 @@ export function proteinBar(rec, now) {
     const at = ps.state === 'done' ? rec.proteinAt : rec.proteinSkip;
     return now - at < PROTEIN_ANSWERED_SHOW && now >= at ? { mode: ps.state, time: '' } : null;
   }
+  if (ps.state === 'overdue') return { mode: ps.state, time: '', late: lateParts(ps.over ?? 0) };
   return { mode: ps.state, time: mmss(ps.left) };
 }
 

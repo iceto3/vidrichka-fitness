@@ -15,7 +15,7 @@ import { topBar } from '../../../ui/components.js';
 import { confirmDialog, snack } from '../../../ui/sheet.js';
 import { restore } from '../../../core/trash.js';
 import { exById, exName } from '../../library/api.js';
-import { planName } from '../api.js';
+import { planName, resumeButton } from '../api.js';
 import { deleteSession } from '../session.js';
 
 /** One set as text: "40 kg × 10" or "12 reps". @param {{w: number, r: number}} x @param {boolean} weighted */
@@ -46,7 +46,7 @@ export default ({ id, tab = 'progress' }) => {
         ['star', t('summary.xp'), html`<span class="gold">+${s.xp}</span>`],
       ];
       return html`<div class="content history">${topBar(planName(s), fmtDate(s.endedAt, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}
-${s.partial ? html`<div class="card mt12 partialnote"><span class="chip warm chip-sm">${t('summary.partial')}</span><p class="muted xs b mt6">${t('summary.partialNote')}</p></div>` : ''}
+${s.partial ? html`<div class="card mt12 partialnote"><span class="chip warm chip-sm">${t('summary.partial')}</span><p class="muted xs b mt6">${t('summary.partialNote')}</p>${resumeButton(s, 'w100 mt10')}</div>` : ''}
 <div class="grid3 mt12">${tiles.map(([i, l, v]) => html`<div class="stat"><div class="l">${ic(String(i), 15, 2.3)}${l}</div><div class="v num">${v}</div></div>`)}</div>
 ${(s.prs ?? []).map(
   (/** @type {any} */ p) =>

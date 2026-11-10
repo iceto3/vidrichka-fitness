@@ -13,7 +13,7 @@ import { levelInfo } from './xp.js';
 import './badges.js';
 import './quests.js';
 
-export { levelInfo, xpForWorkout, isCompleteWorkout, minSetsForWorkout, XP } from './xp.js';
+export { levelInfo, xpForWorkout, isCompleteWorkout, minSetsForWorkout, partialShare, XP } from './xp.js';
 
 /** @type {import('./stats.js').Stats|null} */
 let cache = null;
@@ -68,6 +68,18 @@ export function setAward(id, amt) {
   setKv('xp', ledger);
 }
 
+/**
+ * 1.4.3 (part B): set an XP entry to a new amount and celebrate a level-up it causes (a
+ * partial workout finished later the same day: its entry grows to the full amount, once).
+ * @param {string} id @param {number} amt
+ */
+export function raiseAward(id, amt) {
+  const before = level().level;
+  setAward(id, amt);
+  const after = level().level;
+  if (after > before) emit('level:up', after);
+}
+
 /** Stats context (cached until data changes). */
 export function stats() {
   cache ??= computeStats({
@@ -78,17 +90,51 @@ export function stats() {
     days: all('days'),
     goalAt,
     waterGoal: settings().waterGoal,
+    proteinGoal: settings().proteinGoal,
     level: level().level,
   });
   return cache;
 }
 
-/** Today's quests with completion state. */
-export const quests = () => {
+/**
+ * 1.4.3 (part B): quest sections on Home, in order. A section's quests reset per its period
+ * (`questKey`). To add „Седмични цели“: put `{id: 'weekly', title: 'home.weeklyGoals'}` here
+ * and register quests with `section: 'weekly'` (period: the Monday of the week, `stats().week`).
+ * @type {{id: 'daily'|'weekly'|'monthly', title: string}[]}
+ */
+export const QUEST_SECTIONS = [
+  { id: 'daily', title: 'home.quests' },
+  { id: 'monthly', title: 'home.monthlyGoals' },
+];
+
+/** Period of a section: the day, the week's Monday or the month. @param {string|undefined} section @param {any} s */
+export const questPeriod = (section, s) => (section === 'monthly' ? s.month : section === 'weekly' ? s.week : s.today);
+
+/** XP ledger id of a quest in its current period. @param {{id: string, section?: string}} q @param {any} s */
+export const questKey = (q, s) => `quest:${questPeriod(q.section, s)}:${q.id}`;
+
+/**
+ * The current quests with completion state (default: every section; `section` filters).
+ * @param {string} [section]
+ */
+export const quests = (section) => {
   const s = stats();
   return registry.quests
+    .filter((q) => !section || (q.section ?? 'daily') === section)
     .filter((q) => !q.show || q.show(s))
-    .map((q) => ({ ...q, isDone: q.done(s), vars: q.detail?.(s) ?? {} }));
+    .map((q) => {
+      // 1.4.3: a graded quest (state) can be late (fewer XP) or missed (no XP)
+      const st = q.state?.(s);
+      return {
+        ...q,
+        isDone: st ? st.done : q.done(s),
+        gain: st ? st.xp : q.xp,
+        missed: !!st?.missed,
+        lateMin: st?.lateMin ?? 0,
+        note: st?.note ?? '',
+        vars: q.detail?.(s) ?? {},
+      };
+    });
 };
 
 /** All badges with earned date (or null). */

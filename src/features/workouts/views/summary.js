@@ -14,7 +14,7 @@ import { confetti } from '../../../ui/confetti.js';
 import { shareCard, shareFile } from '../../../ui/share.js';
 import { exName } from '../../library/api.js';
 import { otter, otterSvg } from '../../mascot/api.js';
-import { planName } from '../api.js';
+import { planName, resumeButton } from '../api.js';
 
 /** @param {any} s */
 const statTiles = (s) => [
@@ -47,7 +47,7 @@ ${s.prs.map(
 <div class="f1"><div class="xs xb caps prt">${t('summary.newRecord')}</div><div class="h3 xb">${exName(p.exId)} · ${p.w ? `${fmtKg(p.w)} × ${p.r}` : t('summary.repsN', { n: p.r })}</div>
 <div class="small b prsub">${p.w ? t('summary.prevBest', { prev: fmtKg(p.prevW), diff: `+${fmtKg(Math.round((p.w - p.prevW) * 100) / 100 || 0)}` }) : t('summary.prevBest', { prev: p.prevR, diff: `+${p.r - p.prevR}` })}</div></div></div>`,
 )}
-${s.partial ? html`<p class="muted xs b mt12 center partialnote">${t('summary.partialNote')}</p>` : ''}
+${s.partial ? html`<p class="muted xs b mt12 center partialnote">${t('summary.partialNote')}</p>${resumeButton(s, 'w100 mt10')}` : ''}
 <p class="muted xs mt8 center">${t('summary.kcalNote')}</p>
 <div class="row gap10 mt20"><button class="btn sec f1" data-act="share">${ic('share', 19, 2.2)}${t('common.share')}</button><button class="btn f14" data-go="home">${t('workout.done')}</button></div>
 </div>`;

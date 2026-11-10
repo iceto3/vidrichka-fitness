@@ -13,7 +13,7 @@ import { comboNameError, foodName, logSavedMeal, renameMeal, saveMeal } from '..
 import { totals } from '../logic.js';
 
 /** Meals with their own suggested name (the BG article agrees with each meal's gender). */
-const USUAL = ['breakfast', 'lunch', 'dinner', 'snack'];
+const USUAL = ['breakfast', 'snack_am', 'lunch', 'dinner', 'snack'];
 
 /** Suggested name for a combination of this meal, e.g. „Обичайният ти обяд“. @param {string} meal */
 export const usualName = (meal) => t(`food.usualMeal.${USUAL.includes(meal) ? meal : 'snack'}`);

@@ -1,5 +1,5 @@
 /**
- * Grams sheet: big ±10 g stepper (typed values allowed), portion shortcut, live
+ * Grams sheet: big −10 / −5 / +5 / +10 g stepper (typed values allowed), portion shortcut, live
  * kcal/macros, one-tap Done.
  * @module features/food/views/grams
  */
@@ -8,13 +8,32 @@ import { emit } from '../../../core/bus.js';
 import { html } from '../../../ui/dom.js';
 import { fmtNum, t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
-import { stepper } from '../../../ui/components.js';
 import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
 import { FOOD_CATEGORIES, foodName, saveFoodFix } from '../api.js';
-import { known, missingValues, portion } from '../logic.js';
+import { GRAM_STEPS, known, missingValues, nextGrams, portion } from '../logic.js';
 import { missingNotice } from './notice.js';
 
-export const GRAM_STEP = 10;
+/**
+ * 1.4.3 (part A): the grams stepper of the add sheet and the diary-row edit: −10 −5 [grams] +5 +10.
+ * Buttons carry their step in grams (`data-d`); the field takes typed values (`data-change`).
+ * Fits 360 px (four 44 px buttons and the field on one row).
+ * @param {{act: string, value: number, id: string}} o
+ */
+export const gramStepper = (o) => {
+  const btn = (/** @type {number} */ d) =>
+    html`<button class="sb gsb" data-act="${o.act}" data-d="${d}" aria-label="${t(d < 0 ? 'food.gramsMinus' : 'food.gramsPlus', { n: Math.abs(d) })}">${d < 0 ? '−' : '+'}${Math.abs(d)}</button>`;
+  const [a, b, c, d] = GRAM_STEPS;
+  return html`<div class="step big gstep">${btn(a)}${btn(b)}<label class="sv num"><input id="${o.id}" type="text" inputmode="decimal" value="${o.value}" data-change="${o.act}" aria-label="${t('food.grams')}"/><small>${t('unit.g')}</small></label>${btn(c)}${btn(d)}</div>`;
+};
+
+/**
+ * The `g` action of both sheets: a button adds its step, a typed value replaces the grams.
+ * @param {number} g @param {HTMLElement} el @param {Event} ev
+ */
+export const gramsFrom = (g, el, ev) =>
+  ev.type === 'change'
+    ? nextGrams(g, { typed: /** @type {HTMLInputElement} */ (el).value })
+    : nextGrams(g, { d: Number(el.dataset.d) });
 
 /**
  * Macro line (П / В / М). A macro the product does not list (`food.missing`, e.g. an Open Food
@@ -66,7 +85,7 @@ export function openGrams(food, onDone, initial) {
       const n = portion(food, g);
       return html`<div class="row gap12"><div class="fic lg" style="background:${cat?.bg ?? 'var(--soft)'}">${food.emoji ?? '🍽️'}</div>
 <div class="f1"><h2 class="h2">${foodName(food)}</h2><div class="muted small b">${cat ? `${t(`foodcat.${cat.id}`)} · ` : ''}${t('food.per100', { n: Math.round(food.kcal) })}</div></div></div>
-<div class="mt14">${stepper({ act: 'g', value: g, unit: t('unit.g'), label: t('food.grams'), big: true, id: 'grams' })}</div>
+<div class="mt14">${gramStepper({ act: 'g', value: g, id: 'grams' })}</div>
 ${food.portion && food.portion !== g ? html`<div class="row center-j mt8"><button class="chip" data-act="portion">${t('food.portion', { n: food.portion })}</button></div>` : ''}
 <div class="row between mt14 px4"><div class="num kcalbig">${fmtNum(n.kcal)} <small>${t('unit.kcal')}</small></div>${macroLine(n, food)}</div>
 ${extraLine(n)}
@@ -75,16 +94,7 @@ ${missingNotice(missingValues(food))}
 <button class="btn w100 mt14" data-act="done">${ic('check', 20, 3)}${t('workout.done')}</button>`;
     },
     actions: {
-      g: (el, ev) =>
-        void (g = Math.min(
-          5000,
-          Math.max(
-            0,
-            ev.type === 'change'
-              ? Math.round(parseFloat(/** @type {HTMLInputElement} */ (el).value) || 0)
-              : g + Number(el.dataset.d) * GRAM_STEP,
-          ),
-        )),
+      g: (el, ev) => void (g = gramsFrom(g, el, ev)),
       portion: () => void (g = food.portion),
       fix: () => {
         void fixFood(food, (fixed) => {

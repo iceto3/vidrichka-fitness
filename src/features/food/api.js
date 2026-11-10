@@ -3,12 +3,14 @@
  * + custom/online cached), usage stats for "most used" ordering.
  * @module features/food/api
  */
+import { searchFoods } from './search.js';
 import { all, get, kv, put, remove, setKv, uid } from '../../core/store.js';
 import { emit } from '../../core/bus.js';
 import { L } from '../../core/i18n.js';
 import { dayKey, hhmm } from '../../core/dates.js';
 import { FOODS, FOOD_CATEGORIES, QUICK_PICKS } from '../../data/foods.js';
-import { known, mealTs, portion, scaleRow } from './logic.js';
+import { known, mealFor, mealTs, portion, scaleRow } from './logic.js';
+import { enabledMeals } from '../../core/settings.js';
 
 export { FOODS, FOOD_CATEGORIES, QUICK_PICKS };
 
@@ -22,6 +24,9 @@ export const foodById = (id) => local.get(id) ?? get('foods', id);
 
 /** Localized food name. @param {{name: any}} f */
 export const foodName = (f) => L(f.name);
+
+/** 1.4.3 (part B): the meal for now, among the meals switched on in Profile. */
+export const currentMeal = () => mealFor(new Date(), enabledMeals());
 
 /** Diary rows for a day (water excluded), by time. @param {string} date */
 export const dayRows = (date) =>
@@ -124,7 +129,10 @@ export const unlog = (id) => remove('food', id);
 export function editRow(id, change) {
   const before = get('food', id);
   if (!before) return null;
-  let after = change.grams != null && change.grams !== before.grams ? scaleRow(before, change.grams) : { ...before };
+  let after =
+    change.grams != null && change.grams !== before.grams
+      ? scaleRow(before, change.grams, before.foodId ? foodById(before.foodId) : null)
+      : { ...before };
   if (change.meal && change.meal !== before.meal) after = { ...after, meal: change.meal };
   put('food', after);
   return { before, after };
@@ -232,10 +240,8 @@ export function quickPicks() {
  * @param {string} q
  */
 export function searchLocal(q) {
-  const s = q.trim().toLowerCase();
-  if (!s) return [];
-  const pool = [...FOODS, ...all('foods')];
-  return pool
-    .filter((f) => (typeof f.name === 'string' ? f.name : `${f.name.en} ${f.name.bg}`).toLowerCase().includes(s))
-    .slice(0, 30);
+  // 1.4.3 round 2: by words (stems, гърди = филе), built-in foods first (see ./search.js)
+  return searchFoods(FOODS, all('foods'), q, (/** @type {any} */ f) =>
+    typeof f.name === 'string' ? f.name : `${f.name.en} ${f.name.bg}`,
+  );
 }

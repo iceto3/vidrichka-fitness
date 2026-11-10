@@ -12,6 +12,7 @@ import { settings } from '../../../core/settings.js';
 import { barChart, lineChart } from '../../../ui/charts.js';
 import { ic } from '../../../ui/icons.js';
 import { stepGoal, stepRun } from '../../steps/api.js';
+import { mealChartCard } from '../../daily/views/mealchart.js';
 import {
   MIN_DAYS,
   RANGES,
@@ -159,6 +160,7 @@ ${card(
     }),
   ),
 )}
+${mealChartCard()}
 ${card(
   'ch-food',
   t('trends.food'),

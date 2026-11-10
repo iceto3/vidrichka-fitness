@@ -447,3 +447,93 @@
     color: #7a1414;
   }
 }
+
+/* 1.4.3 meal pill: the protein bar's colours, floating just above the bottom nav (not on Home) */
+.mealpill {
+  position: fixed;
+  left: calc(max(0px, (100% - 480px) / 2) + 14px + env(safe-area-inset-left, 0px));
+  bottom: calc(var(--nav-h) + 10px);
+  z-index: 25;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  max-width: calc(100% - 120px);
+  padding: 0 14px 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #ffe2b8, #ffd0a1);
+  color: #5a2e0e;
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 0 6px 18px rgba(90, 46, 14, 0.25);
+  animation: pillin 0.22s ease-out;
+  transition:
+    padding 0.2s ease,
+    width 0.2s ease;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.mealpill[hidden] {
+  display: none;
+}
+.mealpill .mpic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+}
+.mealpill .mptx {
+  display: inline-flex;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mealpill .ptime {
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.mealpill.overdue {
+  background: #7a1414;
+  color: #fff;
+}
+.mealpill.overdue .mpic {
+  background: rgba(255, 255, 255, 0.16);
+}
+.mealpill.overdue .ptime {
+  color: #ffd4d4;
+  animation: pblink 1s steps(1, end) infinite;
+}
+/* the page gets the pill's room at the bottom, so the last card is never under it */
+body.has-mpill #page {
+  padding-bottom: calc(var(--nav-h) + 66px);
+  scroll-padding-bottom: calc(var(--nav-h) + 66px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mealpill {
+    transition: none;
+    animation: none;
+  }
+  .mealpill.overdue .ptime {
+    animation: none !important;
+  }
+}
+
+/* 1.4.3 the pill's sheet (Изядох / Пропуснах) and the „кога яде“ time step */
+.layer-item .mealsheet.pbar {
+  margin: -4px -4px 0;
+  padding: 16px;
+  border-radius: 18px;
+}
+.mealsheet .field .tbox {
+  width: 100%;
+}
+.ateok[disabled] {
+  opacity: 0.45;
+  pointer-events: none;
+}

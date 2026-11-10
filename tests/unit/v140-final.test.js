@@ -8,7 +8,7 @@ import { applyFix, fromOff, implausible, kcalMismatch, missingValues } from '../
 import { product, reliable, search, toFood } from '../../src/features/food/off.js';
 import { all, put } from '../../src/core/store.js';
 import { logFood, rowFromFood, saveFoodFix } from '../../src/features/food/api.js';
-import { setLang, t } from '../../src/core/i18n.js';
+import { setGender, setLang, t } from '../../src/core/i18n.js';
 
 const NUT = { p: 6.3, c: 57.5, f: 30.9 }; // 4/4/9 → 534 kcal
 const off = (/** @type {any} */ nutriments, code = '1') => ({ code, product_name: `P${code}`, nutriments });
@@ -112,7 +112,11 @@ test('the notice text names the values and says they count as 0 (Bulgarian)', as
     t('food.missingValues', { n: 2, what: 'въглехидрати, фибри' }),
     /^Липсват стойности за .* Попълни ги\.$/,
   );
+  // 1.4.3: follows the profile gender (female by default)
+  assert.equal(t('food.noReliable'), 'Няма надежден резултат за тази храна. Въведи я сама.');
+  setGender('m');
   assert.equal(t('food.noReliable'), 'Няма надежден резултат за тази храна. Въведи я сам.');
+  setGender('f');
   await setLang('en');
 });
 

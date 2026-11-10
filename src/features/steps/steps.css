@@ -20,6 +20,12 @@
 .homemeals .mhead {
   padding: 12px 14px 4px;
 }
+/* 1.4.3 round 2: the protein / fibre / salt line keeps the card padding (not at the edge) */
+.homemeals .dayfoodsum {
+  padding: 0 14px 6px;
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
 .stepscard.flash,
 .sleepcard.flash,
 .homemeals.flash {
@@ -119,6 +125,10 @@
   opacity: 0.35;
   cursor: default;
 }
+/* 1.4.3 round 2: the hint / error line keeps its room, so the sheet does not jump */
+.sleepmsgs {
+  min-height: 38px;
+}
 .sleepdone:disabled {
   background: var(--line);
   color: var(--muted);
@@ -135,4 +145,24 @@
 }
 .sleeperr {
   color: var(--red);
+}
+
+/* 1.4.3 (tester round): typed 24-hour fields – one row per time (label | − hh:mm +), the
+   date and the day buttons under it; fits 360 px with 44 px targets */
+.sleeptimes {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.sleeptimes .stime {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
+}
+.sleeptimes .stime .sdate {
+  grid-column: 1;
+}
+.sleeptimes .stime .sshift {
+  grid-column: 2;
+  justify-content: flex-end;
 }

@@ -23,7 +23,8 @@ import { addMeasurement } from '../../body/api.js';
 import { celebrate, holdCelebrations } from '../../celebrations/api.js';
 import { planTour, playTour } from '../tour.js';
 import { FACES } from '../../daily/views/checkin.js';
-import { mealFor } from '../../food/logic.js';
+import { currentMeal } from '../../food/api.js';
+import { enabledMeals } from '../../../core/settings.js';
 import { parseText, sttReady, transcribeAudio } from '../api.js';
 import { MAX_REC_MS, canRecord, clock, isAndroidChrome, startRecording } from '../recorder.js';
 import { MAX_TEXT, MEALS, OTHER, assignMeals, foodRows, localDay, prepare, waterByDay } from '../logic.js';
@@ -206,7 +207,12 @@ ${SR ? html`<button class="btn sec f1${listening ? ' rec' : ''}" data-act="liste
 export function saveEntries(parsed, screenMeal = '', now = new Date(), o = {}) {
   const glassMl = settings().glassMl || 250;
   const today = localDay(now);
-  const list = assignMeals(prepare(parsed, glassMl), { today, screenMeal, defaultMeal: mealFor(now) });
+  const list = assignMeals(prepare(parsed, glassMl), {
+    today,
+    screenMeal,
+    defaultMeal: currentMeal(),
+    enabled: enabledMeals(),
+  });
   const play = o.tour !== false;
   if (play) holdCelebrations(true);
   /** @type {import('../tour.js').Saved[]} */

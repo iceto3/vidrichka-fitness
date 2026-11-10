@@ -6,9 +6,26 @@
  */
 
 export const MAX_TEXT = 500;
-export const MEALS = ['breakfast', 'lunch', 'snack', 'dinner'];
+/** 1.4.3 (part B): five meals – `snack_am` morning snack, `snack` afternoon snack. */
+export const MEALS = ['breakfast', 'snack_am', 'lunch', 'snack', 'dinner'];
 /** Typical time of a meal when the sentence gave none (for past days). */
-const MEAL_TIME = { breakfast: '08:00', lunch: '13:00', snack: '16:00', dinner: '19:30' };
+const MEAL_TIME = {
+  breakfast: '08:00',
+  snack_am: '10:30',
+  lunch: '13:00',
+  snack: '16:00',
+  dinner: '19:30',
+};
+
+/**
+ * 1.4.3 (part B): a meal switched off in Profile goes to the other snack (snack ↔ snack_am)
+ * or else to `fallback` (the current meal). @param {string} meal @param {string[]|undefined} enabled @param {string} fallback
+ */
+const onlyEnabled = (meal, enabled, fallback) => {
+  if (!enabled || enabled.includes(meal)) return meal;
+  const other = meal === 'snack' ? 'snack_am' : meal === 'snack_am' ? 'snack' : '';
+  return other && enabled.includes(other) ? other : fallback;
+};
 
 const pad = (/** @type {number} */ n) => String(n).padStart(2, '0');
 /** Local YYYY-MM-DD. @param {Date} d */
@@ -58,15 +75,20 @@ export const prepare = (list, glassMl) =>
  * 2. a said time ("на обяд", "в 8") or a past day keeps the meal the server inferred;
  * 3. otherwise (today, nothing said) the meal of the Food › Add screen it was opened from,
  *    else the current meal by time of day.
+ * 1.4.3 (part B): only meals switched on (`o.enabled`) are used – see `onlyEnabled`.
  * @param {Entry[]} list
- * @param {{today: string, screenMeal?: string, defaultMeal: string}} o
+ * @param {{today: string, screenMeal?: string, defaultMeal: string, enabled?: string[]}} o
  * @returns {Entry[]}
  */
 export const assignMeals = (list, o) =>
   list.map((e) => {
-    if (e.meal_named && MEALS.includes(e.meal)) return e;
-    if (e.time || e.date !== o.today) return MEALS.includes(e.meal) ? e : { ...e, meal: o.defaultMeal };
-    return { ...e, meal: o.screenMeal && MEALS.includes(o.screenMeal) ? o.screenMeal : o.defaultMeal };
+    const pick = (/** @type {Entry} */ x) => {
+      const meal = onlyEnabled(x.meal, o.enabled, o.defaultMeal);
+      return meal === x.meal ? x : { ...x, meal };
+    };
+    if (e.meal_named && MEALS.includes(e.meal)) return pick(e);
+    if (e.time || e.date !== o.today) return MEALS.includes(e.meal) ? pick(e) : { ...e, meal: o.defaultMeal };
+    return pick({ ...e, meal: o.screenMeal && MEALS.includes(o.screenMeal) ? o.screenMeal : o.defaultMeal });
   });
 
 /**

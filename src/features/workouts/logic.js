@@ -158,14 +158,19 @@ export const estimateMinutes = (items) =>
 
 /**
  * Index of the set to highlight: the next unfinished set after the most recently completed one.
- * @param {WItem[]} items
+ * 1.4.3 (part B): sets done before `since` (a resumed partial workout) are ignored, so a
+ * resumed workout starts at its first unfinished set.
+ * @param {WItem[]} items @param {number} [since]
  * @returns {[number, number]|null} [itemIndex, setIndex]
  */
-export function activeSet(items) {
+export function activeSet(items, since = 0) {
   /** @type {[number, number, number]} */
   let lastDone = [-1, -1, 0];
   items.forEach((it, i) =>
-    it.sets.forEach((s, j) => s.done && (s.doneAt ?? 0) >= lastDone[2] && (lastDone = [i, j, s.doneAt ?? 0])),
+    it.sets.forEach(
+      (s, j) =>
+        s.done && (s.doneAt ?? 0) >= since && (s.doneAt ?? 0) >= lastDone[2] && (lastDone = [i, j, s.doneAt ?? 0]),
+    ),
   );
   const flat = items.flatMap((it, i) =>
     it.sets.map((s, j) => /** @type {[number, number, boolean]} */ ([i, j, s.done])),
@@ -176,11 +181,19 @@ export function activeSet(items) {
 }
 
 /**
+ * 1.4.3 (part B): can this saved workout be finished („Довърши тренировката с Видричка“)?
+ * Only a partial workout of today, while no other workout is running.
+ * @param {{partial?: boolean, endedAt: number}|null|undefined} s @param {string} today Day key.
+ * @param {(ts: number) => string} dayOf Day key of a timestamp. @param {boolean} [busy] A workout is running.
+ */
+export const canResume = (s, today, dayOf, busy = false) => !!s?.partial && !busy && dayOf(s.endedAt) === today;
+
+/**
  * After deleting a workout: the later workouts whose PRs (and so XP) change once it is gone.
- * @param {(WSession & {prs?: any[], xp?: number, setsDone: number, partial?: boolean})[]} rest Remaining sessions.
+ * @param {(WSession & {prs?: any[], xp?: number, setsDone: number, setsPlanned?: number, partial?: boolean})[]} rest Remaining sessions.
  * @param {number} goneAt `endedAt` of the deleted workout.
  * @param {(id: string) => {weighted: boolean}|undefined} exById
- * @param {(s: {setsDone: number, prs: number, partial?: boolean}) => number} xpFor
+ * @param {(s: {setsDone: number, prs: number, partial?: boolean, setsPlanned?: number}) => number} xpFor
  * @returns {{id: string, prs: any[], xp: number}[]}
  */
 export function recomputeAfterDelete(rest, goneAt, exById, xpFor) {
@@ -191,7 +204,7 @@ export function recomputeAfterDelete(rest, goneAt, exById, xpFor) {
     if (s.endedAt > goneAt) {
       const done = s.items.filter((it) => it.sets.some((x) => x.done));
       const prs = detectPRs(done, history, exById);
-      const xp = xpFor({ setsDone: s.setsDone, prs: prs.length, partial: !!s.partial });
+      const xp = xpFor({ setsDone: s.setsDone, prs: prs.length, partial: !!s.partial, setsPlanned: s.setsPlanned });
       if (JSON.stringify(prs) !== JSON.stringify(s.prs ?? []) || xp !== s.xp) out.push({ id: s.id, prs, xp });
     }
     history.push(s);

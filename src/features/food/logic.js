@@ -4,13 +4,21 @@
  * @module features/food/logic
  */
 
-/** Meal slots in display order with typical start hours. */
+/**
+ * Meal slots in display order with typical start hours. 1.4.3 (part B): five meals – the
+ * morning snack (`snack_am`, new, off by default) and the afternoon snack (`snack`, the old
+ * „Междинно“, id kept for existing entries). Which are used: core/settings `enabledMeals`.
+ */
 export const MEALS = /** @type {const} */ ([
   ['breakfast', 4],
+  ['snack_am', 10],
   ['lunch', 11],
   ['snack', 15],
   ['dinner', 18],
 ]);
+
+/** The four meals of older versions (the default when no list of enabled meals is given). */
+export const DEFAULT_MEALS = ['breakfast', 'lunch', 'snack', 'dinner'];
 
 /**
  * 1.4.0: the time given to food added to a PAST day (it used to be 12:00 for every meal,
@@ -18,6 +26,7 @@ export const MEALS = /** @type {const} */ ([
  */
 export const MEAL_TIME = /** @type {Record<string, string>} */ ({
   breakfast: '08:00',
+  snack_am: '10:30',
   lunch: '13:00',
   snack: '16:00',
   dinner: '19:00',
@@ -33,13 +42,55 @@ export const mealTs = (date, meal, today, now = Date.now()) =>
 /** Emoji tile + background per meal slot. */
 export const MEAL_STYLE = {
   breakfast: ['🥣', '#FFF2D9'],
+  snack_am: ['🍎', '#E6F3FF'],
   lunch: ['🍗', '#E3F5EA'],
   snack: ['🥜', '#EEE8FF'],
   dinner: ['🍝', '#FFE9E3'],
 };
 
-/** Meal that fits a time of day. @param {Date} [d] */
-export const mealFor = (d = new Date()) => [...MEALS].reverse().find(([, h]) => d.getHours() >= h)?.[0] ?? 'snack';
+/**
+ * Start hour of a meal among the enabled ones: with the morning snack on, lunch starts at 12
+ * (the morning snack gets 10–12), else at 11 as before. @param {string} m @param {string[]} enabled
+ */
+const startHour = (m, enabled) =>
+  m === 'lunch' && enabled.includes('snack_am') ? 12 : (MEALS.find(([id]) => id === m)?.[1] ?? 0);
+
+/**
+ * Meal that fits a time of day, chosen only from the enabled meals (1.4.3 part B). In the
+ * small hours (before 04:00) it is the afternoon snack as before, else the last enabled meal.
+ * @param {Date} [d] @param {string[]} [enabled] Enabled meal ids (default: the four classic meals).
+ */
+export function mealFor(d = new Date(), enabled = DEFAULT_MEALS) {
+  const list = MEALS.map(([m]) => m).filter((m) => enabled.includes(m));
+  if (!list.length) return 'snack';
+  const h = d.getHours();
+  return (
+    [...list].reverse().find((m) => h >= startHour(m, list)) ??
+    (list.includes('snack') ? 'snack' : list[list.length - 1])
+  );
+}
+
+/**
+ * 1.4.3 (fixes): the add page of a meal switched off in Profile (an old link, history back,
+ * a `?protein` deep link) opens the meal of this time instead. A switched-off meal that already
+ * has entries on that day (hidden meals keep their entries) still opens as is.
+ * @param {string} meal The meal in the link. @param {string[]} enabled Meals in use.
+ * @param {boolean} hasRows The day already has entries in that meal.
+ * @param {Date} [d] Now (picks the meal of this time).
+ * @returns {string|null} The meal to open instead, or null to keep the link.
+ */
+export function addMealRedirect(meal, enabled, hasRows, d = new Date()) {
+  if (enabled.includes(meal) || (hasRows && MEALS.some(([m]) => m === meal))) return null;
+  return mealFor(d, enabled);
+}
+
+/**
+ * Meals to list for a day: the enabled ones plus any disabled meal that has entries that day
+ * (hidden meals keep their past entries visible), in the day's order.
+ * @param {string[]} enabled @param {{meal?: string}[]} [rows] That day's food rows.
+ */
+export const mealsForDay = (enabled, rows = []) =>
+  MEALS.map(([m]) => m).filter((m) => enabled.includes(m) || rows.some((r) => r.meal === m));
 
 /** Is `v` a known (finite, non-negative) amount? Missing fiber/salt means "unknown". @param {any} v */
 export const known = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0;
@@ -88,18 +139,24 @@ export const totals = (rows) =>
 /**
  * A diary row (or saved-meal item) at a new weight: every nutrient scales with the grams,
  * unknown fiber/salt stay unknown. Ids, meal, date and time are kept.
+ * 1.4.3 (fixes): with the row's food (catalog or saved food, per 100 g) the values come from
+ * the food, exactly like when it was added (`portion`) – 160 g is the same kcal in the add
+ * sheet and in the edit sheet. Without it (voice / custom rows) they are scaled from the row.
  * @template {{grams: number, kcal: number, p: number, c: number, f: number, fib?: number, salt?: number}} R
  * @param {R} row
  * @param {number} grams
+ * @param {any} [food] The row's food (per 100 g), if known.
  * @returns {R}
  */
-export function scaleRow(row, grams) {
+export function scaleRow(row, grams, food = null) {
   const g = Math.max(1, Math.round(grams));
   if (!(row.grams > 0)) return { ...row, grams: g };
   const per100 = Object.fromEntries(
     ['kcal', 'p', 'c', 'f', 'fib', 'salt'].map((k) => {
-      const v = /** @type {any} */ (row)[k];
-      return [k, known(v) ? (v * 100) / row.grams : undefined];
+      const v = /** @type {any} */ (row)[k],
+        fv = food?.[k];
+      if (!known(v)) return [k, undefined];
+      return [k, known(fv) ? fv : (v * 100) / row.grams];
     }),
   );
   const out = { ...row, grams: g, ...portion(/** @type {any} */ (per100), g) };
@@ -306,4 +363,22 @@ export function validateFood(v) {
   if (typed('fib') && !errors.fib) values.fib = n.fib;
   if (typed('salt') && !errors.salt) values.salt = n.salt;
   return { errors, warn, est, values };
+}
+
+/** 1.4.3 (part A): the grams steppers' buttons (add sheet and diary-row edit), in grams. */
+export const GRAM_STEPS = /** @type {const} */ ([-10, -5, 5, 10]);
+/** Largest portion in grams. */
+export const GRAM_MAX = 5000;
+
+/**
+ * Grams after a stepper button (`d` grams) or a typed value (`typed`), kept within 0…GRAM_MAX.
+ * Typed text is rounded to whole grams; text that is not a number gives 0. Pure.
+ * @param {number} g Current grams. @param {{d?: number, typed?: string}} change
+ */
+export function nextGrams(g, change) {
+  const v =
+    change.typed != null
+      ? Math.round(parseFloat(String(change.typed).replace(',', '.')) || 0)
+      : g + Number(change.d || 0);
+  return Math.min(GRAM_MAX, Math.max(0, v));
 }

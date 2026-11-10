@@ -7,7 +7,7 @@
 import { html, raw } from '../../../ui/dom.js';
 import { LANGUAGES } from '../../../data/i18n/index.js';
 import { fmtDate, fmtHM, fmtNum, getLang, t, weekdayName } from '../../../core/i18n.js';
-import { dailySettings, settings, setSettings } from '../../../core/settings.js';
+import { MEAL_IDS, dailySettings, mealsOn, settings, setSettings } from '../../../core/settings.js';
 import { kv } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
@@ -97,6 +97,41 @@ function outfitSheet() {
   });
 }
 
+/**
+ * 1.4.3 (part B): Хранения през деня – a switch per meal (at least one stays on) and, while
+ * breakfast is on, the protein breakfast switch (part A).
+ * @param {import('../../../core/settings.js').Settings} s
+ */
+function mealsCard(s) {
+  const on = mealsOn();
+  const n = MEAL_IDS.filter((m) => on[m]).length;
+  return html`<div class="section-title"><h2 class="h3">${t('profile.mealsTitle')}</h2></div>
+<div class="card p0 mealsset" id="mealsset">
+${MEAL_IDS.map((m) =>
+  srow(
+    'food',
+    on[m] ? 'green' : 'gray',
+    t(`meal.${m}`),
+    m === 'snack_am' ? t('profile.mealSnackAmSub') : '',
+    toggle(!!on[m], 'mealtog', t(`meal.${m}`), { k: m, ...(on[m] && n <= 1 ? { last: '1' } : {}) }),
+    `data-meal="${m}"`,
+  ),
+)}
+${
+  on.breakfast
+    ? srow(
+        'sun',
+        'gold',
+        t('profile.proteinBreakfast'),
+        t('profile.proteinBreakfastSub'),
+        toggle(s.proteinBreakfast !== false, 'tg', t('profile.proteinBreakfast'), { k: 'proteinBreakfast' }),
+        'id="proteinbf"',
+      )
+    : ''
+}
+<p class="muted xs b px14 pb12 mealsnote">${t('profile.mealsNote')}</p></div>`;
+}
+
 /** @returns {import('../../../core/registry.js').View} */
 export default () => ({
   tab: 'profile',
@@ -123,6 +158,7 @@ export default () => ({
 <div class="row mt12 center pstats"><div class="f1"><div class="xb num fs18">${st.totalWorkouts}</div><div class="muted xs b">${t('profile.workouts')}</div></div><i class="vsep"></i>
 <div class="f1"><div class="xb num fs18 row gap4 center-j"><span class="warm-t">${ic('flame', 17, 2.4)}</span>${st.streak.weeks}</div><div class="muted xs b">${t('profile.weekStreak')}</div></div><i class="vsep"></i>
 <div class="f1"><div class="xb num fs18">${badges().filter((b) => b.at).length}</div><div class="muted xs b">${t('profile.badges')}</div></div></div></div>
+${mealsCard(s)}
 <div class="section-title"><h2 class="h3">${t('profile.settings')}</h2></div>
 <div class="card p0">
 ${srow('globe', 'teal', t('profile.language'), langs.map((l) => l.name).join(' / '), seg(langs, getLang(), 'lang', 'mini'))}
@@ -206,7 +242,9 @@ ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic t
       if (v !== cur) (recordGoal(v), setSettings({ weeklyGoal: v }));
     },
     tg: (el) => {
-      const k = /** @type {'restSound'|'restVibrate'|'celebrationSounds'|'shareFoods'} */ (el.dataset.k);
+      const k = /** @type {'restSound'|'restVibrate'|'celebrationSounds'|'shareFoods'|'proteinBreakfast'} */ (
+        el.dataset.k
+      );
       setSettings({ [k]: !settings()[k] });
     },
     sgoal: (el, ev) => {
@@ -224,6 +262,17 @@ ${canInstall() ? html`<button class="srow" data-act="install"><span class="sic t
     },
     feedback: async () => ((await import('../../improve/api.js')).openFeedback(), false),
     wstep: (el) => void setSettings({ weightStep: Number(el.dataset.v) }),
+    // 1.4.3 (part B): a meal on/off; the last meal that is on stays on
+    mealtog: (el) => {
+      const k = el.dataset.k ?? '',
+        on = mealsOn();
+      if (!MEAL_IDS.includes(k)) return false;
+      if (on[k] && MEAL_IDS.filter((m) => on[m]).length <= 1) {
+        emit('toast', { key: 'profile.mealsOneOn' });
+        return false;
+      }
+      setSettings({ meals: { ...on, [k]: !on[k] } });
+    },
     names: () => (namesSheet(), false),
     outfit: () => (outfitSheet(), false),
     nutrition: () => (

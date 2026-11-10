@@ -89,6 +89,15 @@ export function closeSheet(entry = stack[stack.length - 1], fromPop = false) {
   repositionPills();
 }
 
+/**
+ * 1.4.3 (round 2): re-render only the top sheet (its morph keeps a focused field), without
+ * the page under it – for sheets that change nothing until „Готово“.
+ */
+export const refreshSheet = () => {
+  const top = stack[stack.length - 1];
+  if (top) render(top);
+};
+
 /** Number of open sheets. */
 export const sheetsOpen = () => stack.length;
 
@@ -132,6 +141,9 @@ export function toast(text) {
 /** How long the undo pill stays (ms). */
 export const SNACK_MS = 4000;
 
+/** How far (px, |dx| + dy) a press on the undo pill may move and still be a tap. */
+const PILL_SLOP = 24;
+
 /** Things on the page the undo pill must not cover. */
 const TAPPABLE = 'main button, main a[href], main input, main select, main textarea, main [data-go], main [data-act]';
 
@@ -141,6 +153,7 @@ const TAPPABLE = 'main button, main a[href], main input, main select, main texta
  * @param {HTMLElement} el
  */
 const placePill = (el) => {
+  if (el.dataset.press === '1') return; // never move away from under a finger
   const top = stack[stack.length - 1];
   const panel = top && top.view.kind !== 'dialog' ? top.el.querySelector(':scope > .panel') : null;
   el.style.bottom = panel ? `${Math.round(innerHeight - panel.getBoundingClientRect().top + 10)}px` : '';
@@ -199,30 +212,56 @@ export function snack(text, onUndo, ms = SNACK_MS, o = {}) {
     el.classList.add('out');
     setTimeout(() => el.remove(), 220);
   };
-  el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (used || drag) return;
+  const undo = () => {
+    if (used) return;
     used = true;
-    el.remove();
+    // Gone at once, but kept in the DOM a moment so the click that follows a touch lands
+    // here (and is stopped) instead of on whatever lies underneath.
+    el.className = 'undoghost';
+    el.hidden = true;
+    setTimeout(() => el.remove(), 400);
     onUndo();
     toast(t('undo.done'));
+  };
+  // 1.4.3 (tester round 3): a tap that moved a few pixels (a finger, or a mouse in the
+  // DevTools device mode) used to count as a drag, so its click was swallowed and Undo did
+  // nothing. Now only a real swipe dismisses; anything shorter is a tap and undoes on
+  // pointerup, without waiting for a click the browser may not send after a small move.
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!drag) undo();
   });
   // Swipe away (sideways or down).
-  el.addEventListener(
-    'pointerdown',
-    (e) => ((x0 = e.clientX), (y0 = e.clientY), (drag = false), el.setPointerCapture(e.pointerId)),
-  );
+  el.addEventListener('pointerdown', (e) => {
+    x0 = e.clientX;
+    y0 = e.clientY;
+    dx = dy = 0;
+    drag = false;
+    el.dataset.press = '1';
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {
+      /* not capturable (synthetic event): the tap still works */
+    }
+  });
   el.addEventListener('pointermove', (e) => {
-    if (!el.hasPointerCapture(e.pointerId)) return;
+    if (el.dataset.press !== '1') return;
     dx = e.clientX - x0;
     dy = Math.max(0, e.clientY - y0);
-    if (Math.abs(dx) + dy > 8) drag = true;
+    if (Math.abs(dx) + dy > PILL_SLOP) drag = true;
     if (drag) el.style.transform = `translate(${dx}px, ${dy}px)`;
   });
-  el.addEventListener('pointerup', () => {
+  el.addEventListener('pointerup', (e) => {
+    delete el.dataset.press;
     if (drag && (Math.abs(dx) > 40 || dy > 30)) return void ((used = true), hide());
     el.style.transform = '';
+    if (!drag && e.pointerType !== 'mouse') return void (e.preventDefault(), undo());
     setTimeout(() => (drag = false), 0);
+  });
+  el.addEventListener('pointercancel', () => {
+    delete el.dataset.press;
+    el.style.transform = '';
+    drag = false;
   });
   document.body.append(el);
   placePill(el);

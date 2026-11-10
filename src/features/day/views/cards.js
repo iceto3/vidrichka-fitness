@@ -10,16 +10,18 @@
  */
 import { html, raw } from '../../../ui/dom.js';
 import { L, fmtDate, fmtDuration, fmtNum, t } from '../../../core/i18n.js';
-import { kv, setKv } from '../../../core/store.js';
-import { dayKey, durationMin, parseDay } from '../../../core/dates.js';
-import { settings } from '../../../core/settings.js';
+import { get, kv, setKv } from '../../../core/store.js';
+import { resumeButton } from '../../workouts/api.js';
+import { dayKey, durationMin, hmComplete, parseDay, parseHM, stepHM } from '../../../core/dates.js';
+import { enabledMeals, settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
-import { bar, stepper, timeInput } from '../../../ui/components.js';
-import { closeSheet, confirmDialog, openSheet, snack, toast } from '../../../ui/sheet.js';
+import { bar, stepper, time24 } from '../../../ui/components.js';
+import { closeSheet, confirmDialog, openSheet, refreshSheet, snack, toast } from '../../../ui/sheet.js';
 import { FACES, scale } from '../../daily/views/checkin.js';
-import { MEALS, MEAL_STYLE, totals } from '../../food/logic.js';
+import { MEAL_STYLE, mealsForDay, totals } from '../../food/logic.js';
 import { foodName, view as foodView } from '../../food/api.js';
+import { mealTotalsLine } from '../../food/views/totals.js';
 import { DEFAULT_CREATINE_DOSE } from '../../food/creatine.js';
 import { checkNight } from '../../daily/sleeptimes.js';
 import {
@@ -32,6 +34,7 @@ import {
   rateDayField,
   readDay,
   removeDayCreatine,
+  restoreDaySleep,
   setDayCreatine,
   setDaySleep,
   setDaySleepTimes,
@@ -122,76 +125,115 @@ ${has ? '' : html`<button class="chip accent chip-sm" data-act="sleepSheet">${t(
 <button class="iconbtn flat sm" data-act="sleepShot" aria-label="${t('shot.sleepAria')}">📷</button></div>`;
 }
 
+/** −/+ step of the sleep times (min). */
+const SLEEP_STEP = 5;
+
 /**
- * Sleep entry sheet (1.4.2): bedtime and wake-up time pickers instead of the hours stepper;
- * the hours are computed (also across midnight). The bedtime's date follows the rule in
+ * Sleep entry sheet (1.4.2): bedtime and wake-up time instead of the hours stepper; the hours
+ * are computed (also across midnight). The bedtime's date follows the rule in
  * daily/sleeptimes (12:00–23:59 → the evening before, 00:00–11:59 → after midnight) and is
  * shown small, with "ден назад / ден напред" to override it; the wake-up is the next time
  * after the bedtime. Old hours-only entries open with times derived from them. Quality 1–5
- * and "Delete entry" as before. Saved on every valid change. @param {string} date
+ * and "Delete entry" (with Отмени) as before.
+ * 1.4.3 round 2: nothing is saved until „Готово“ (closing the sheet discards the changes),
+ * and while editing only the sheet re-renders – never the page under it – so a field keeps
+ * its focus and what is being typed, and the sheet does not jump. @param {string} date
  */
 export function openSleepSheet(date) {
-  const cur = sleepEditorTimes(date);
+  const cur = sleepEditorTimes(date),
+    start = { bed: cur.bed, wake: cur.wake, shift: cur.shift },
+    had = readDay(date).sleep;
+  /** Quality picked in the sheet (saved with Готово). */
+  let q = had.q ?? null;
   /** Error of the last save attempt that the live check does not cover (e.g. storage). */
   let err = '';
-  /** Save when the values are valid; invalid ones are only shown (Готово stays off). */
-  const save = () => {
-    err = '';
-    if (checkNight(date, cur).err) return;
-    try {
-      setDaySleepTimes(date, cur);
-      cur.source = 'times';
-    } catch (e) {
-      if (!(e instanceof DayEditError)) throw e;
-      err = t(`day.err.${e.code}`, { max: MAX_SLEEP_H });
+  /** 1.4.3: text typed into a time field that is not a time (shown as typed, with a hint). */
+  /** @type {{bed?: string, wake?: string}} */
+  const bad = {};
+  /**
+   * A typed time: a complete one is used while typing, anything else on change (blur /
+   * Enter). Only the sheet re-renders; the focused field keeps what is typed.
+   * @param {'bed'|'wake'} f @param {HTMLElement} el @param {Event} [ev]
+   */
+  const typed = (f, el, ev) => {
+    const input = /** @type {HTMLInputElement} */ (el),
+      txt = input.value,
+      v = parseHM(txt);
+    if (ev?.type === 'input') {
+      if (!hmComplete(txt) || !v) return false;
+      setTime(f, v);
+    } else if (!v) {
+      if (txt.trim()) bad[f] = txt;
+      else delete bad[f];
+    } else {
+      setTime(f, v);
+      input.value = v;
     }
+    refreshSheet();
+    return false;
+  };
+  /** @param {'bed'|'wake'} f @param {string} v */
+  const setTime = (f, v) => {
+    delete bad[f];
+    err = '';
+    if (f === 'bed' && v !== cur.bed) cur.shift = 0; // a new time → the date rule applies again
+    cur[f] = v;
   };
   const dayLabel = (/** @type {number} */ ts) =>
     fmtDate(new Date(ts), { weekday: 'short', day: 'numeric', month: 'short' });
   openSheet({
     render: () => {
-      const s = readDay(date).sleep,
-        n = checkNight(date, cur),
-        msg = n.err ? t(`day.err.${n.err}`, { max: MAX_SLEEP_H }) : err;
+      const n = checkNight(date, cur),
+        msg = bad.bed || bad.wake ? t('time24.bad') : n.err ? t(`day.err.${n.err}`, { max: MAX_SLEEP_H }) : err;
       return html`<h2 class="h2">${t(isToday(date) ? 'sleep.cardTitle' : 'day.sleep')}</h2>
 <div class="sleeptimes mt12">
-<div class="stime sbed"><span class="b">${t('sleep.bedtime')}</span>${timeInput({ value: cur.bed, act: 'sbed', label: t('sleep.bedtime'), cls: 'wide' })}
+<div class="stime sbed"><span class="b">${t('sleep.bedtime')}</span>${time24({ value: bad.bed ?? cur.bed, act: 'sbed', step: 'sstep', f: 'bed', mins: SLEEP_STEP, label: t('sleep.bedtime'), bad: !!bad.bed })}
 <span class="muted xs b sdate" data-day="${n.bedDay}">${dayLabel(n.bed)}</span>
 <span class="row gap8 sshift"><button type="button" class="sshiftb" data-act="sshift" data-d="-1" ${cur.shift <= -1 ? raw('disabled') : ''}>${t('sleep.dayBack')}</button><button type="button" class="sshiftb" data-act="sshift" data-d="1" ${cur.shift >= 1 ? raw('disabled') : ''}>${t('sleep.dayForward')}</button></span></div>
-<div class="stime swake"><span class="b">${t('sleep.wakeTime')}</span>${timeInput({ value: cur.wake, act: 'swake', label: t('sleep.wakeTime'), cls: 'wide' })}
+<div class="stime swake"><span class="b">${t('sleep.wakeTime')}</span>${time24({ value: bad.wake ?? cur.wake, act: 'swake', step: 'sstep', f: 'wake', mins: SLEEP_STEP, label: t('sleep.wakeTime'), bad: !!bad.wake })}
 <span class="muted xs b sdate" data-day="${n.wakeDay}">${dayLabel(n.wake)}</span></div></div>
 ${n.moved ? html`<p class="small b mt8 sleepnote" role="status">${ic('info', 14, 2.4)}${t('sleep.datesNote', { bed: dayLabel(n.bed), wake: dayLabel(n.wake) })}</p>` : ''}
 <div class="row between mt12"><span class="b">${t('sleep.hours')}</span><span class="xb num big19 sleepdur">${fmtDuration(n.hours)}</span></div>
-${msg ? html`<p class="warnc xs b mt4 sleeperr" role="alert">${msg}</p>` : ''}
-${s.hours == null && !msg ? html`<p class="muted xs b mt4">${t('sleep.timesHint')}</p>` : ''}
-<h3 class="b mt16">${t('sleep.quality')}</h3>${scale('sleepQ', s.q ?? undefined, t('sleep.quality'))}
-<div class="row gap10 mt16">${s.manual ? html`<button class="btn sec f1" data-act="clear">${ic('trash', 16, 2.2)}${t('sleep.delete')}</button>` : ''}<button class="btn f1 sleepdone" data-act="done" ${msg ? raw('disabled aria-disabled="true"') : ''}>${t('common.done')}</button></div>`;
+<div class="sleepmsgs">${msg ? html`<p class="warnc xs b mt4 sleeperr" role="alert">${msg}</p>` : html`<p class="muted xs b mt4 sleephint">${t(had.hours == null ? 'sleep.timesHint' : 'sleep.saveHint')}</p>`}</div>
+<h3 class="b mt16">${t('sleep.quality')}</h3>${scale('sleepQ', q ?? undefined, t('sleep.quality'))}
+<div class="row gap10 mt16">${had.manual ? html`<button class="btn sec f1" data-act="clear">${ic('trash', 16, 2.2)}${t('sleep.delete')}</button>` : ''}<button class="btn f1 sleepdone" data-act="done" ${msg ? raw('disabled aria-disabled="true"') : ''}>${t('common.done')}</button></div>`;
     },
     actions: {
-      sbed: (el) => {
-        const v = /** @type {HTMLInputElement} */ (el).value;
-        if (!/^\d{2}:\d{2}$/.test(v)) return false;
-        cur.bed = v;
-        cur.shift = 0; // a new time → the date rule applies again
-        save();
-      },
-      swake: (el) => {
-        const v = /** @type {HTMLInputElement} */ (el).value;
-        if (!/^\d{2}:\d{2}$/.test(v)) return false;
-        cur.wake = v;
-        save();
+      sbed: (el, ev) => typed('bed', el, ev),
+      swake: (el, ev) => typed('wake', el, ev),
+      // 1.4.3: −/+ next to the typed time, exactly one step (round 2: no snapping)
+      sstep: (el) => {
+        const f = el.dataset.f === 'bed' ? 'bed' : 'wake';
+        setTime(f, stepHM(cur[f], Number(el.dataset.d)));
+        refreshSheet();
+        return false;
       },
       sshift: (el) => {
         cur.shift = Math.max(-1, Math.min(1, cur.shift + Number(el.dataset.d)));
-        save();
+        err = '';
+        refreshSheet();
+        return false;
       },
-      rate: (el) => void safely(() => setDaySleep(date, { q: Number(el.dataset.v) })),
+      rate: (el) => {
+        q = Number(el.dataset.v);
+        refreshSheet();
+        return false;
+      },
       done: () => {
-        if (checkNight(date, cur).err) return; // the button is disabled; nothing to save
-        // Closing with the offered times saves them (they were shown as the values).
-        if (readDay(date).sleep.hours == null) save();
-        if (err) return;
+        if (bad.bed || bad.wake || checkNight(date, cur).err) return false; // the button is disabled
+        const moved = cur.bed !== start.bed || cur.wake !== start.wake || cur.shift !== start.shift;
+        try {
+          // the offered times count as the values when there is no entry yet
+          if (moved || had.hours == null) setDaySleepTimes(date, cur);
+          if (q && q !== had.q) setDaySleep(date, { q });
+        } catch (e) {
+          if (!(e instanceof DayEditError)) throw e;
+          err = t(`day.err.${e.code}`, { max: MAX_SLEEP_H });
+          refreshSheet();
+          return false;
+        }
         closeSheet();
+        emit('ui:refresh');
         return false;
       },
       clear: async () => {
@@ -204,8 +246,14 @@ ${s.hours == null && !msg ? html`<p class="muted xs b mt4">${t('sleep.timesHint'
           }))
         )
           return false;
-        safely(() => clearDaySleep(date));
+        const res = safely(() => clearDaySleep(date));
         closeSheet();
+        emit('ui:refresh');
+        if (res)
+          snack(t('sleep.deleted'), () => {
+            safely(() => restoreDaySleep(date, res.undo));
+            emit('ui:refresh');
+          });
         return false;
       },
     },
@@ -223,7 +271,7 @@ export function creatineCard(date) {
       c.suppG ? `${t('creatine.supp')} ${fmtNum(c.suppG, 1)} ${t('unit.g')}` : '',
     ].filter(Boolean);
   return html`<div class="card mt12 row gap10 creatinecard"><div class="mic sm creaic" aria-hidden="true">⚡</div>
-<div class="f1 minw0"><div class="b">${t('creatine.title')} <span class="num crtotal">${fmtNum(c.totalG, 1)} ${t('unit.g')}</span></div><div class="muted xs b">${parts.length ? parts.join(' · ') : t('creatine.none')}</div></div>
+<div class="f1 minw0"><div class="b nowrap crtitle">${t('creatine.title')} <span class="num crtotal">${fmtNum(c.totalG, 1)} ${t('unit.g')}</span></div><div class="muted xs b">${parts.length ? parts.join(' · ') : t('creatine.none')}</div></div>
 <button class="chip accent chip-sm creaadd" data-act="creaSheet">${c.suppG ? ic('edit', 13, 2.4) : ic('plus', 13, 2.6)}${t('creatine.add')}</button></div>`;
 }
 
@@ -308,7 +356,7 @@ export function waterCard(date) {
   const s = settings(),
     w = readDay(date).water ?? 0;
   return html`<div class="card mt12 row gap10 water"><div class="mic blue sm">${ic('drop', 20, 2.2)}</div>
-<div class="f1 minw0"><div class="b">${t('food.water')}</div><div class="muted xs b">${t('food.glasses', { n: w, goal: s.waterGoal, l: fmtNum((w * s.glassMl) / 1000, 2) })}</div></div>
+<div class="f1 minw0"><div class="b">${t('food.water')}</div><div class="muted xs b nowrap wateramt">${t('food.glasses', { n: w, goal: s.waterGoal, l: fmtNum((w * s.glassMl) / 1000, 2) })}</div></div>
 <button class="iconbtn sm bluebtn waterminus" data-act="water" data-n="${Math.max(0, w - 1)}" aria-label="${t('food.removeGlass')}" ${w > 0 ? '' : raw('disabled')}>${ic('minus', 18, 2.6)}</button>
 <div class="row gap4 glasses" role="group" aria-label="${t('food.water')}">${Array.from({ length: Math.max(s.waterGoal, w) }, (_, k) => html`<button class="glass${k < w ? ' on' : ''}" data-act="water" data-n="${k < w && k === w - 1 ? k : k + 1}" aria-label="${t('food.setGlasses', { n: k + 1 })}"></button>`)}</div>
 <button class="iconbtn sm bluebtn waterplus" data-act="water" data-n="${Math.min(MAX_GLASSES, w + 1)}" aria-label="${t('food.addGlass')}">${ic('plus', 18, 2.6)}</button></div>`;
@@ -325,13 +373,13 @@ export function mealsCard(date) {
   return html`<section class="card mt12 meals homemeals" aria-label="${head}"><div class="row between mhead"><h2 class="h3 xb">${head}</h2><span class="b num small">${fmtNum(tot?.kcal ?? 0)} ${t('unit.kcal')}</span></div>
 <div class="row gap12 small b muted dayfoodsum"><span class="${p > s.proteinGoal ? 'okc' : ''}">${t('food.protein')} <span class="num">${fmtNum(p)}/${s.proteinGoal} ${t('unit.g')}</span>${p >= s.proteinGoal ? ' ✓' : ''}</span>
 <span>${t('food.fiber')} <span class="num">${gramsOrDash(tot, tot?.fib)}</span></span><span>${t('food.salt')} <span class="num">${gramsOrDash(tot, tot?.salt)}</span></span></div>
-${MEALS.map(([m]) => {
+${mealsForDay(enabledMeals(), rows).map((m) => {
   const items = rows.filter((r) => r.meal === m),
-    [emo, bg] = MEAL_STYLE[m];
+    [emo, bg] = MEAL_STYLE[/** @type {keyof typeof MEAL_STYLE} */ (m)];
   if (!items.length)
     return html`<button class="meal" data-act="dayAddFood" data-m="${m}"><span class="mic muted-bg">${ic('plus', 20, 2.4)}</span><span class="f1"><span class="b muted block">${t(`meal.${m}`)}</span><span class="muted xs b">${t('food.nothing')}</span></span></button>`;
   return html`<button class="meal" data-act="dayMeal" data-m="${m}"><span class="mic" style="${raw(`background:${bg}`)}">${emo}</span><span class="f1 minw0"><span class="row gap8"><span class="b">${t(`meal.${m}`)}</span><span class="muted xs b">${items[0].time}</span></span>
-<span class="muted small b ellip block">${items.map((r) => foodName(r)).join(', ')}</span></span><span class="b num nowrap">${fmtNum(totals(items).kcal)} <span class="muted xs">${t('unit.kcal')}</span></span></button>`;
+<span class="muted small b ellip block">${items.map((r) => foodName(r)).join(', ')}</span>${mealTotalsLine(totals(items))}</span><span class="b num nowrap">${fmtNum(totals(items).kcal)} <span class="muted xs">${t('unit.kcal')}</span></span></button>`;
 })}</section>`;
 }
 
@@ -347,7 +395,7 @@ ${
         ) => html`<button class="lrow" data-go="history/${w.id}"><span class="f1 left minw0"><span class="b block">${L(w.name) || '—'}</span>
 <span class="muted xs b">${t('day.workoutLine', { ex: w.exercises, sets: w.setsDone, min: durationMin(w.durationSec), vol: fmtNum(w.volume) })}</span></span>
 ${w.partial ? html`<span class="chip chip-sm">${t('summary.partial')}</span>` : ''}${w.prs ? html`<span class="chip warm chip-sm">${ic('trophy', 13, 2.4)}${w.prs}</span>` : ''}${ic('right', 16, 2.2, 'var(--muted)')}</button>`,
-      )}</div>`
+      )}</div>${list.filter((w) => w.partial).map((w) => resumeButton(get('sessions', w.id), 'w100 mt8'))}`
     : html`<p class="muted small b mt8">${t('day.noWorkout')}</p>`
 }</section>`;
 }

@@ -55,7 +55,14 @@ export async function setLang(code) {
   const entry = LANGUAGES[code] ?? LANGUAGES.en;
   dict = await entry.load();
   lang = code in LANGUAGES ? code : 'en';
-  if (typeof document !== 'undefined') document.documentElement.lang = lang;
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = lang;
+    // 1.4.3 (tester round): the static shell's accessibility labels follow the language
+    const skip = document.querySelector('a.skip'),
+      nav = document.getElementById('nav');
+    if (skip) skip.textContent = t('a11y.skip');
+    nav?.setAttribute('aria-label', t('a11y.nav'));
+  }
 }
 
 /**

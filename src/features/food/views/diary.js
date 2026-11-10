@@ -12,21 +12,32 @@ import { ic } from '../../../ui/icons.js';
 import { bar, ring } from '../../../ui/components.js';
 import { closeSheet, openSheet } from '../../../ui/sheet.js';
 import { trashList } from '../../../core/trash.js';
-import { dayRows, foodName, view } from '../api.js';
+import { currentMeal, dayRows, foodName, view } from '../api.js';
 import { cardActions, creatineCard, waterCard } from '../../day/views/cards.js';
-import { MEALS, MEAL_STYLE, known, mealFor, totals } from '../logic.js';
+import { MEAL_STYLE, mealsForDay, totals } from '../logic.js';
+import { enabledMeals } from '../../../core/settings.js';
+import { creatineMg } from '../creatine.js';
+import { nutrientLegend, nutrientLine } from '../nutrients.js';
+import { mealTotalsLine } from './totals.js';
+
+export { mealTotalsLine } from './totals.js';
 
 export { MEAL_STYLE } from '../logic.js';
 
-/** Fiber / salt of a row as a short suffix (only known values). @param {any} r */
-const extras = (r) =>
-  [
-    known(r.fib) ? `${t('food.fiberShort')} ${fmtNum(r.fib, 1)} ${t('unit.g')}` : '',
-    known(r.salt) ? `${t('food.saltShort')} ${fmtNum(r.salt, 1)} ${t('unit.g')}` : '',
-  ]
-    .filter(Boolean)
-    .map((x) => ` · ${x}`)
-    .join('');
+/**
+ * 1.4.3: the legend of the abbreviated nutrients (opened by the ⓘ in a meal's sheet).
+ */
+export function openNutrientLegend() {
+  openSheet({
+    kind: 'dialog',
+    render: () =>
+      html`<h2 class="h3 xb">${t('nutr.legendTitle')}</h2><div class="col gap8 mt12 nutrlegend">${nutrientLegend().map(
+        ([short, full]) =>
+          html`<div class="row gap10"><span class="nabbr b">${short}</span><span class="b">${full}</span></div>`,
+      )}</div><p class="muted xs b mt12">${t('nutr.legendNote')}</p>
+<button class="btn w100 mt16" data-close>${t('common.ok')}</button>`,
+  });
+}
 
 /**
  * Meal detail sheet: tap an item to edit it, delete with Undo, save as a combination.
@@ -38,16 +49,17 @@ export function openMeal(meal, date) {
   openSheet({
     render: () => {
       const rows = dayRows(view.date).filter((r) => r.meal === meal);
-      return html`<div class="row between"><h2 class="h2">${t(`meal.${meal}`)}</h2><span class="b num">${fmtNum(totals(rows).kcal)} ${t('unit.kcal')}</span></div>
+      return html`<div class="row between"><span class="row gap6"><h2 class="h2">${t(`meal.${meal}`)}</h2><button class="iconbtn flat sm nutrinfo" data-act="legend" aria-label="${t('nutr.legendOpen')}">${ic('info', 18, 2.2)}</button></span><span class="b num">${fmtNum(totals(rows).kcal)} ${t('unit.kcal')}</span></div>
 <div class="list mt8 mealitems">${rows.map(
         (r) =>
-          html`<div class="lrow"><button class="f1 row gap10 left itembtn" data-act="edit" data-id="${r.id}" aria-label="${t('food.editItem')}: ${foodName(r)}"><span class="fic">${r.emoji ?? '🍽️'}</span><span class="f1 minw0"><span class="b block">${foodName(r)}</span><span class="muted xs b">${r.time} · ${r.grams} ${t('unit.g')}${extras(r)}</span></span>
+          html`<div class="lrow"><button class="f1 row gap10 left itembtn" data-act="edit" data-id="${r.id}" aria-label="${t('food.editItem')}: ${foodName(r)}"><span class="fic">${r.emoji ?? '🍽️'}</span><span class="f1 minw0"><span class="b block">${foodName(r)}</span><span class="muted xs b block">${r.time} · ${r.grams} ${t('unit.g')}</span><span class="muted xs b block num nutrline">${nutrientLine(r, creatineMg(r))}</span></span>
 <span class="b num small">${fmtNum(r.kcal)}</span></button><button class="iconbtn flat sm" data-act="del" data-id="${r.id}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('trash', 18)}</button></div>`,
       )}</div>
 <div class="row gap10 mt12"><button class="btn sec f1 savecombo" data-act="combo">${ic('star', 18, 2.2)}${t('food.saveCombo')}</button></div>
 <button class="btn w100 mt10" data-go="food/add/${meal}">${ic('plus', 20, 2.8)}${t('food.addTo', { meal: t(`meal.${meal}`) })}</button>`;
     },
     actions: {
+      legend: () => (openNutrientLegend(), false),
       edit: async (el) => {
         const { openItemEdit } = await import('./item.js');
         openItemEdit(el.dataset.id ?? '');
@@ -102,7 +114,7 @@ export default () => ({
     ];
     const leftK = s.kcalGoal - tot.kcal;
     return html`<div class="content food">
-<div class="row between"><h1 class="h1">${t('food.title')}</h1><div class="row gap8"><button class="iconbtn" data-go="food/add/${mealFor()}?q" aria-label="${t('food.search')}">${ic('search', 21)}</button><button class="iconbtn" data-go="food/add/${mealFor()}?scan" aria-label="${t('food.scan')}">${ic('scan', 21)}</button></div></div>
+<div class="row between"><h1 class="h1">${t('food.title')}</h1><div class="row gap8"><button class="iconbtn" data-go="food/add/${currentMeal()}?q" aria-label="${t('food.search')}">${ic('search', 21)}</button><button class="iconbtn" data-go="food/add/${currentMeal()}?scan" aria-label="${t('food.scan')}">${ic('scan', 21)}</button></div></div>
 <div class="card datebar row between mt12"><button class="iconbtn flat sm" data-act="day" data-d="-1" aria-label="${t('food.prevDay')}">${ic('left', 18)}</button>
 <label class="row gap8 b datepick">${ic('calendar', 18)}<span>${isToday ? `${t('common.today')}, ` : ''}${fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' })}</span><input type="date" data-change="pick" value="${view.date}" max="${today}" aria-label="${t('food.pickDate')}"></label>
 <button class="iconbtn flat sm" data-act="day" data-d="1" aria-label="${t('food.nextDay')}" ${isToday ? raw('disabled') : ''}>${ic('right', 18)}</button></div>
@@ -126,15 +138,15 @@ ${macros.map(([k, v, g, c], i) => {
 ${waterCard(view.date)}
 ${creatineCard(view.date)}
 <div class="section-title"><h2 class="h3">${t('food.meals')}</h2><button class="link" data-go="food/meals">${t('food.regularMeals')}</button></div>
-<div class="card meals">${MEALS.map(([m]) => {
+<div class="card meals">${mealsForDay(enabledMeals(), rows).map((m) => {
       const items = rows.filter((r) => r.meal === m),
-        [emo, bg] = MEAL_STYLE[m];
+        [emo, bg] = MEAL_STYLE[/** @type {keyof typeof MEAL_STYLE} */ (m)];
       if (!items.length)
         return html`<button class="meal" data-go="food/add/${m}"><span class="mic muted-bg">${ic('plus', 20, 2.4)}</span><span class="f1"><span class="b muted block">${t(`meal.${m}`)}</span><span class="muted xs b">${t('food.nothing')}</span></span></button>`;
       return html`<button class="meal" data-act="meal" data-m="${m}"><span class="mic" style="background:${bg}">${emo}</span><span class="f1 minw0"><span class="row gap8"><span class="b">${t(`meal.${m}`)}</span><span class="muted xs b">${items[0].time}</span></span>
-<span class="muted small b ellip block">${items.map((r) => foodName(r)).join(', ')}</span></span><span class="b num nowrap">${fmtNum(totals(items).kcal)} <span class="muted xs">${t('unit.kcal')}</span></span></button>`;
+<span class="muted small b ellip block">${items.map((r) => foodName(r)).join(', ')}</span>${mealTotalsLine(totals(items))}</span><span class="b num nowrap">${fmtNum(totals(items).kcal)} <span class="muted xs">${t('unit.kcal')}</span></span></button>`;
     })}</div>
-<button class="btn w100 mt12" data-go="food/add/${mealFor()}">${ic('plus', 20, 2.8)}${t('food.add')}</button>
+<button class="btn w100 mt12" data-go="food/add/${currentMeal()}">${ic('plus', 20, 2.8)}${t('food.add')}</button>
 <div class="row center-j mt12"><button class="link trashlink" data-go="food/trash">${ic('trash', 16, 2.2)} ${t('trash.title')}${trashList().length ? ` (${trashList().length})` : ''}</button></div>
 </div>`;
   },

@@ -25,6 +25,21 @@ export const DAILY = {
   photos: { time: '10:00', on: true }, // 1.2.1: monthly 4-pose photo set, on the 1st of the month
 };
 
+/**
+ * 1.4.3 (part B): the meals of the day and whether each is used. The morning snack is new and
+ * off; the old „Междинно“ (`snack`) is the afternoon snack. Missing keys = these defaults.
+ */
+export const MEALS_ON = /** @type {Record<string, boolean>} */ ({
+  breakfast: true,
+  snack_am: false,
+  lunch: true,
+  snack: true,
+  dinner: true,
+});
+
+/** Meal ids in the day's order (same as food/logic MEALS). */
+export const MEAL_IDS = ['breakfast', 'snack_am', 'lunch', 'snack', 'dinner'];
+
 /** @typedef {typeof DEFAULTS} Settings */
 export const DEFAULTS = {
   lang: '', // '' = detect from the device on first run
@@ -51,13 +66,45 @@ export const DEFAULTS = {
   lastBackup: 0,
   stepGoal: 8000, // 1.3.4: daily steps challenge (entered by hand – a web app can't read Health/Fit)
   shareFoods: true, // 1.3.4: send manually entered foods (name + per-100 g values only) anonymously
+  proteinBreakfast: true, // 1.4.3: protein within 30 min of waking (countdown, pill, banner, reminders, quest, chart)
+  meals: MEALS_ON, // 1.4.3 (part B): which meals of the day are used (see enabledMeals)
 };
 
 /** Current settings merged over defaults. @returns {Settings} */
 export const settings = () => ({ ...DEFAULTS, ...kv('settings', {}) });
 
-/** Daily-rhythm settings, merged over DAILY so new keys get defaults. @returns {typeof DAILY} */
-export const dailySettings = () => ({ ...DAILY, ...settings().daily });
+/**
+ * 1.4.3: is the protein breakfast switched on (Profile)? Missing = on (existing users keep it,
+ * no migration). Part B: off as well while breakfast itself is switched off. @returns {boolean}
+ */
+export const proteinBreakfastOn = () => settings().proteinBreakfast !== false && mealsOn().breakfast !== false;
+
+/** 1.4.3 (part B): meal on/off map merged over the defaults. @returns {Record<string, boolean>} */
+export const mealsOn = () => ({ ...MEALS_ON, ...(settings().meals ?? {}) });
+
+/**
+ * 1.4.3 (part B): the meals in use, in the day's order; never empty (all off → every meal,
+ * the Profile switches keep one on). @returns {string[]}
+ */
+export function enabledMeals() {
+  const on = mealsOn();
+  const list = MEAL_IDS.filter((m) => on[m]);
+  return list.length ? list : [...MEAL_IDS];
+}
+
+/** Daily-rhythm settings as stored (the Reminders editor reads and writes these). @returns {typeof DAILY} */
+export const storedDailySettings = () => ({ ...DAILY, ...settings().daily });
+
+/**
+ * Daily-rhythm settings in effect, merged over DAILY so new keys get defaults. With the
+ * protein breakfast switched off in Profile, `protein` reads false everywhere (countdown,
+ * pill, banner, reminders, push, quest); the stored reminder choice is kept for when it is
+ * switched on again. @returns {typeof DAILY}
+ */
+export const dailySettings = () => {
+  const d = storedDailySettings();
+  return proteinBreakfastOn() ? d : { ...d, protein: false };
+};
 
 /**
  * Update one or more settings.

@@ -24,7 +24,9 @@ import {
   searchLocal,
   view,
 } from '../api.js';
-import { known, signature, timesEaten, totals } from '../logic.js';
+import { addMealRedirect, known, signature, timesEaten, totals } from '../logic.js';
+import { enabledMeals } from '../../../core/settings.js';
+import { navigate } from '../../../core/router.js';
 import { openGrams } from './grams.js';
 import { SEARCH_TIMEOUT, offView, search, within } from '../off.js';
 import { deleteFoodRow } from './item.js';
@@ -53,6 +55,21 @@ const foodRow = (
 export default ({ meal }) => {
   const protein = /[?&]protein\b/.test(location.hash);
   if (protein) view.date = dayKey(); // always today's breakfast
+  // 1.4.3 (fixes): a switched-off meal has no add page – open the meal of this time instead
+  // (the `?protein` hint belongs to the breakfast only; a search / scan link keeps its flag).
+  const other = addMealRedirect(
+    meal,
+    enabledMeals(),
+    all('food').some((r) => r.date === view.date && r.meal === meal && r.type !== 'water'),
+  );
+  if (other) {
+    const qs = (location.hash.split('?')[1] ?? '')
+      .split('&')
+      .filter((x) => x && x !== 'protein')
+      .join('&');
+    navigate(`food/add/${other}${qs ? `?${qs}` : ''}`, { replace: true });
+    meal = other;
+  }
   /** @type {any[]} */
   const basket = [];
   /** @type {Map<string, any>} */
@@ -163,7 +180,7 @@ ${!loc.length && q && offView(off, q) !== 'none' ? html`<button class="btn sec w
       return html`<div class="content add">
 <header class="row between topbar"><button class="iconbtn" data-act="finish" aria-label="${t('common.back')}">${ic('back', 22)}</button>
 <div class="center"><h1 class="h2">${t('food.add')}</h1><div class="muted xs b">${t('food.toMeal', { meal: t(`meal.${meal}`), day })}</div></div>
-${basket.length ? html`<button class="btn sm" data-act="finish">${t('food.finishMeal')}</button>` : html`<span class="iconbtn ghost" aria-hidden="true"></span>`}</header>
+<span class="iconbtn ghost" aria-hidden="true"></span>${basket.length ? html`<button class="btn sm finishmeal" data-act="finish">${t('food.finishMeal')}</button>` : ''}</header>
 <label class="search mt14">${ic('search', 20, 2.2)}<input id="fq" class="bare f1" type="search" data-input="q" value="${q}" placeholder="${t('food.searchPh')}" autocomplete="off" enterkeyhint="search" aria-label="${t('food.search')}">
 ${voiceReady() ? html`<button class="iconbtn flat sm" data-act="voice" aria-label="${t('voice.say')}">${ic('mic', 20, 2.2)}</button>` : ''}<button class="iconbtn flat sm acc-bg" data-act="scan" aria-label="${t('food.scan')}">${ic('scan', 20, 2.2)}</button></label>
 ${

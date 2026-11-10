@@ -10,7 +10,9 @@ import { register } from '../../core/registry.js';
 import { emit, on } from '../../core/bus.js';
 import { currentPath } from '../../core/router.js';
 import { dailySettings } from '../../core/settings.js';
-import { proteinOnTime } from './logic.js';
+import { all, fromOtherTab } from '../../core/store.js';
+import { dayKey } from '../../core/dates.js';
+import { proteinOnTime, proteinQuest } from './logic.js';
 
 register(
   'routes',
@@ -24,8 +26,19 @@ register('quests', {
   label: 'quest.protein',
   xp: 15,
   go: 'morning',
+  order: 2.5, // 1.4.3 (part B): right after the breakfast quest
   show: () => dailySettings().protein && dailySettings().morning,
   done: (/** @type {any} */ s) => proteinOnTime(s.dayRec),
+  // 1.4.3 (part A): on time 15 XP, up to 30 min late ticked „+N мин“ 8 XP, later „пропуснато“
+  state: (/** @type {any} */ s) => {
+    const q = proteinQuest(s.dayRec, Date.now());
+    return {
+      done: q.state === 'done' || q.state === 'late',
+      xp: q.xp,
+      missed: q.state === 'missed',
+      lateMin: q.state === 'late' ? q.delayMin : 0,
+    };
+  },
 });
 
 /** Start the in-app side of the daily rhythm (after the store is loaded). */
@@ -59,11 +72,41 @@ export async function startDaily() {
   on(
     'settings:changed',
     (/** @type {Record<string, any>} */ p) =>
-      ('daily' in p || 'lang' in p || 'userName' in p) && notify.syncDaily().catch(() => {}),
+      ('daily' in p || 'proteinBreakfast' in p || 'meals' in p || 'lang' in p || 'userName' in p) &&
+      notify.syncDaily().catch(() => {}),
   );
+  // 1.4.3 (tester): protein switched on after this morning's wake-up was recorded
+  // (part A: also the protein breakfast switch in Profile; switched off, its notifications close)
+  on('settings:changed', (/** @type {Record<string, any>} */ p) => {
+    const prot = 'proteinBreakfast' in p || 'meals' in p; // part B: breakfast off = protein off
+    if (('daily' in p || prot) && api.proteinFromWake()) emit('daily:changed');
+    if (prot && !dailySettings().protein) notify.closeNotifications(['protein']).catch(() => {});
+  });
+  if (api.proteinFromWake()) emit('daily:changed');
   api.catchUpProtein();
+  // 1.4.3: the meal pill above the nav on the other tabs (same countdown as the Home banner)
+  (await import('./pill.js')).startMealPill();
   // 1.2.1: the protein breakfast counts only once a breakfast entry is saved.
-  on('store:food', (/** @type {any} */ row) => api.proteinLogged(row));
+  // 1.4.3 (round 2): … and stops counting when today's last breakfast entry is deleted (or
+  // moved away); Undo / Възстанови puts it back. A later breakfast row of the same late meal
+  // gets the typed „Кога яде?“ time too.
+  const breakfastIds = () => {
+    const d = dayKey();
+    return new Set(
+      all('food')
+        .filter((r) => r.date === d && r.meal === 'breakfast' && r.type !== 'water')
+        .map((r) => r.id),
+    );
+  };
+  let bf = breakfastIds();
+  on('store:food', (/** @type {any} */ row) => {
+    const had = bf.has(row?.id);
+    bf = breakfastIds();
+    if (fromOtherTab()) return; // round 3: the tab that saved it did this already
+    if (had && !bf.has(row.id)) api.proteinUnlogged(row.id);
+    else if (!api.proteinLogged(row) && !had) api.ateTimeOnRow(row);
+  });
+  on('store:replaced', () => (bf = breakfastIds()));
   // Not awaited: it waits for the service worker; pushOn() alone already decides local planning.
   push.startPush().catch((e) => console.warn('[push]', e));
   notify.syncDaily().catch(() => {});

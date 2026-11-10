@@ -37,8 +37,8 @@
 }
 .days i {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: min(20px, 100%);
+  aspect-ratio: 1;
   border-radius: 50%;
   margin: 0 auto 3px;
   background: var(--soft);
@@ -158,6 +158,28 @@
   color: #f5c451;
   background: #3a3016;
 }
+/* 1.4.3 (part A): a protein quest ticked late shows „+N мин“ (not struck), a missed one is greyed */
+.qlate {
+  display: inline-block;
+  font-weight: 800;
+  color: #c2410c;
+}
+.dark .qlate {
+  color: #f59e5b;
+}
+.quest.missed {
+  opacity: 0.55;
+}
+.quest.missed .qbox {
+  border-style: dashed;
+}
+.qmissed {
+  color: var(--muted);
+  background: var(--soft);
+  padding: 4px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
 .challenge,
 .recapcard {
   display: block;
@@ -209,4 +231,25 @@
   font: inherit;
   color: inherit;
   cursor: pointer;
+}
+
+/* 1.4.3 (tester): install card – text full width, button below */
+.installcard .f1 {
+  min-width: 0;
+}
+
+/* 1.4.3 round 2: streak + weekly goal side by side fit 360 px (nothing clipped on the right):
+   the goal card has the ring and title on top, the count and chip below at full width. */
+.goalcard .chip {
+  max-width: 100%;
+  white-space: normal;
+}
+@media (max-width: 400px) {
+  .streakbtn .big20 {
+    font-size: 17px;
+  }
+  .streakbtn,
+  .goalcard {
+    padding: 12px;
+  }
 }

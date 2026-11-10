@@ -13,20 +13,21 @@ import { addDays, dayKey, monthKey, startOfWeek } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { bar, ring } from '../../../ui/components.js';
 import { messageFor, moodFor, otter, otterName } from '../../mascot/api.js';
-import { level, quests, stats } from '../../motivation/api.js';
-import { activeWorkout, nextPlan, planFor, planMinutes, planName, sessions, startWorkout } from '../../workouts/api.js';
-import { backupDue, canInstall, installApp } from '../../profile/api.js';
+import { QUEST_SECTIONS, level, quests, stats } from '../../motivation/api.js';
 import {
-  BREAKFAST_LOGGER,
-  day,
-  goodnight,
-  isEvening,
-  morningPending,
-  proteinBar,
-  proteinSkip,
-  tuckedIn,
-} from '../../daily/api.js';
-import { closeNotifications } from '../../daily/notify.js';
+  activeWorkout,
+  nextPlan,
+  planFor,
+  planMinutes,
+  planName,
+  resumableToday,
+  resumeButton,
+  sessions,
+  startWorkout,
+} from '../../workouts/api.js';
+import { backupDue, canInstall, installApp } from '../../profile/api.js';
+import { day, goodnight, isEvening, morningPending, proteinBar, tuckedIn } from '../../daily/api.js';
+import { mealAte, mealSkip, withLate } from '../../daily/views/mealsheet.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 import { dayRows } from '../../food/api.js';
 import { cardActions, mealsCard, sleepCard, stepsCard } from '../../day/views/cards.js';
@@ -38,7 +39,7 @@ import { otterLine } from '../otter.js';
  * After 30 min it turns dark red and only the 00:00 blinks, until she answers. Only the
  * `.ptime` text node is updated every second (see mount) — no re-render, no flicker.
  */
-const barNow = () => (dailySettings().protein ? proteinBar(day(), Date.now()) : null);
+const barNow = () => (dailySettings().protein ? withLate(proteinBar(day(), Date.now())) : null);
 
 function proteinBarCard() {
   const b = barNow();
@@ -78,9 +79,53 @@ function dailyCards() {
     out.push(card('', 'data-go="checkin/evening"', 'bolt', t('home.checkinPm'), t('home.checkinPmSub')));
   if (isEvening(now) && !tuckedIn(now))
     out.push(
-      card('night', 'data-act="tuck"', 'moon', t('goodnight.cta', { otter: otterName() }), t('home.goodnightSub')),
+      card(
+        'night',
+        'data-act="tuck"',
+        'moon',
+        t('home.goodnightTitle'),
+        t('home.goodnightSub', { otter: otterName() }),
+      ),
     );
   return out;
+}
+
+/**
+ * One quest row. 1.4.3 (part B): a meal quest whose meal has entries opens that meal; a
+ * quest with `bar` (the day's protein) shows n/goal with its unit and a progress bar.
+ * @param {ReturnType<typeof quests>[number]} q
+ */
+function questRow(q) {
+  const v = /** @type {any} */ (q.vars),
+    meal = q.id.startsWith('meal_') ? q.id.slice(5) : '',
+    tap =
+      meal && dayRows(dayKey()).some((r) => r.meal === meal)
+        ? `data-act="dayMeal" data-m="${esc(meal)}"`
+        : `data-go="${esc(q.go ?? 'home')}"`;
+  const prog =
+    v.goal != null
+      ? html` <span class="muted small num">(${t('home.progressOf', v)}${q.unit ? ` ${t(q.unit)}` : ''})</span>`
+      : '';
+  return html`<button class="quest${q.missed ? ' missed' : ''}" data-q="${q.id}" ${raw(tap)}><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
+<span class="f1 minw0 b${q.isDone ? ' struck' : ''}"><span class="block">${t(q.label, q.vars)}${prog}${q.lateMin ? html` <span class="qlate small num">${t('quest.lateN', { n: q.lateMin })}</span>` : ''}${q.note ? html` <span class="qlate qnote small">${t(q.note)}</span>` : ''}</span>${q.bar && v.goal ? bar(Math.min(1, v.n / v.goal), q.isDone ? 'var(--ok)' : '#7C5CFF', 'mt6 qbar') : ''}</span>${q.missed ? html`<span class="qmissed xs b">${t('quest.missed')}</span>` : html`<span class="xp">+${q.isDone ? q.gain : q.xp} XP</span>`}</button>`;
+}
+
+/**
+ * 1.4.3 (part B): a Home quest section – „Дневни цели“ (with the level bar), „Месечни цели“
+ * (with the month), later „Седмични цели“ (see QUEST_SECTIONS). Empty sections are hidden.
+ * @param {(typeof QUEST_SECTIONS)[number]} sec @param {ReturnType<typeof level>} lv
+ */
+function questSection(sec, lv) {
+  const qs = quests(sec.id);
+  if (!qs.length) return '';
+  const head =
+    sec.id === 'daily'
+      ? html`<div class="row gap6"><div class="lvl sm" aria-label="${t('home.level', { n: lv.level })}">${lv.level}</div><div class="bar w96">${raw(`<i style="width:${lv.pct * 100}%;background:var(--gold)"></i>`)}</div><span class="xs b muted num">${fmtNum(lv.into)}/${fmtNum(lv.need)} XP</span></div>`
+      : sec.id === 'monthly'
+        ? html`<span class="xs b muted">${fmtDate(new Date(), { month: 'long' })}</span>`
+        : '';
+  return html`<section class="card mt12 quests q-${sec.id}" aria-label="${t(sec.title)}"><div class="row between qhead"><h2 class="h3 xb">${t(sec.title)}</h2>${head}</div>
+${qs.map(questRow)}</section>`;
 }
 
 /** Render `**bold**` segments of a translated string as highlighted spans. @param {string} s */
@@ -109,6 +154,19 @@ function workoutCard() {
   const s = stats(),
     plan = planFor(),
     next = nextPlan();
+  // 1.4.3 (part B): a full workout today → „Тренировката е готова“ + the next one (no start
+  // button); a partial one today → „Довърши тренировката с Видричка“ (only the same day).
+  if (s.workedOutToday && !activeWorkout())
+    return html`<div class="wcard mt12 wdone"><div class="deco"></div><div class="deco2"></div>
+<div class="row between rel"><span class="chip glass caps">${t('home.doneToday')}</span>${ic('check', 26, 2.6, 'rgba(255,255,255,.85)')}</div>
+<div class="wtitle rel">${t('home.workoutDone')}</div>
+${next ? html`<div class="wsub rel wnext">${t('home.nextWorkout', { on: t(`home.onDay${(next.date.getDay() + 6) % 7}`), plan: planName(next.plan) })}</div>` : ''}</div>`;
+  const part = activeWorkout() ? null : resumableToday();
+  if (part)
+    return html`<div class="wcard mt12 wpartial"><div class="deco"></div><div class="deco2"></div>
+<div class="row between rel"><span class="chip glass caps">${t('summary.partial')}</span>${ic('dumbbell', 26, 2.2, 'rgba(255,255,255,.8)')}</div>
+<div class="wtitle rel">${planName(part)}</div><div class="wsub rel">${t('home.partialSets', { n: part.setsDone, of: part.setsPlanned })}</div>
+${resumeButton(part, 'white mt14 w100 rel')}</div>`;
   const p = s.workedOutToday || !plan ? (next?.plan ?? plan) : plan;
   if (!p)
     return html`<div class="wcard mt12"><div class="deco"></div><div class="deco2"></div><div class="rel"><div class="wtitle">${t('home.noPlans')}</div>
@@ -168,32 +226,27 @@ export default () => {
 ${dailyCards()}
 ${a ? html`<button class="card resume row gap12" data-go="workout"><span class="live"><i></i></span><span class="f1 b">${t('home.resume', { plan: planName(a) })}</span>${ic('right', 18, 2.4)}</button>` : ''}
 <div class="row gap12 stretch mt4">
- <button class="card f1 pad14 left streakbtn" data-act="streakInfo" aria-label="${t('home.weeklyStreak')}: ${t('home.weeks', { n: st.weeks })}"><div class="row gap8"><div class="sq warm">${ic('flame', 20, 2.2)}</div>
+ <button class="card f1 minw0 pad14 left streakbtn" data-act="streakInfo" aria-label="${t('home.weeklyStreak')}: ${t('home.weeks', { n: st.weeks })}"><div class="row gap8"><div class="sq warm">${ic('flame', 20, 2.2)}</div>
   <div><div class="xb big20">${t('home.weeks', { n: st.weeks })}</div><div class="muted xs b">${t('home.weeklyStreak')}${st.freezes ? html` · <span title="${t('home.freezeHint')}">❄️${st.freezes}</span>` : ''}</div></div></div>${weekDots()}</button>
- <div class="card f1 pad14 row gap10" role="group" aria-label="${t('home.weeklyGoal')}">${ring(66, 8, st.thisWeek / st.goal, { inner: html`<div class="xb big19">${st.thisWeek}<span class="muted fs12">/${st.goal}</span></div>` })}
-  <div class="minw0"><div class="b fs135 lh-t">${t('home.weeklyGoal')}</div><div class="muted xs b mt6">${t('home.ofWorkouts', { n: st.thisWeek, goal: st.goal })}</div>
-  <div class="chip ${left ? 'accent' : 'ok'} mt6 chip-sm">${left ? t('home.toGo', { n: left }) : t('home.goalMet')}</div></div></div>
+ <div class="card f1 minw0 pad14 goalcard" role="group" aria-label="${t('home.weeklyGoal')}"><div class="row gap8">${ring(54, 7, st.thisWeek / st.goal, { inner: html`<div class="xb fs18">${st.thisWeek}<span class="muted fs12">/${st.goal}</span></div>` })}
+  <div class="b fs135 lh-t minw0">${t('home.weeklyGoal')}</div></div><div class="muted xs b mt6">${t('home.ofWorkouts', { n: st.thisWeek, goal: st.goal })}</div>
+  <div class="chip ${left ? 'accent' : 'ok'} mt6 chip-sm">${left ? t('home.toGo', { n: left }) : t('home.goalMet')}</div></div>
 </div>
 ${workoutCard()}
 ${stepsCard(dayKey())}
 ${sleepCard(dayKey())}
 ${mealsCard(dayKey())}
-<section class="card mt12 quests" aria-label="${t('home.quests')}"><div class="row between qhead"><h2 class="h3 xb">${t('home.quests')}</h2>
-<div class="row gap6"><div class="lvl sm" aria-label="${t('home.level', { n: lv.level })}">${lv.level}</div><div class="bar w96">${raw(`<i style="width:${lv.pct * 100}%;background:var(--gold)"></i>`)}</div><span class="xs b muted num">${fmtNum(lv.into)}/${fmtNum(lv.need)} XP</span></div></div>
-${quests().map(
-  (
-    q,
-  ) => html`<button class="quest" ${raw(q.id === 'breakfast' && dayRows(dayKey()).some((r) => r.meal === 'breakfast') ? 'data-act="dayMeal" data-m="breakfast"' : `data-go="${esc(q.go ?? 'home')}"`)}><span class="qbox${q.isDone ? ' done' : ''}">${q.isDone ? ic('check', 16, 3) : ''}</span>
-<span class="f1 b${q.isDone ? ' struck' : ''}">${t(q.label, q.vars)}${/** @type {any} */ (q.vars).goal != null ? html` <span class="muted small">(${t('home.progressOf', q.vars)})</span>` : ''}</span><span class="xp">+${q.xp} XP</span></button>`,
-)}</section>
+${QUEST_SECTIONS.map((sec) => questSection(sec, lv))}
 <button class="card mt12 challenge" data-go="progress/lifts"><div class="row between"><span class="row gap8"><span class="sq gold">${ic('target', 18, 2.4)}</span><span class="b">${t('home.challenge', { month: fmtDate(now, { month: 'long' }) })}</span></span><span class="xs b muted num">${s.monthWorkouts}/${s.monthTarget}</span></div>
 <div class="muted xs b mt6 left">${s.monthWorkouts >= s.monthTarget ? t('home.challengeDone') : t('home.challengeBody', { n: s.monthTarget, xp: 100 })}</div>${bar(s.monthWorkouts / s.monthTarget, 'var(--gold)', 'mt8')}</button>
 ${showRecap ? html`<button class="card mt12 row gap12 recapcard" data-act="recap" data-m="${prevMonth}"><span class="sq violet">${ic('gift', 20, 2.2)}</span><span class="f1 left"><span class="b block">${t('home.recapTitle', { month: fmtDate(new Date(prevMonth + '-15'), { month: 'long' }) })}</span><span class="muted xs b">${t('home.recapBody')}</span></span>${ic('right', 18, 2.2, 'var(--muted)')}</button>` : ''}
 ${backupDue() ? html`<button class="card mt12 row gap12" data-go="profile"><span class="sq acc">${ic('cloud', 20, 2.2)}</span><span class="f1 left"><span class="b block">${t('home.backupTitle')}</span><span class="muted xs b">${t('home.backupBody')}</span></span>${ic('right', 18, 2.2, 'var(--muted)')}</button>` : ''}
 ${
   canInstall() && !kv('installDismissed', false)
-    ? html`<div class="card mt12 row gap12"><span class="sq acc">${ic('download', 20, 2.2)}</span><span class="f1"><span class="b block">${t('install.cardTitle')}</span><span class="muted xs b">${t('install.cardBody')}</span></span>
-<button class="btn sm" data-act="install">${t('install.cta')}</button><button class="iconbtn flat sm" data-act="noInstall" aria-label="${t('common.close')}">${ic('close', 16)}</button></div>`
+    ? // 1.4.3 (tester): text gets the full width, the button sits below it (no squashed column at 360–390 px)
+      html`<div class="card mt12 installcard"><div class="row gap12"><span class="sq acc">${ic('download', 20, 2.2)}</span><span class="f1"><span class="b block">${t('install.cardTitle')}</span><span class="muted xs b">${t('install.cardBody')}</span></span>
+<button class="iconbtn flat sm" data-act="noInstall" aria-label="${t('common.close')}">${ic('close', 16)}</button></div>
+<button class="btn sm w100 mt10" data-act="install">${t('install.cta')}</button></div>`
     : ''
 }
 </div>`;
@@ -235,16 +288,12 @@ ${
       },
       install: () => installApp(),
       noInstall: () => void setKv('installDismissed', true),
-      proteinYes: () => {
-        // 1.2.1: only opens the logger; saving a breakfast there ticks the protein quest.
-        closeNotifications(['protein']);
-        emit('nav', { path: BREAKFAST_LOGGER });
-        return false;
-      },
-      proteinSkip: () => {
-        proteinSkip(); // push "protein-skipped": follow-ups stop; no celebration, no quest
-        closeNotifications(['protein']);
-      },
+      // 1.4.3: the same actions as the meal pill's sheet (features/daily/views/mealsheet.js).
+      // „Изядох“ only opens the logger (1.2.1: saving a breakfast there ticks the protein quest);
+      // after the 30-min window it first asks when she ate.
+      proteinYes: () => (mealAte(), false),
+      // push "protein-skipped": follow-ups stop; no celebration, no quest
+      proteinSkip: () => void mealSkip(),
     },
     mount: (el) => {
       // The steps quest (#/home?steps) jumps to the steps card.
@@ -257,7 +306,7 @@ ${
       timer = window.setInterval(() => {
         const b = barNow();
         if ((b?.mode ?? '') !== mode) return void ((mode = b?.mode ?? ''), emit('ui:refresh'));
-        const n = b?.mode === 'running' ? el.querySelector('.pbar .ptime') : null;
+        const n = b?.mode === 'running' || b?.mode === 'overdue' ? el.querySelector('.pbar .ptime') : null;
         if (n && n.textContent !== b?.time) n.textContent = b?.time ?? '';
       }, 1000);
     },

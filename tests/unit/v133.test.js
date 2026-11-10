@@ -125,7 +125,7 @@ test('suggested combination names agree with the meal; shorter over-100 text; 1.
   assert.equal(bg['food.usualMeal.breakfast'], 'Обичайната ти закуска');
   assert.equal(bg['food.usualMeal.lunch'], 'Обичайният ти обяд');
   assert.equal(bg['food.usualMeal.dinner'], 'Обичайната ти вечеря');
-  assert.equal(bg['food.usualMeal.snack'], 'Обичайното ти междинно хранене');
+  assert.equal(bg['food.usualMeal.snack'], 'Обичайното ти следобедно междинно'); // 1.4.3 part B
   assert.equal(bg['manual.errOver100'], 'Най-много 100 г на 100 г продукт.');
   assert.equal(bg['voice.record'], 'Запиши');
   assert.equal(bg['voice.transcribing'], 'Разпознаване…');
@@ -134,7 +134,7 @@ test('suggested combination names agree with the meal; shorter over-100 text; 1.
       k,
     ),
   );
-  assert.equal(keys.length, 16);
+  assert.equal(keys.length, 17); // 1.4.3 part B: + the morning snack
   for (const k of keys) assert.ok(k in en, k);
   assert.ok(!('food.usualMeal' in bg));
 });
