@@ -9,12 +9,13 @@ import { html, raw } from '../../../ui/dom.js';
 import { fmtDate, fmtDuration, t } from '../../../core/i18n.js';
 import { dailySettings, settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
-import { clock } from '../../../core/dates.js';
+import { toast } from '../../../ui/sheet.js';
+import { clock, dayKey, hhmm } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { rig } from '../../mascot/api.js';
 import { PROTEIN_WINDOW, MIN, proteinQuest } from '../logic.js';
 import { closeNotifications } from '../notify.js';
-import { BREAKFAST_LOGGER, day, isMorning, lastNight, proteinState, sleepHours, wakeUp } from '../api.js';
+import { BREAKFAST_LOGGER, day, isMorning, lastNight, proteinState, sleepHours, wakeConflict, wakeUp } from '../api.js';
 
 const R = 92,
   C = 2 * Math.PI * R;
@@ -91,7 +92,12 @@ ${proteinCard()}
     },
     unmount: () => clearInterval(timer),
     actions: {
-      wake: () => void wakeUp(),
+      wake: () => {
+        if (wakeUp()) return;
+        // 1.4.4 (time): a breakfast is already logged earlier – the wake-up must be before it
+        const bf = wakeConflict(dayKey(), Date.now());
+        if (bf != null) toast(t('day.err.wakeAfterBreakfast', { time: hhmm(bf) }));
+      },
       yes: () => {
         // 1.2.1: only opens the logger; saving a breakfast there ticks the protein quest.
         closeNotifications(['protein']);

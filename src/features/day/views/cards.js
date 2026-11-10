@@ -12,7 +12,7 @@ import { html, raw } from '../../../ui/dom.js';
 import { L, fmtDate, fmtDuration, fmtNum, t } from '../../../core/i18n.js';
 import { get, kv, setKv } from '../../../core/store.js';
 import { resumeButton } from '../../workouts/api.js';
-import { dayKey, durationMin, hmComplete, parseDay, parseHM, stepHM } from '../../../core/dates.js';
+import { dayKey, durationMin, hhmm, hmComplete, parseDay, parseHM, stepHM } from '../../../core/dates.js';
 import { enabledMeals, settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
@@ -39,6 +39,7 @@ import {
   setDaySleep,
   setDaySleepTimes,
   sleepEditorTimes,
+  sleepWakeConflict,
   setDaySteps,
   setDayWater,
   stepGoal,
@@ -184,7 +185,16 @@ export function openSleepSheet(date) {
   openSheet({
     render: () => {
       const n = checkNight(date, cur),
-        msg = bad.bed || bad.wake ? t('time24.bad') : n.err ? t(`day.err.${n.err}`, { max: MAX_SLEEP_H }) : err;
+        // 1.4.4 (time): a meal can never be before the wake-up
+        bf = bad.bed || bad.wake || n.err ? null : sleepWakeConflict(date, n.wake),
+        msg =
+          bad.bed || bad.wake
+            ? t('time24.bad')
+            : n.err
+              ? t(`day.err.${n.err}`, { max: MAX_SLEEP_H })
+              : bf != null
+                ? t('day.err.wakeAfterBreakfast', { time: hhmm(bf) })
+                : err;
       return html`<h2 class="h2">${t(isToday(date) ? 'sleep.cardTitle' : 'day.sleep')}</h2>
 <div class="sleeptimes mt12">
 <div class="stime sbed"><span class="b">${t('sleep.bedtime')}</span>${time24({ value: bad.bed ?? cur.bed, act: 'sbed', step: 'sstep', f: 'bed', mins: SLEEP_STEP, label: t('sleep.bedtime'), bad: !!bad.bed })}

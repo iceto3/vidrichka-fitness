@@ -585,7 +585,6 @@ export default {
   'cel.setSub': '{n} от {total} серии',
   'cel.protein': 'Протеинова закуска ✓',
   'cel.proteinOnTime': 'До 30 минути – перфектно начало!',
-  'cel.proteinLate': 'Малко късно, но пак се брои!',
   'cel.checkin': 'Благодаря, че отговори!',
   'cel.checkinSub': 'Видричка го записа 📝',
   'cel.workout': 'Тренировката е готова!',
@@ -1256,7 +1255,7 @@ export default {
   'mealTime.save': 'Запиши и продължи',
   'mealTime.err.invalid': 'Избери час.',
   'mealTime.err.future': 'Този час още не е дошъл – избери по-ранен.',
-  'mealTime.err.early': 'Избери час след старта на таймера.',
+  'mealTime.err.early': 'Храненето не може да е преди ставането – избери по-късен час.',
   'mealChart.title': 'Хранене навреме',
   'mealChart.sub': 'протеинова закуска · последните 7 дни',
   'mealChart.onTime': 'навреме',
@@ -1397,4 +1396,12 @@ export default {
   'cel.proteinMissedSub': 'Този път след прозореца – утре пак ще успееш!',
   'home.proteinMissed': 'Протеиновата закуска е записана · пропуснат прозорец',
   'morning.missed': 'Хапна в {time} · след прозореца',
+  // 1.4.4 (time): meal time in the item editor, no meal before the wake-up
+  'day.err.wakeAfterBreakfast': 'Закуската е записана в {time} – ставането трябва да е преди това',
+  'food.time': 'Час',
+  'food.timeHint': 'Не по-късно от сега и не преди ставането.',
+  'food.timeBreakfast': 'Часът важи за цялата закуска.',
+  'whatsNew.time144': 'Часът на храна се променя от „Промени“ (поле „Час“). Храненето не може да е преди ставането.',
+  // 1.4.4 (time): toast after a changed time
+  'food.timeChanged': '{name} – час {time}',
 };

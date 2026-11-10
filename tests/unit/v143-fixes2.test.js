@@ -79,8 +79,19 @@ test('a breakfast saved before the wake-up was entered counts for the protein qu
   q = breakfastThenSleep('08:45', '07:00', '09:00');
   assert.equal(q.state, 'missed');
   assert.equal(q.xp, 0);
-  // a breakfast entered before the typed wake-up counts from the start (on time)
-  q = breakfastThenSleep('06:50', '07:00', '08:00');
+  // 1.4.4 (time): a meal can never be before the wake-up – a wake-up after the logged
+  // breakfast is refused (the wake-up has to be before 06:50)
+  assert.throws(() => breakfastThenSleep('06:50', '07:00', '08:00'), { code: 'wakeAfterBreakfast' });
+  assert.equal(get('days', D)?.proteinStart, undefined);
+  // the same minute is fine (wake-up 06:50, breakfast 06:50 → on time)
+  q = breakfastThenSleep('06:50', '06:50', '08:00');
+  assert.equal(q.state, 'done');
+  // older data that already has a breakfast before the wake-up: graded as on time, no crash
+  clearAll();
+  setSettings({ daily: { protein: true } });
+  breakfastAt('06:50');
+  put('days', { id: D, date: D, sleepWake: at(D, '07:00') });
+  q = atClock('08:00', (t) => (setDaySleepTimes(D, { bed: '23:30', wake: '07:00' }), proteinQuest(get('days', D), t)));
   assert.equal(q.state, 'done');
 });
 

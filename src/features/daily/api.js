@@ -19,7 +19,17 @@ import {
   proteinQuest,
   sleepStreak,
 } from './logic.js';
-import { TIMED_MEAL, actualAt, askWhenAte, checkAteAt, plannedAt, withActual } from './mealtime.js';
+import {
+  TIMED_MEAL,
+  actualAt,
+  askWhenAte,
+  checkAteAt,
+  checkMealTime,
+  mealFloor,
+  plannedAt,
+  wakeAfterBreakfast,
+  withActual,
+} from './mealtime.js';
 
 export {
   BREAKFAST_LOGGER,
@@ -59,6 +69,7 @@ export function wakeUp(now = Date.now()) {
     if (proteinFromWake(now)) (emit('daily:changed'), emit('daily:wake'));
     return false;
   }
+  if (wakeConflict(id, now) != null) return false; // 1.4.4: a meal can't be before the wake-up
   const est = fillBedtime(get('days', yesterday(id)));
   if (est) patchDay(yesterday(id), est);
   patchDay(id, { wake: now, ack: rec.ack ?? now });
@@ -89,7 +100,10 @@ export function proteinFromWake(now = Date.now()) {
   patchDay(id, { proteinStart: start });
   // 1.4.3 (fixes): a breakfast saved before the wake-up was entered (e.g. the sleep sheet
   // filled in after eating) is the protein breakfast too, graded by when it was eaten:
-  // on time 15, up to 60 min after the window 8 („+N мин“), later 0 („пропуснато“).
+  // on time 15, up to 30 min after the window 8 („+N мин“), later 0 („пропуснато“).
+  // 1.4.4 (time): a wake-up later than a logged breakfast is refused (wakeConflict), so the
+  // breakfast is never before the start; older data that has one is clamped to the start
+  // (on time) as before rather than refused or graded as missed.
   const bf = all('food')
     .filter((r) => r.date === id && r.meal === TIMED_MEAL && r.type !== 'water' && !r.removed && r.ts <= now)
     .sort((a, b) => b.ts - a.ts)[0];
@@ -181,9 +195,12 @@ export function proteinLogged(row, now = Date.now(), ask = true) {
  * the countdown started); null = „Сега“, the logged time stays. Either way it is not asked
  * again today. The meal's actual time drives Хранене навреме and the graded quest XP
  * (rewards re-grades it – no double pay); the breakfast rows of that logging get the time.
- * @param {number|null} at @param {number} [now] @returns {boolean} true if the time changed.
+ * 1.4.4 (time): `all` – the time edited in the item editor moves every breakfast entry of
+ * today to it (one meal, one time), not only those of the late logging.
+ * @param {number|null} at @param {number} [now] @param {{all?: boolean}} [o]
+ * @returns {boolean} true if the time changed.
  */
-export function setMealActual(at, now = Date.now()) {
+export function setMealActual(at, now = Date.now(), o = {}) {
   const id = dayKey(now),
     rec = get('days', id),
     mt = rec?.mealTimes?.[TIMED_MEAL];
@@ -201,14 +218,76 @@ export function setMealActual(at, now = Date.now()) {
       r.date === id &&
       r.meal === TIMED_MEAL &&
       r.type !== 'water' &&
-      r.ts >= rec.proteinAt - 60_000 &&
-      r.ts - rec.proteinAt < 60 * 60_000 &&
-      r.ts > at
+      (o.all ? r.ts !== at : r.ts >= rec.proteinAt - 60_000 && r.ts - rec.proteinAt < 60 * 60_000 && r.ts > at)
     )
       put('food', { ...r, ts: at, time: hhmm(new Date(at)) });
   proteinGraded(now);
   emit('daily:changed');
   return true;
+}
+
+/**
+ * 1.4.4 (time): a wake-up for `date` later than that day's first breakfast entry is refused
+ * („Закуската е записана в HH:MM – ставането трябва да е преди това“). Returns that
+ * breakfast's time, or null when the wake-up is fine. The wake-up already stored for the day
+ * is never refused (older data may have one after the breakfast), so other sleep fields stay
+ * editable. @param {string} date @param {number} wake
+ * @returns {number|null}
+ */
+export function wakeConflict(date, wake) {
+  const rec = get('days', date);
+  const stored = [rec?.sleepWake, rec?.wake].filter((x) => typeof x === 'number');
+  if (stored.some((x) => Math.floor(x / 60_000) === Math.floor(wake / 60_000))) return null;
+  return wakeAfterBreakfast(
+    all('food').filter((r) => r.date === date),
+    wake,
+  );
+}
+
+/**
+ * 1.4.4 (time): check a meal time typed for `date` (not in the future, not before that
+ * day's wake-up). @param {string} date @param {string} hm @param {number} [now]
+ */
+export const checkFoodTime = (date, hm, now = Date.now()) => checkMealTime(get('days', date), date, hm, now);
+
+/**
+ * 1.4.4 (time): the earliest meal time of `date` („HH:MM“ – the wake-up), or null.
+ * @param {string} date
+ */
+export function foodTimeFloor(date) {
+  const f = mealFloor(get('days', date), date);
+  return f == null ? null : hhmm(new Date(f));
+}
+
+/**
+ * 1.4.4 (time): the time of a diary entry, typed in the item editor („Час“). Checked like
+ * „Кога яде?“: not in the future, not before that day's wake-up. A breakfast moves as one
+ * meal – every breakfast entry of that day gets the time; today's graded protein breakfast
+ * goes through the „Кога яде?“ save (setMealActual), so XP, the banner, the timing chart and
+ * the result toast re-grade without double pay. Other meals move only that entry.
+ * @param {string} rowId @param {string} hm „HH:MM“ @param {number} [now]
+ * @returns {{ok: true, at: number, graded?: boolean} | {ok: false, err: 'invalid'|'future'|'early'|'missing'}}
+ */
+export function setFoodTime(rowId, hm, now = Date.now()) {
+  const row = get('food', rowId);
+  if (!row || row.type === 'water') return { ok: false, err: 'missing' };
+  const rec = get('days', row.date);
+  const r = checkMealTime(rec, row.date, hm, now);
+  if (!r.ok) return r;
+  const at = r.at,
+    moveTo = (/** @type {any} */ x) => put('food', { ...x, ts: at, time: hhmm(new Date(at)) });
+  if (row.meal !== TIMED_MEAL) {
+    if (row.ts !== at) moveTo(row);
+    return r;
+  }
+  if (row.date === dayKey(now) && rec?.proteinAt && rec.mealTimes?.[TIMED_MEAL]) {
+    setMealActual(at, now, { all: true });
+    return { ...r, graded: true };
+  }
+  for (const x of all('food'))
+    if (x.date === row.date && x.meal === TIMED_MEAL && x.type !== 'water' && x.ts !== at) moveTo(x);
+  emit('daily:changed');
+  return r;
 }
 
 /**

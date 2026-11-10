@@ -582,7 +582,6 @@ export default {
   'cel.setSub': '{n} of {total} sets',
   'cel.protein': 'Protein breakfast ✓',
   'cel.proteinOnTime': 'Within 30 minutes – perfect start!',
-  'cel.proteinLate': 'A bit late, but it still counts!',
   'cel.checkin': 'Thanks for checking in!',
   'cel.checkinSub': 'Vidrichka wrote it down 📝',
   'cel.workout': 'Workout complete!',
@@ -1226,7 +1225,7 @@ export default {
   'mealTime.save': 'Save and continue',
   'mealTime.err.invalid': 'Pick a time.',
   'mealTime.err.future': "That time hasn't come yet – pick an earlier one.",
-  'mealTime.err.early': "That's before the timer started – pick a later time.",
+  'mealTime.err.early': "A meal can't be before the wake-up – pick a later time.",
   'mealChart.title': 'Meals on time',
   'mealChart.sub': 'protein breakfast · last 7 days',
   'mealChart.onTime': 'on time',
@@ -1359,4 +1358,12 @@ export default {
   'cel.proteinMissedSub': 'After the window this time – tomorrow you’ll make it!',
   'home.proteinMissed': 'Protein breakfast logged · window missed',
   'morning.missed': 'Eaten at {time} · after the window',
+  // 1.4.4 (time): meal time in the item editor, no meal before the wake-up
+  'day.err.wakeAfterBreakfast': 'Breakfast is logged at {time} – the wake-up has to be before that',
+  'food.time': 'Time',
+  'food.timeHint': 'Not later than now and not before you woke up.',
+  'food.timeBreakfast': 'The time applies to the whole breakfast.',
+  'whatsNew.time144': 'Change a food’s time in its editor (the “Time” field). A meal can’t be before you woke up.',
+  // 1.4.4 (time): toast after a changed time
+  'food.timeChanged': '{name} – time {time}',
 };

@@ -59,17 +59,50 @@ export function hmOn(day, hm) {
 }
 
 /**
- * Check a typed "ate at" time: not in the future and not before the countdown started.
- * The current minute counts as now.
- * @param {any} rec Today's record. @param {string} hm @param {number} now
+ * 1.4.4 (time): the earliest a meal of `day` can be – the wake-up of that day (the morning
+ * tap or the one typed in the sleep editor), else the protein countdown's start; null when
+ * none is known. @param {any} rec The day's record. @param {string} day Day key.
+ * @returns {number|null}
+ */
+export function mealFloor(rec, day) {
+  const w = [rec?.wake, rec?.sleepWake].find((x) => typeof x === 'number' && x > 0 && dayKey(x) === day);
+  const f = w ?? (Number(rec?.proteinStart) > 0 ? Number(rec.proteinStart) : null);
+  return f == null ? null : Math.floor(f / MIN) * MIN;
+}
+
+/**
+ * 1.4.4 (time): check a meal time typed for `day`: a time, not in the future, not before
+ * that day's wake-up ({@link mealFloor}). The current minute counts as now.
+ * @param {any} rec The day's record. @param {string} day @param {string} hm @param {number} now
  * @returns {{ok: true, at: number} | {ok: false, err: 'invalid'|'future'|'early'}}
  */
-export function checkAteAt(rec, hm, now) {
-  const at = hmOn(dayKey(now), hm);
+export function checkMealTime(rec, day, hm, now) {
+  const at = hmOn(day, hm);
   if (at == null) return { ok: false, err: 'invalid' };
   if (at > now) return { ok: false, err: 'future' };
-  if (rec?.proteinStart && at < Math.floor(rec.proteinStart / MIN) * MIN) return { ok: false, err: 'early' };
+  const floor = mealFloor(rec, day);
+  if (floor != null && at < floor) return { ok: false, err: 'early' };
   return { ok: true, at: Math.min(at, now) };
+}
+
+/**
+ * Check a typed "ate at" time for today's meal: not in the future and (1.4.4) not before
+ * the wake-up. @param {any} rec Today's record. @param {string} hm @param {number} now
+ * @returns {{ok: true, at: number} | {ok: false, err: 'invalid'|'future'|'early'}}
+ */
+export const checkAteAt = (rec, hm, now) => checkMealTime(rec, dayKey(now), hm, now);
+
+/**
+ * 1.4.4 (time): a meal can never be before the wake-up. A wake-up later than the day's first
+ * breakfast entry (to the minute) is refused; returns that breakfast's time, else null.
+ * @param {{meal?: string, type?: string, date?: string, ts: number}[]} rows That day's food rows.
+ * @param {number} wake
+ */
+export function wakeAfterBreakfast(rows, wake) {
+  const ts = rows.filter((r) => r.meal === TIMED_MEAL && r.type !== 'water' && r.ts > 0).map((r) => r.ts);
+  if (!ts.length) return null;
+  const first = Math.min(...ts);
+  return Math.floor(wake / MIN) > Math.floor(first / MIN) ? first : null;
 }
 
 /**
