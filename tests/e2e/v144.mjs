@@ -378,7 +378,7 @@ export async function v144(page, h) {
   const it24 = ie.locator('.itemtime input.t24i');
   await it24.waitFor();
   assert.equal(await it24.inputValue(), '08:30', 'the logged time, editable');
-  assert.match(await ie.innerText(), /Час[\s\S]*важи за цялата закуска/);
+  assert.match(await ie.innerText(), /Час[\s\S]*важи за цялото хранене/);
   for (const [hm, re] of [
     ['09:30', /още не е дошъл/],
     ['06:50', /преди ставането/],

@@ -260,32 +260,37 @@ export function foodTimeFloor(date) {
 }
 
 /**
- * 1.4.4 (time): the time of a diary entry, typed in the item editor („Час“). Checked like
- * „Кога яде?“: not in the future, not before that day's wake-up. A breakfast moves as one
- * meal – every breakfast entry of that day gets the time; today's graded protein breakfast
- * goes through the „Кога яде?“ save (setMealActual), so XP, the banner, the timing chart and
- * the result toast re-grade without double pay. Other meals move only that entry.
- * @param {string} rowId @param {string} hm „HH:MM“ @param {number} [now]
+ * 1.4.4 (time) / 1.5.0: the time of a diary entry, typed in the item editor („Час“) – it is
+ * the time of the whole meal (see setMealClock). @param {string} rowId @param {string} hm „HH:MM“
+ * @param {number} [now]
  * @returns {{ok: true, at: number, graded?: boolean} | {ok: false, err: 'invalid'|'future'|'early'|'missing'}}
  */
 export function setFoodTime(rowId, hm, now = Date.now()) {
   const row = get('food', rowId);
   if (!row || row.type === 'water') return { ok: false, err: 'missing' };
-  const rec = get('days', row.date);
-  const r = checkMealTime(rec, row.date, hm, now);
+  return setMealClock(row.date, row.meal, hm, now);
+}
+
+/**
+ * 1.5.0: one time per meal. Set the time of `meal` on `date`, checked like „Кога яде?“ (not
+ * in the future, not before that day's wake-up): every entry of the meal gets it. Today's
+ * graded protein breakfast goes through the „Кога яде?“ save (setMealActual), so XP, the
+ * banner, the timing chart and the result toast re-grade without double pay.
+ * @param {string} date @param {string} meal @param {string} hm „HH:MM“ @param {number} [now]
+ * @returns {{ok: true, at: number, graded?: boolean} | {ok: false, err: 'invalid'|'future'|'early'}}
+ */
+export function setMealClock(date, meal, hm, now = Date.now()) {
+  const rec = get('days', date);
+  const r = checkMealTime(rec, date, hm, now);
   if (!r.ok) return r;
-  const at = r.at,
-    moveTo = (/** @type {any} */ x) => put('food', { ...x, ts: at, time: hhmm(new Date(at)) });
-  if (row.meal !== TIMED_MEAL) {
-    if (row.ts !== at) moveTo(row);
-    return r;
-  }
-  if (row.date === dayKey(now) && rec?.proteinAt && rec.mealTimes?.[TIMED_MEAL]) {
+  const at = r.at;
+  if (meal === TIMED_MEAL && date === dayKey(now) && rec?.proteinAt && rec.mealTimes?.[TIMED_MEAL]) {
     setMealActual(at, now, { all: true });
     return { ...r, graded: true };
   }
   for (const x of all('food'))
-    if (x.date === row.date && x.meal === TIMED_MEAL && x.type !== 'water' && x.ts !== at) moveTo(x);
+    if (x.date === date && x.meal === meal && x.type !== 'water' && x.ts !== at)
+      put('food', { ...x, ts: at, time: hhmm(new Date(at)) });
   emit('daily:changed');
   return r;
 }

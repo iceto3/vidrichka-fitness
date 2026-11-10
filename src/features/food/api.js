@@ -9,7 +9,7 @@ import { emit } from '../../core/bus.js';
 import { L } from '../../core/i18n.js';
 import { dayKey, hhmm } from '../../core/dates.js';
 import { FOODS, FOOD_CATEGORIES, QUICK_PICKS } from '../../data/foods.js';
-import { known, mealFor, mealTs, portion, scaleRow } from './logic.js';
+import { known, mealFor, mealTimeOf, mealTs, portion, scaleRow } from './logic.js';
 import { enabledMeals } from '../../core/settings.js';
 import { bump, byPoints, categoriesByPoints, groupFoods } from './usage.js';
 
@@ -55,14 +55,16 @@ export function setWater(date, glasses) {
  * @param {number} grams
  * @param {string} meal
  * @param {string} [date]
+ * @param {number} [at] 1.5.0: the time on the add page's clock (default: the meal's time).
  */
-export function logFood(food, grams, meal, date = view.date) {
+export function logFood(food, grams, meal, date = view.date, at = undefined) {
   if (food.source === 'custom')
     food = get('foods', food.id) ?? saveCustomFood(food); // 1.4.4: the saved (edited) one
   else if (food.source && !local.has(food.id)) put('foods', food);
   const use = kv('foodUse', {});
   setKv('foodUse', { ...use, [food.id]: bump(use[food.id], Date.now(), food.cat) }); // 1.4.4: points
-  const ts = mealTs(date, meal, dayKey());
+  // 1.5.0: the time picked on the clock, else the meal's time (one per meal), else now / usual
+  const ts = at ?? mealTimeOf(all('food'), date, meal) ?? mealTs(date, meal, dayKey());
   const row = put('food', {
     id: uid('f'),
     date,
@@ -137,7 +139,15 @@ export function editRow(id, change) {
     change.grams != null && change.grams !== before.grams
       ? scaleRow(before, change.grams, before.foodId ? foodById(before.foodId) : null)
       : { ...before };
-  if (change.meal && change.meal !== before.meal) after = { ...after, meal: change.meal };
+  if (change.meal && change.meal !== before.meal) {
+    // 1.5.0: moved into another meal → it takes that meal's time (one time per meal)
+    const ts = mealTimeOf(
+      all('food').filter((r) => r.id !== id),
+      before.date,
+      change.meal,
+    );
+    after = { ...after, meal: change.meal, ...(ts ? { ts, time: hhmm(new Date(ts)) } : {}) };
+  }
   put('food', after);
   return { before, after };
 }
@@ -205,7 +215,7 @@ export const saveMeal = (name, rows) =>
 export function logSavedMeal(id, meal) {
   const m = get('meals', id);
   if (!m) return null;
-  const ts = mealTs(view.date, meal, dayKey());
+  const ts = mealTimeOf(all('food'), view.date, meal) ?? mealTs(view.date, meal, dayKey()); // 1.5.0
   const rows = m.items.map((/** @type {any} */ it, /** @type {number} */ i) =>
     put('food', { ...it, id: uid('f'), date: view.date, meal, ts: ts + i, time: hhmm(new Date(ts)) }),
   );

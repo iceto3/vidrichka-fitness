@@ -1399,8 +1399,6 @@ export default {
   // 1.4.4 (time): meal time in the item editor, no meal before the wake-up
   'day.err.wakeAfterBreakfast': 'Закуската е записана в {time} – ставането трябва да е преди това',
   'food.time': 'Час',
-  'food.timeHint': 'Не по-късно от сега и не преди ставането.',
-  'food.timeBreakfast': 'Часът важи за цялата закуска.',
   'whatsNew.time144': 'Часът на храна се променя от „Промени“ (поле „Час“). Храненето не може да е преди ставането.',
   // 1.4.4 (time): toast after a changed time
   'food.timeChanged': '{name} – час {time}',
@@ -1409,4 +1407,6 @@ export default {
   'steps.n': '{n} крачки',
   'steps.minus': 'Махни {n} крачки',
   'steps.plus': 'Добави {n} крачки',
+  // 1.5.0 2a: one time per meal
+  'food.timeMeal': 'Часът важи за цялото хранене.',
 };

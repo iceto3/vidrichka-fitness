@@ -39,6 +39,19 @@ export const MEAL_TIME = /** @type {Record<string, string>} */ ({
 export const mealTs = (date, meal, today, now = Date.now()) =>
   date === today ? now : new Date(`${date}T${MEAL_TIME[meal] ?? '12:00'}`).getTime();
 
+/**
+ * 1.5.0: one time per meal – every entry of a meal on a day shares it. The meal's time is its
+ * earliest entry (older data may have several times; the first one counts). Pure.
+ * @param {{date?: string, meal?: string, type?: string, ts?: number}[]} rows @param {string} date
+ * @param {string} meal @returns {number|null}
+ */
+export function mealTimeOf(rows, date, meal) {
+  let t = Infinity;
+  for (const r of rows)
+    if (r.date === date && r.meal === meal && r.type !== 'water' && Number(r.ts) > 0) t = Math.min(t, Number(r.ts));
+  return t === Infinity ? null : t;
+}
+
 /** Emoji tile + background per meal slot. */
 export const MEAL_STYLE = {
   breakfast: ['🥣', '#FFF2D9'],

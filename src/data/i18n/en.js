@@ -1361,8 +1361,6 @@ export default {
   // 1.4.4 (time): meal time in the item editor, no meal before the wake-up
   'day.err.wakeAfterBreakfast': 'Breakfast is logged at {time} – the wake-up has to be before that',
   'food.time': 'Time',
-  'food.timeHint': 'Not later than now and not before you woke up.',
-  'food.timeBreakfast': 'The time applies to the whole breakfast.',
   'whatsNew.time144': 'Change a food’s time in its editor (the “Time” field). A meal can’t be before you woke up.',
   // 1.4.4 (time): toast after a changed time
   'food.timeChanged': '{name} – time {time}',
@@ -1371,4 +1369,6 @@ export default {
   'steps.n': '{n} steps',
   'steps.minus': 'Remove {n} steps',
   'steps.plus': 'Add {n} steps',
+  // 1.5.0 2a: one time per meal
+  'food.timeMeal': 'The time applies to the whole meal.',
 };

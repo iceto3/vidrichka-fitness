@@ -62,3 +62,113 @@ test('1d: steps – slider every 500, fine-tune ±50/±100, never below 0', asyn
   assert.equal(addDaySteps(D, -100), 0);
   assert.equal(addDaySteps(D, 100), 100);
 });
+
+// ---- part 2 ----
+/** Today (real): the add path uses the real date for „today“; the clock is mocked. */
+const P2 = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+})();
+const p2at = (/** @type {string} */ hm, d = P2) => new Date(`${d}T${hm}:00`).getTime();
+const withClock = (/** @type {string} */ hm, /** @type {(now: number) => any} */ fn) => {
+  const real = Date.now,
+    now = p2at(hm);
+  Date.now = () => now;
+  try {
+    return fn(now);
+  } finally {
+    Date.now = real;
+  }
+};
+const p2 = async () => {
+  globalThis.addEventListener ??= () => {};
+  globalThis.removeEventListener ??= () => {};
+  const store = await import('../../src/core/store.js');
+  const { setLang } = await import('../../src/core/i18n.js');
+  await setLang('bg');
+  const { setSettings } = await import('../../src/core/settings.js');
+  const food = await import('../../src/features/food/api.js');
+  const daily = await import('../../src/features/daily/api.js');
+  await import('../../src/features/daily/index.js');
+  const { syncRewards } = await import('../../src/features/motivation/rewards.js');
+  await import('../../src/features/motivation/quests.js');
+  const clear = () => {
+    for (const st of ['food', 'days']) store.all(st).forEach((r) => store.remove(st, r.id));
+    store.setKv('xp', {});
+    setSettings({ daily: { protein: true } });
+  };
+  const egg = { id: 'egg', name: 'Яйце', emoji: '🥚', kcal: 155, p: 13, c: 1, f: 11, cat: 'protein' };
+  return { ...store, food, daily, syncRewards, clear, egg };
+};
+
+test('2a: one time per meal – a new entry takes the meal’s time; moving any entry moves the meal', async () => {
+  const { food, daily, get, all, put, clear, egg } = await p2();
+  const { mealTimeOf } = await import('../../src/features/food/logic.js');
+  clear();
+  put('days', { id: P2, wake: p2at('07:00') });
+  food.view.date = P2;
+  const a = withClock('12:40', () => food.logFood(egg, 100, 'lunch', P2));
+  const b = withClock('13:30', () => food.logFood(egg, 50, 'lunch', P2));
+  assert.equal(b.ts, a.ts, 'the second entry takes the meal’s time');
+  assert.equal(b.time, '12:40');
+  assert.equal(mealTimeOf(all('food'), P2, 'lunch'), p2at('12:40'));
+  assert.equal(mealTimeOf(all('food'), P2, 'dinner'), null);
+  // an explicit clock time wins for the new entry (the view then moves the meal)
+  const c = withClock('13:30', () => food.logFood(egg, 50, 'lunch', P2, p2at('13:10')));
+  assert.equal(c.time, '13:10');
+  // the item editor's „Час“ on any entry moves the whole meal (lunch, snack, dinner…)
+  const r = withClock('14:00', (now) => daily.setFoodTime(b.id, '12:15', now));
+  assert.equal(r.ok, true);
+  assert.deepEqual(
+    all('food')
+      .filter((x) => x.meal === 'lunch')
+      .map((x) => x.time),
+    ['12:15', '12:15', '12:15'],
+  );
+  assert.deepEqual(
+    withClock('14:00', (now) => daily.setMealClock(P2, 'lunch', '06:55', now)),
+    {
+      ok: false,
+      err: 'early',
+    },
+  );
+  // moved into another meal → it takes that meal's time
+  const d = withClock('19:30', () => food.logFood(egg, 80, 'dinner', P2));
+  withClock('19:40', () => food.editRow(a.id, { meal: 'dinner' }));
+  assert.equal(get('food', a.id).time, d.time);
+  // a saved combination logged into a meal takes the meal's time too
+  put('meals', {
+    id: 'm1',
+    name: 'Обяд',
+    items: [{ name: 'Ориз', grams: 100, kcal: 130, p: 3, c: 28, f: 0 }],
+  });
+  const res = withClock('20:30', () => food.logSavedMeal('m1', 'dinner'));
+  assert.equal(res?.rows[0].time, '19:30');
+});
+
+test('2a: breakfast re-grades through the „Кога яде?“ save – no double XP', async () => {
+  const { food, daily, kv, all, put, clear, egg, syncRewards } = await p2();
+  clear();
+  put('days', { id: P2, wake: p2at('07:00'), proteinStart: p2at('07:00') });
+  food.view.date = P2;
+  const row = withClock('08:20', (now) => {
+    const x = food.logFood(egg, 150, 'breakfast', P2);
+    daily.proteinLogged(x, now);
+    daily.setMealActual(null, now);
+    syncRewards();
+    return x;
+  });
+  const xp = () => kv('xp', {})[`quest:${P2}:protein`]?.amt ?? 0;
+  assert.equal(xp(), 0, '50 min after the window: missed');
+  withClock('08:25', () => food.logFood(egg, 50, 'breakfast', P2));
+  const r = withClock('09:00', (now) => daily.setFoodTime(row.id, '07:20', now));
+  assert.equal(r.ok && r.graded, true);
+  withClock('09:00', () => syncRewards());
+  assert.equal(xp(), 15);
+  assert.deepEqual(
+    all('food').map((x) => x.time),
+    ['07:20', '07:20'],
+  );
+  withClock('09:05', () => syncRewards());
+  assert.equal(xp(), 15, 'not paid twice');
+});

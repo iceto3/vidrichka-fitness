@@ -81,7 +81,7 @@ ${missingNotice(missingValues(food() ?? row), { button: !!food() })}
 ${
   terr
     ? html`<p class="small b danger-t mt8 timeerr" role="alert">${t(terr)}</p>`
-    : html`<p class="xs b muted mt6">${t(meal === 'breakfast' ? 'food.timeBreakfast' : 'food.timeHint')}</p>`
+    : html`<p class="xs b muted mt6">${t('food.timeMeal')}</p>`
 }
 <div class="row gap10 mt16"><button class="btn sec danger-t f1" data-act="del">${ic('trash', 18, 2.2)}${t('common.delete')}</button><button class="btn f2" data-act="save"${terr ? ' disabled' : ''}>${ic('check', 20, 3)}${t('common.save')}</button></div></div>`;
     },
@@ -134,7 +134,7 @@ ${
       save: () => {
         if (g <= 0 || timeErr()) return false;
         const res = editRow(id, { grams: g, meal });
-        // 1.4.4 (time): the new time after the grams / meal (a breakfast moves as one meal;
+        // 1.4.4 (time): the new time after the grams / meal (1.5.0: every meal moves as one;
         // today's graded protein breakfast re-grades with its own result toast)
         const moved = res && tm.hm !== time0 ? setFoodTime(id, tm.hm) : null;
         closeSheet();
