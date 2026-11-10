@@ -16,7 +16,7 @@ import { dayKey, durationMin, hhmm, hmComplete, parseDay, parseHM, stepHM } from
 import { enabledMeals, settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
-import { bar, stepper, time24 } from '../../../ui/components.js';
+import { stepper, time24 } from '../../../ui/components.js';
 import { closeSheet, confirmDialog, openSheet, refreshSheet, snack, toast } from '../../../ui/sheet.js';
 import { FACES, scale } from '../../daily/views/checkin.js';
 import { MEAL_STYLE, mealsForDay, totals } from '../../food/logic.js';
@@ -24,6 +24,7 @@ import { foodName, view as foodView } from '../../food/api.js';
 import { mealTotalsLine } from '../../food/views/totals.js';
 import { DEFAULT_CREATINE_DOSE } from '../../food/creatine.js';
 import { checkNight } from '../../daily/sleeptimes.js';
+import { FINE_STEPS, SLIDER_STEP, sliderMax, snapSteps } from '../../steps/api.js';
 import {
   DayEditError,
   MAX_GLASSES,
@@ -68,14 +69,18 @@ export function stepsCard(date) {
     goal = stepGoal(),
     today = isToday(date),
     run = today ? stepRun() : 0,
-    done = n >= goal;
+    done = n >= goal,
+    max = sliderMax(n, goal);
   return html`<section class="card mt12 pad14 stepscard${done ? ' done' : ''}" aria-label="${t(today ? 'steps.title' : 'day.steps')}">
 <div class="row gap10"><span class="sq teal">${ic('steps', 20, 2.1)}</span><div class="f1 minw0"><div class="b">${t(today ? 'steps.title' : 'day.steps')}</div>
 <div class="muted xs b">${done ? t('steps.goalMet') : t('steps.left', { n: fmtNum(goal - n) })}${run ? html` · 🔥 ${t('steps.streak', { n: run })}` : ''}</div></div>
 <div class="right"><span class="xb num big19 stepsn">${fmtNum(n)}</span><span class="muted xs b num"> / ${fmtNum(goal)}</span></div></div>
-<div class="stepsbar mt10">${bar(n / goal, done ? 'var(--ok, #1FB46B)' : 'var(--accent)')}</div>
-<div class="row gap8 mt10 wrap"><button class="chip" data-act="stepsAdd" data-n="1000">+${fmtNum(1000)}</button><button class="chip" data-act="stepsAdd" data-n="2000">+${fmtNum(2000)}</button>
-<span class="f1"></span><button class="btn sm sec nowrap" data-act="stepsShot" aria-label="${t('shot.stepsAria')}">📷 ${t('shot.btn')}</button><button class="btn sm sec nowrap stepsenter" data-act="stepsSheet">${ic('edit', 15, 2.4)}${t('steps.enter')}</button></div></section>`;
+<label class="stepslide mt10" style="--p:${Math.min(100, (100 * snapSteps(n)) / max)}%"><span class="sr-only">${t('steps.slider')}</span><input class="stepsrange" type="range" min="0" max="${max}" step="${SLIDER_STEP}" value="${snapSteps(n)}" data-input="stepsSlide" data-change="stepsSet" aria-valuetext="${t('steps.n', { n: fmtNum(snapSteps(n)) })}"></label>
+<div class="row between gap6 mt10 stepsfine">${FINE_STEPS.map(
+    (d) =>
+      html`<button class="chip num" data-act="stepsAdd" data-n="${d}"${d < 0 && n <= 0 ? ' disabled' : ''} aria-label="${t(d < 0 ? 'steps.minus' : 'steps.plus', { n: Math.abs(d) })}">${d < 0 ? '−' : '+'}${Math.abs(d)}</button>`,
+  )}</div>
+<div class="row gap8 mt10"><button class="btn sm sec nowrap f1" data-act="stepsShot" aria-label="${t('shot.stepsAria')}">📷 ${t('shot.btn')}</button><button class="btn sm sec nowrap stepsenter f1" data-act="stepsSheet">${ic('edit', 15, 2.4)}${t('steps.enter')}</button></div></section>`;
 }
 
 /** Steps entry sheet: add some or set the day's total (1.4.0: each button explained). @param {string} date */
@@ -413,6 +418,8 @@ ${w.partial ? html`<span class="chip chip-sm">${t('summary.partial')}</span>` : 
 /** Action names the cards use (a view must not reuse them for something else). */
 export const CARD_ACTS = /** @type {const} */ ([
   'stepsAdd',
+  'stepsSlide',
+  'stepsSet',
   'stepsSheet',
   'stepsShot',
   'sleepSheet',
@@ -431,6 +438,17 @@ export const CARD_ACTS = /** @type {const} */ ([
 export function cardActions(dateOf) {
   return {
     stepsAdd: (el) => void safely(() => addDaySteps(dateOf(), Number(el.dataset.n))),
+    // 1.5.0: the slider shows the count while dragging and saves it when let go (500 steps)
+    stepsSlide: (el) => {
+      const v = snapSteps(/** @type {HTMLInputElement} */ (el).value),
+        card = el.closest('.stepscard'),
+        lab = /** @type {HTMLElement|null} */ (el.closest('.stepslide'));
+      const out = card?.querySelector('.stepsn');
+      if (out) out.textContent = fmtNum(v);
+      lab?.style.setProperty('--p', `${(100 * v) / Number(/** @type {HTMLInputElement} */ (el).max)}%`);
+      return false;
+    },
+    stepsSet: (el) => void safely(() => setDaySteps(dateOf(), snapSteps(/** @type {HTMLInputElement} */ (el).value))),
     stepsSheet: () => (openStepsSheet(dateOf()), false),
     stepsShot: async () => ((await import('./shot.js')).openShot('steps', dateOf()), false),
     sleepSheet: () => (openSleepSheet(dateOf()), false),

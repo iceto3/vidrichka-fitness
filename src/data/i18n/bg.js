@@ -1404,4 +1404,9 @@ export default {
   'whatsNew.time144': 'Часът на храна се променя от „Промени“ (поле „Час“). Храненето не може да е преди ставането.',
   // 1.4.4 (time): toast after a changed time
   'food.timeChanged': '{name} – час {time}',
+  // 1.5.0 1d: steps slider + fine-tune
+  'steps.slider': 'Крачки за деня (плъзни)',
+  'steps.n': '{n} крачки',
+  'steps.minus': 'Махни {n} крачки',
+  'steps.plus': 'Добави {n} крачки',
 };

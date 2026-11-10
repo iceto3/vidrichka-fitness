@@ -35,3 +35,30 @@ test('1c: the amount follows each key while typing (input), steps on the buttons
   assert.equal(gramsFrom(100, el('250'), /** @type {any} */ ({ type: 'change' })), 250);
   assert.equal(gramsFrom(100, el('', '-10'), /** @type {any} */ ({ type: 'click' })), 90);
 });
+
+test('1d: steps – slider every 500, fine-tune ±50/±100, never below 0', async () => {
+  globalThis.addEventListener ??= () => {};
+  const { FINE_STEPS, SLIDER_STEP, clampDelta, sliderMax, snapSteps } =
+    await import('../../src/features/steps/logic.js');
+  const { addSteps, setSteps, steps } = await import('../../src/features/steps/api.js');
+  const { addDaySteps } = await import('../../src/features/day/api.js');
+  assert.deepEqual([...FINE_STEPS], [-100, -50, 50, 100]);
+  assert.equal(SLIDER_STEP, 500);
+  assert.equal(snapSteps(7230), 7000);
+  assert.equal(snapSteps(7250), 7500);
+  assert.equal(snapSteps(-300), 0);
+  assert.equal(snapSteps(200_000), 100_000);
+  assert.equal(sliderMax(0, 8000), 16_000);
+  assert.equal(sliderMax(17_230, 8000), 17_500, 'room for a big day');
+  assert.equal(sliderMax(99_999, 30_000), 100_000);
+  assert.equal(clampDelta(-100), -100);
+  assert.equal(clampDelta('x'), 0);
+  const D = '2026-11-01';
+  setSteps(D, 120);
+  assert.equal(addSteps(D, -100), 20);
+  assert.equal(addSteps(D, -50), 0, 'never below 0');
+  assert.equal(steps(D), 0);
+  assert.equal(addDaySteps(D, 50), 50);
+  assert.equal(addDaySteps(D, -100), 0);
+  assert.equal(addDaySteps(D, 100), 100);
+});

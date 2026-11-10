@@ -1366,4 +1366,9 @@ export default {
   'whatsNew.time144': 'Change a food’s time in its editor (the “Time” field). A meal can’t be before you woke up.',
   // 1.4.4 (time): toast after a changed time
   'food.timeChanged': '{name} – time {time}',
+  // 1.5.0 1d: steps slider + fine-tune
+  'steps.slider': 'Steps for the day (drag)',
+  'steps.n': '{n} steps',
+  'steps.minus': 'Remove {n} steps',
+  'steps.plus': 'Add {n} steps',
 };

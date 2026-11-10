@@ -2142,9 +2142,9 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   const card = page.locator('.stepscard');
   await card.scrollIntoViewIfNeeded();
   const s0 = (await dayField('steps')) ?? 0;
-  await card.locator('[data-act="stepsAdd"][data-n="2000"]').click();
+  await card.locator('[data-act="stepsAdd"][data-n="100"]').click(); // 1.5.0: fine-tune buttons
   await settle();
-  assert.equal(await dayField('steps'), s0 + 2000);
+  assert.equal(await dayField('steps'), s0 + 100);
   await card.locator('[data-act="stepsSheet"]').click();
   await layer.locator('#stepsin').fill('6500');
   await layer.locator('[data-act="set"]').click();
@@ -2153,12 +2153,12 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.match(await page.locator('.stepscard').innerText(), /6\s?500/);
   await page.locator('.stepscard').scrollIntoViewIfNeeded();
   await shot('steps-card');
-  await page.locator('.stepscard [data-act="stepsAdd"][data-n="2000"]').click();
+  await page.locator('.stepscard .stepsrange').fill('8500'); // 1.5.0: the slider
   await page.locator('#cel > *').first().waitFor({ timeout: 4000 });
   assert.match(await page.locator('#cel').innerText(), /крачки/i, 'goal celebration');
   await clearCel();
   assert.ok(page.locator('.stepscard.done'), 'goal met');
-  await page.locator('.stepscard [data-act="stepsAdd"][data-n="1000"]').click();
+  await page.locator('.stepscard [data-act="stepsAdd"][data-n="100"]').click();
   await page.waitForTimeout(600);
   assert.equal(await page.locator('#cel > *').count(), 0, 'the goal celebrates once a day');
   await go('profile');
@@ -3018,9 +3018,9 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await page.locator('.dayview').waitFor();
   for (const sel of ['.stepscard', '.sleepcard', '.homemeals', '.dayworkouts'])
     assert.equal(await page.locator(`.dayview ${sel}`).count(), 1, `${sel} on the day view`);
-  await page.locator('.dayview [data-act="stepsAdd"][data-n="1000"]').click();
+  await page.locator('.dayview [data-act="stepsAdd"][data-n="100"]').click();
   await settle();
-  assert.equal((await dayRow()).steps, before + 1000, 'steps added to the past day');
+  assert.equal((await dayRow()).steps, before + 100, 'steps added to the past day');
   // water: − (left) … glasses … + (right); − is disabled at 0
   const w0 = await page.locator('.dayview .glasses .glass.on').count();
   if (w0 === 0) assert.ok(await page.locator('.dayview .waterminus').isDisabled(), '− disabled at 0');
