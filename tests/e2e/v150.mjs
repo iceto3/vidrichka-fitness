@@ -61,5 +61,28 @@ export async function v150(page, h) {
   await shot('v150-steps-enter-360');
   console.log('  ✔ 1.5.0 1a: „Въведи“ on one line at 360 px');
 
+  // ---- 1c: kcal follows the amount while typing (before the field loses focus)
+  await go('food/add/lunch');
+  await h.clickPast(page.locator('.cats .cat[data-act="cat"]').first(), layer.locator('.flist'));
+  await layer.locator('.flist [data-act="pick"]').first().click();
+  const gIn = layer.locator('#grams');
+  await gIn.waitFor();
+  const kcal = () => layer.locator('.kcalbig').innerText();
+  await gIn.click();
+  await gIn.press('Control+A');
+  await gIn.press('Backspace');
+  await page.keyboard.type('2');
+  await settle();
+  const k2 = await kcal();
+  await page.keyboard.type('00');
+  await settle();
+  const k200 = await kcal();
+  assert.equal(await gIn.evaluate((e) => e === document.activeElement), true, 'still typing');
+  assert.equal(await gIn.inputValue(), '200', 'the field keeps what is typed');
+  assert.notEqual(k2, k200, `kcal follows the keys (${k2} → ${k200})`);
+  assert.ok(parseInt(k200, 10) > parseInt(k2, 10));
+  await closeAll();
+  console.log('  ✔ 1.5.0 1c: kcal live while typing the amount');
+
   await page.setViewportSize(vp ?? { width: 390, height: 844 });
 }

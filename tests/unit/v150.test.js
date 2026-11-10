@@ -23,3 +23,15 @@ test('1b: breakfast off – before 10:00 the current meal is the next one, never
   // the small hours stay as before (the evening's meal)
   assert.equal(mealFor(at(2), noBf), 'snack');
 });
+
+test('1c: the amount follows each key while typing (input), steps on the buttons', async () => {
+  globalThis.addEventListener ??= () => {};
+  const { gramsFrom } = await import('../../src/features/food/views/grams.js');
+  const el = (/** @type {any} */ v, d = '') => /** @type {any} */ ({ value: v, dataset: { d } });
+  assert.equal(gramsFrom(100, el('2'), /** @type {any} */ ({ type: 'input' })), 2);
+  assert.equal(gramsFrom(100, el('25'), /** @type {any} */ ({ type: 'input' })), 25);
+  assert.equal(gramsFrom(100, el('12,6'), /** @type {any} */ ({ type: 'input' })), 13);
+  assert.equal(gramsFrom(100, el(''), /** @type {any} */ ({ type: 'input' })), 0, 'cleared: 0 until typed');
+  assert.equal(gramsFrom(100, el('250'), /** @type {any} */ ({ type: 'change' })), 250);
+  assert.equal(gramsFrom(100, el('', '-10'), /** @type {any} */ ({ type: 'click' })), 90);
+});
