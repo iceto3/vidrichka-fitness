@@ -2479,7 +2479,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.deepEqual(Object.keys(fb).sort(), ['images', 'lang', 'text', 'version']);
   assert.match(fb.text, /пулса/);
   assert.equal(fb.lang, 'bg');
-  assert.match(fb.version, /^1\.(3\.4|4\.\d)/);
+  assert.match(fb.version, /^1\.(3\.4|4\.\d|5\.\d)/);
   assert.equal(fb.images.length, 1);
   assert.equal(fb.images[0].mime, 'image/jpeg');
   const bytes = Buffer.from(fb.images[0].data, 'base64');
@@ -3414,7 +3414,7 @@ async function v141tester(page, { go, settle, shot }, name, ctx) {
   // build id: 1.4.1-<hash> / 1.4.1-beta-<hash> from a build, the plain version from the sources
   const idRe = DIR === '.' ? /^Билд: 1\.5\.0$/ : /^Билд: 1\.5\.0(-beta)?-[0-9a-f]{7,}$/;
   const meta = await page.evaluate(
-    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.4.4',
+    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.5.0',
   );
   const foot = page.locator('#pbuild');
   await foot.scrollIntoViewIfNeeded();
