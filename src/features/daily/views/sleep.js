@@ -53,7 +53,7 @@ export default () => ({
       list.length
         ? html`<div class="row between muted xs b mt6 num sbrange"><span>${fmtDate(parseDay(list[list.length - 1].day), { day: 'numeric', month: 'short' })}</span><span>${fmtDate(parseDay(list[0].day), { day: 'numeric', month: 'short' })}</span></div>`
         : ''
-    }<div class="muted xs b mt8">${t('sleep.legend')} ${t('sleep.tapBar')}</div></div>
+    }<div class="muted xs b mt8">${t('sleep.legend')} · ${t('sleep.tapBar')}</div></div>
 <div class="section-title"><h2 class="h3">${t('sleep.nights')}</h2></div>
 ${
   known.length

@@ -1397,6 +1397,10 @@ export default {
   'manual.errSat': 'Cannot be more than the fat.',
   'manual.errSug': 'Cannot be more than the carbs.',
   // 1.5.1: tap a sleep bar
-  'sleep.tapBar': 'Tap a bar to add or fix that night.',
+  'sleep.tapBar': 'tap a bar to add or fix that night',
   'sleep.editNight': 'Sleep: {day} – edit',
+  // 1.5.1: What's new
+  'whatsNew.satsug151': 'Saturated fat and sugar: add them to your own foods and see the totals in Food.',
+  'whatsNew.home151': 'Home now shows mood, energy and water too – the whole day in one place.',
+  'whatsNew.sleep151': 'Progress › Sleep: tap a bar in “Hours slept” to add or fix that night.',
 };

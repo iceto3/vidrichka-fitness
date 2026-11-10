@@ -198,3 +198,32 @@ test('4b: an empty past night is filled in from its bar; same rules – 16 h cap
   setDaySleepTimes(P, { bed: '23:00', wake: '07:00' });
   assert.equal(get('days', P).sleepWake, at(P, '07:00'), 'before the breakfast is fine');
 });
+
+test("1.5.1: version, What's new (bg + en), no English in Bulgarian", async () => {
+  const { readFileSync } = await import('node:fs');
+  const { NOTES } = await import('../../src/features/whatsnew/notes.js');
+  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.5.1');
+  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+  assert.equal(lock.version, '1.5.1');
+  assert.equal(lock.packages[''].version, '1.5.1');
+  const { APP_VERSION } = await import('../../src/core/version.js');
+  assert.equal(APP_VERSION, '1.5.1');
+  assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.5\.1\]/);
+  assert.equal(NOTES[0].v, '1.5.1');
+  assert.equal(NOTES[0].items.length, 3);
+  const keys = [
+    ...NOTES[0].items.map(([, k]) => k),
+    'food.satFat',
+    'food.sugar',
+    'nutr.sat',
+    'nutr.sug',
+    'manual.sat',
+    'manual.sug',
+    'sleep.tapBar',
+    'sleep.editNight',
+  ];
+  for (const k of keys) {
+    assert.ok(/** @type {any} */ (bg)[k] && /** @type {any} */ (en)[k], k);
+    assert.doesNotMatch(String(/** @type {any} */ (bg)[k]).replace(/\{\w+\}/g, ''), /[A-Za-z]/, `English in bg ${k}`);
+  }
+});

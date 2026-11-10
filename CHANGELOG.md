@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.5.1] – 2026-11-11 (beta)
+
+### Added
+
+- **Saturated fat and sugar** (g / 100 g, keys `sat` and `sug`): optional, like fiber and salt – empty means unknown („–“), never 0. In the new-food, edit and fill-in forms (sugar after carbs, saturated fat after fat; saturated fat can't be more than the fat, sugar not more than the carbs), read from Open Food Facts (`saturated-fat_100g`, `sugars_100g`; an impossible value is dropped, the product is kept), scaled with the grams (`portion`, `scaleRow`), shown in the add and item sheets („Наситени мазнини · Захар“ under fiber / salt), in the item line („зх“ after carbs, „нм“ after fat, only when the food lists them) and its ⓘ legend, in Храна's day totals and in the day's meals card (Начало / calendar day, once something logged lists them). Old diary rows and foods are not rewritten: they simply have no value (unknown).
+- **Foods sheet** (`docs/foods.csv`, `tools/export-foods.mjs`): new columns `sat_fat` and `sugar` at the end (`creatine_mg` stays where it was). Herring (Херинга, сурова, since 1.4.2 with creatine 650 mg) gets saturated fat 2 g and sugar 0 g from its source (USDA SR 15039, FDC 175116); every other food is left empty – no sourced value yet (`SAT_SUGAR` in `src/data/foods.js`). Changes vs 1.5.0 in `docs/foods-changes-1.5.1.csv`.
+- **Начало shows everything tracked except body measurements:** the mood / energy card and the water card (the calendar day view's cards and sheets) between „Сън снощи“ and „Хранене днес“.
+- **Прогрес › Сън „Часове сън“ (last 14 nights):** every bar is a button that opens that night's sleep editor (`openSleepSheet`), so a bedtime / wake-up can be entered or corrected and empty nights filled in. Same rules as the day view: the 16 h cap, and on any day a wake-up after a logged breakfast is refused („Закуската е записана в … – ставането трябва да е преди това“).
+- What's new entry for 1.5.1 (bg + en). Unit tests `tests/unit/v151.test.js`; e2e flow `tests/e2e/v151.mjs` at 360 px (also alone with `--flow v151`).
+
+### Fixed
+
+- Two 1.4.4 unit tests used a fixed date and failed from the next day on; they now use today.
+
 ## [1.5.0] – 2026-11-10 (beta)
 
 ### Added
