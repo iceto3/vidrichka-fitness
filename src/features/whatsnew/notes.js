@@ -20,6 +20,7 @@ export const NOTES = [
       ['edit', 'whatsNew.custom144'],
       ['camera', 'whatsNew.photo144'],
       ['clock', 'whatsNew.whenAte144'],
+      ['edit', 'whatsNew.time144'],
     ],
   },
   {

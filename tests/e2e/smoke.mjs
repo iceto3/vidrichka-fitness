@@ -1595,6 +1595,7 @@ async function v132(page, { go, settle, clearCel, layer }) {
   const txt = await layer.innerText();
   assert.match(txt, /Какво ново в 1\.4\.4/);
   assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
+  assert.match(txt, /поле „Час“/, 'the 1.4.4 time item');
   assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
   assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
@@ -1605,7 +1606,7 @@ async function v132(page, { go, settle, clearCel, layer }) {
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    36, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +5
+    37, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6
     'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -1913,6 +1914,7 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   const txt = await layer.innerText();
   assert.match(txt, /Какво ново в 1\.4\.4/);
   assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
+  assert.match(txt, /поле „Час“/, 'the 1.4.4 time item');
   assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
   assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
@@ -1920,7 +1922,7 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   assert.match(txt, /Обичайният ти обяд/);
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    33, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +5
+    34, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6
     'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -2026,6 +2028,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   const txt = await layer.innerText();
   assert.match(txt, /Какво ново в 1\.4\.4/);
   assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
+  assert.match(txt, /поле „Час“/, 'the 1.4.4 time item');
   assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
   assert.match(txt, /Креатин/, 'the 1.4.2 items');
   assert.match(txt, /илюстрации и описания на техниката/, 'the 1.4.1 item');
@@ -2034,8 +2037,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    31,
-    'five 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
+    32,
+    'six 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
   );
   await page.waitForTimeout(700);
   await shot('whats-new-134');
@@ -3841,8 +3844,11 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
   assert.ok(await layer.locator('.ateok').isDisabled(), 'no future time');
   // round 3: before the start → only the app's own message (ти form), never a browser popup
   await tin.fill('04:10');
-  await page.waitForFunction(() => /след старта/.test(document.querySelector('#layer .ateerr')?.textContent ?? ''));
-  assert.equal((await layer.locator('.ateerr').innerText()).trim(), 'Избери час след старта на таймера.');
+  await page.waitForFunction(() => /преди ставането/.test(document.querySelector('#layer .ateerr')?.textContent ?? ''));
+  assert.equal(
+    (await layer.locator('.ateerr').innerText()).trim(),
+    'Храненето не може да е преди ставането – избери по-късен час.',
+  );
   assert.deepEqual(
     await tin.evaluate((e) => [
       e.validity.valid,

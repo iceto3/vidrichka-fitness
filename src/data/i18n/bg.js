@@ -1378,7 +1378,7 @@ export default {
   'whenAte.body': 'Записа закуската след 30-минутния ѝ прозорец. Кога я изяде?',
   'whenAte.now': 'Сега ({time})',
   'whenAte.earlier': 'По-рано',
-  'whenAte.hint': 'Не по-късно от сега и не преди старта на таймера.',
+  'whenAte.hint': 'Не по-късно от сега и не преди ставането.',
   'whenAte.done': 'Готово',
   'whenAte.onTime': 'Навреме ✓ · +{xp} XP',
   'whenAte.late': '{late} · +{xp} XP',

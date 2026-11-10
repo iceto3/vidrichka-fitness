@@ -1339,7 +1339,7 @@ export default {
   'whenAte.body': 'You logged breakfast after its 30-minute window. When did you eat it?',
   'whenAte.now': 'Now ({time})',
   'whenAte.earlier': 'Earlier',
-  'whenAte.hint': 'Not later than now and not before the timer started.',
+  'whenAte.hint': 'Not later than now and not before you woke up.',
   'whenAte.done': 'Done',
   'whenAte.onTime': 'On time ✓ · +{xp} XP',
   'whenAte.late': '{late} · +{xp} XP',

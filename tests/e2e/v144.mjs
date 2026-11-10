@@ -272,7 +272,7 @@ export async function v144(page, h) {
   assert.match(await prev.innerText(), /\+40 мин · пропуснато/, 'now = 40 min after the window');
   for (const [hm, re] of [
     ['08:30', /още не е дошъл/],
-    ['06:30', /след старта/],
+    ['06:30', /преди ставането/],
   ]) {
     await t24.fill(hm);
     await t24.press('Tab');
@@ -280,6 +280,16 @@ export async function v144(page, h) {
     assert.match(await layer.locator('.whenate .ateerr').innerText(), re, hm);
     assert.ok(await layer.locator('.whenate .wok').isDisabled());
   }
+  // 1.4.4 (time): − stops at the wake-up (07:00) – a meal can't be before it
+  await t24.fill('07:05');
+  await settle();
+  await layer.locator('.whenate .t24b[data-d="-5"]').click();
+  await settle();
+  await layer.locator('.whenate .t24b[data-d="-5"]').click();
+  await settle();
+  assert.equal(await t24.inputValue(), '07:00', 'the picker floor is the wake-up');
+  assert.equal(await layer.locator('.whenate .ateerr').count(), 0);
+  await sheetShot('v144time-picker-floor', false);
   await t24.fill('07:45');
   await settle();
   assert.match(await prev.innerText(), /\+15 мин · \+8 XP/);
@@ -359,5 +369,86 @@ export async function v144(page, h) {
   await shot('v144fix-banner-missed');
   console.log(
     '  ✔ 1.4.4 C3: „Кога яде?“ – Сега / По-рано, limits, live preview, actual time + 15 XP, asked once; result toast after the answer, grey banner when missed',
+  );
+  // ---- 1.4.4 (time): „Час“ in the item editor re-grades today's breakfast (missed 08:30 → 07:20)
+  await go('food');
+  await clickPast(page.locator('.meal[data-m="breakfast"]'), layer.locator('.mealitems'));
+  await layer.locator('.mealitems .itembtn').first().click();
+  const ie = layer.locator('.itemedit');
+  const it24 = ie.locator('.itemtime input.t24i');
+  await it24.waitFor();
+  assert.equal(await it24.inputValue(), '08:30', 'the logged time, editable');
+  assert.match(await ie.innerText(), /Час[\s\S]*важи за цялата закуска/);
+  for (const [hm, re] of [
+    ['09:30', /още не е дошъл/],
+    ['06:50', /преди ставането/],
+  ]) {
+    await it24.fill(hm);
+    await it24.press('Tab');
+    await settle();
+    assert.match(await ie.locator('.timeerr').innerText(), re, hm);
+    assert.ok(await ie.locator('[data-act="save"]').isDisabled(), `Запази off for ${hm}`);
+  }
+  await it24.fill('07:05');
+  await settle();
+  await ie.locator('.t24b[data-d="-5"]').click();
+  await settle();
+  await ie.locator('.t24b[data-d="-5"]').click();
+  await settle();
+  assert.equal(await it24.inputValue(), '07:00', '− stops at the wake-up');
+  for (let i = 0; i < 4; i++) await ie.locator('.t24b[data-d="5"]').click();
+  await settle();
+  assert.equal(await it24.inputValue(), '07:20');
+  assert.equal(await ie.locator('.timeerr').count(), 0);
+  await sheetShot('v144time-editor');
+  await clearCel();
+  await ie.locator('[data-act="save"]').click();
+  await ie.waitFor({ state: 'detached' });
+  await page.locator('#cel .toastc').first().waitFor({ timeout: 4000 });
+  assert.match(await celText(), /Протеинова закуска ✓[\s\S]*перфектно/, 'the result toast after the change');
+  await page.waitForTimeout(900);
+  await shot('v144time-toast', false, true);
+  const bf4 = (await rows('food')).filter((/** @type {any} */ r) => r.date === D4 && r.meal === 'breakfast');
+  assert.deepEqual(
+    bf4.map((/** @type {any} */ r) => r.time),
+    ['07:20'],
+  );
+  const day4 = (await rows('days')).find((/** @type {any} */ r) => r.id === D4);
+  assert.equal(day4.mealTimes.breakfast.actual, T4('07:20'));
+  await page.waitForFunction(
+    (k) =>
+      new Promise((res) => {
+        const r = indexedDB.open('vidrichka-fitness');
+        r.onsuccess = () => {
+          const q = r.result.transaction('kv').objectStore('kv').get('xp');
+          q.onsuccess = () => (r.result.close(), res(q.result?.value?.[k]?.amt === 15));
+        };
+      }),
+    `quest:${D4}:protein`,
+    { timeout: 5000 },
+  );
+  await clearCel();
+  await page.waitForTimeout(2500);
+  await go('home');
+  await page.locator('.pbar.done').waitFor();
+  assert.equal(await page.locator('.pbar.missed').count(), 0, 'green again');
+
+  // a wake-up later than the logged breakfast (07:20) is refused in the sleep editor
+  await page.locator('.sleepcard').scrollIntoViewIfNeeded();
+  await clickPast(page.locator('.sleepcard'), layer.locator('.sleeptimes'));
+  await layer.locator('.swake input.t24i').fill('07:30');
+  await settle();
+  assert.equal(
+    await layer.locator('.sleeperr').innerText(),
+    'Закуската е записана в 07:20 – ставането трябва да е преди това',
+  );
+  assert.ok(await layer.locator('[data-act="done"]').isDisabled(), 'Готово off');
+  await sheetShot('v144time-wake-rejected');
+  await layer.locator('.swake input.t24i').fill('07:15');
+  await settle();
+  assert.equal(await layer.locator('.sleeperr').count(), 0, 'a wake-up before the breakfast is fine');
+  await closeAll();
+  console.log(
+    '  ✔ 1.4.4 time: „Час“ in the item editor (future / before wake refused, − stops at the wake-up), re-graded toast + XP + green banner; wake-up after the breakfast refused; „Кога яде?“ floor',
   );
 }
