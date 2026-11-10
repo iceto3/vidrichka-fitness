@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.4] – 2026-11-10
+
+### Added
+
+- **Favorites (☆):** every food row in the add screen (search results, category sheets) has a star. Starred foods are kept on the device (`kv('foodFav')`, manual only – never from usage). The new first tile **Любими** opens one list with the saved combinations (tap = add the combination to the meal) and the starred foods.
+- **Most used by points:** each time a food is added it gets 1 point (no 30-day window). After 14 days without being added its points halve, then halve again every further 2 weeks; adding it again continues from what is left. Ties go to the most recently added. Old `foodUse` entries (`{n, ts}`) start with their count as points – no migration. Food lists are shown as favorites → faint divider → the 5 most used → faint divider → the rest (`food/usage.js`, pure). The category tiles and Бърз избор follow the same points.
+- **Ръчно добавени храни:** a category tile (shown once there is one) with the user's own foods, newest first, in the same grouped order. ✎ edits a food: name, kcal, protein, carbs, fat, fiber, salt, usual portion and (new) creatine in g / 100 g. Diary rows are copies, so past days keep the values they were logged with; changing the grams of an old row scales it from the row itself when the food was edited since (`logic.matchesFood`). Built-in foods can't be edited or deleted. A new manual food is saved right away (it is in the list even if it is never added to the diary).
+- **Delete foods:** „Изтрий храни“ in that sheet switches to check boxes and „Изтрий (N)“ → a confirmation → Recently deleted with the usual Undo pill (one pill for the batch, kind `customFood`, 7 days). The edit form has a single „Изтрий храната“ too. Undo brings back the foods and their ☆.
+- **Package photo:** „Снимай опаковката отпред“ in the new-food and edit forms (camera or gallery). It is shrunk to ≤ 320 px JPEG (≈20–40 KB) and stored with the food on the device only – never sent (the anonymous food sharing still sends name and per-100 g values only), and it does not use the label-reading limit. Shown as a small thumbnail in food lists; change or remove it in the edit form. Only our own image data URLs are ever rendered.
+- **„Кога яде?“ after a late breakfast:** when the protein breakfast is logged after its 30-minute window (and no time was typed from the pill / banner), a sheet asks once a day: „Сега (HH:MM)“ keeps the logged time; „По-рано“ opens a 24-hour picker (±5 min; not later than now, not before the countdown started) with a live preview – „Навреме ✓ · +15 XP“, „+N мин · +8 XP“ or „+N мин · пропуснато“. „Готово“ stores the actual time in `mealTimes.breakfast.actual` (planned stays), moves that logging's breakfast rows to the time, and Хранене навреме and the graded protein quest XP follow; rewards re-grade the quest entry (no double pay). Closing the sheet = „Сега“. Works for any way the breakfast is logged (search, category, combination, voice).
+- What's new entry for 1.4.4 (bg + en). Unit tests in `tests/unit/v144.test.js` and `tests/unit/v144-whenate.test.js`; e2e flow `tests/e2e/v144.mjs` (also runnable alone with `--flow v144`).
+
 ## [1.4.3] – 2026-11-04
 
 ### Added

@@ -1336,4 +1336,22 @@ export default {
   'manual.cr': 'Creatine (g / 100 g)',
   'manual.errCr': 'Between 0 and 5 g',
   'trash.kind.customFood': 'Food added by hand',
+  // 1.4.4 C3: „Кога яде?“ + What's new
+  'whenAte.body': 'You logged breakfast after its 30-minute window. When did you eat it?',
+  'whenAte.now': 'Now ({time})',
+  'whenAte.earlier': 'Earlier',
+  'whenAte.hint': 'Not later than now and not before the timer started.',
+  'whenAte.done': 'Done',
+  'whenAte.onTime': 'On time ✓ · +{xp} XP',
+  'whenAte.late': '{late} · +{xp} XP',
+  'whenAte.missed': '{late} · missed',
+  'whenAte.saved': 'Saved: {time} · {grade}',
+  'whatsNew.fav144':
+    'Favorites: tap ☆ next to a food. Favorites and regular meals are together in the “Favorites” tile.',
+  'whatsNew.most144': 'Your most used foods come first – after your favorites, with a thin line between the groups.',
+  'whatsNew.custom144':
+    '“Foods you added”: change the values (and creatine), delete one or several at once. Past days stay as they were.',
+  'whatsNew.photo144': 'Snap the front of the package – a small photo next to the food, kept on your phone only.',
+  'whatsNew.whenAte144':
+    'Logged breakfast later? “When did you eat?” asks when it was – so Meals on time and XP are right.',
 };

@@ -14,7 +14,7 @@
  * @module features/daily/mealtime
  */
 import { addDays, dayKey, parseDay } from '../../core/dates.js';
-import { MIN, PROTEIN_WINDOW, proteinBar } from './logic.js';
+import { MIN, PROTEIN_WINDOW, proteinBar, proteinQuest } from './logic.js';
 
 /** The meal the countdown belongs to. */
 export const TIMED_MEAL = 'breakfast';
@@ -173,3 +173,37 @@ export function timingSummary(days) {
     avgDelay: late.length ? Math.round(late.reduce((a, x) => a + x.delayMin, 0) / late.length) : null,
   };
 }
+
+/** 1.4.4: „Кога яде?“ is offered right after the late meal is logged, not hours later. */
+export const ASK_WITHIN = 10 * MIN;
+
+/**
+ * 1.4.4 „Кога яде?“: ask when the timed meal was just recorded late at the moment it was
+ * logged (not with a time typed from the pill / banner), once per day. „Сега“ keeps it.
+ * @param {any} rec Today's record. @param {number} now
+ */
+export function askWhenAte(rec, now) {
+  const mt = rec?.mealTimes?.[TIMED_MEAL];
+  if (!rec?.proteinAt || !mt || mt.asked || !(mt.planned > 0) || !(mt.actual > 0)) return false;
+  if (now - rec.proteinAt > ASK_WITHIN || now < rec.proteinAt - MIN) return false;
+  if (mt.actual < rec.proteinAt - MIN) return false; // a time was typed already
+  return classify(mt.planned, mt.actual).status === 'late';
+}
+
+/**
+ * 1.4.4: the day record with another actual time for the timed meal (pure). The quest, the
+ * Хранене навреме chart and the XP all read `mealTimes.breakfast.actual`.
+ * @param {any} rec @param {number} at @param {boolean} [asked]
+ */
+export const withActual = (rec, at, asked = true) => ({
+  ...rec,
+  mealTimes: { ...rec?.mealTimes, [TIMED_MEAL]: { ...rec?.mealTimes?.[TIMED_MEAL], actual: at, asked } },
+});
+
+/**
+ * 1.4.4: the live preview under the picker – what that time would give (the protein quest's
+ * grading: on time 15 XP, up to PROTEIN_LATE_MAX min late 8 XP, later 0).
+ * @param {any} rec @param {number} at
+ * @returns {{state: 'done'|'late'|'missed'|'open', delayMin: number, xp: number}}
+ */
+export const previewAt = (rec, at) => proteinQuest(withActual(rec, at), at);

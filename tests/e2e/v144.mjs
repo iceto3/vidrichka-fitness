@@ -236,4 +236,83 @@ export async function v144(page, h) {
   assert.ok(!(await rows('foods')).some((/** @type {any} */ f) => f.id === 'custom_e2e_1'));
   await closeAll();
   console.log('  ✔ 1.4.4 C2: custom foods – photo thumbnail, edit, multi-delete + confirm + Undo, single delete');
+
+  // ---- C3: „Кога яде?“ after a late protein breakfast (window 07:00–07:30, logged 08:10)
+  const D3 = '2026-11-17';
+  const T = (/** @type {string} */ hm) => new Date(`${D3}T${hm}:00+02:00`).getTime();
+  await page.clock.setSystemTime(new Date(T('08:10')));
+  const st3 = (await kvGet('settings')) ?? {};
+  await idb('kv', [{ id: 'settings', value: { ...st3, daily: { ...st3.daily, protein: true } } }]);
+  await idb('days', [{ id: D3, wake: T('07:00'), ack: T('07:00'), proteinStart: T('07:00') }]);
+  await reopen();
+  await go('food/add/breakfast');
+  await clickPast(page.locator('.cats .cat[data-act="cat"]').first(), layer.locator('.flist'));
+  await layer.locator('.flist [data-act="pick"]').first().click();
+  await layer.locator('#grams').waitFor();
+  await layer.locator('[data-act="done"]').click();
+  const when = layer.locator('.whenate');
+  await when.waitFor({ timeout: 6000 });
+  assert.match(await when.innerText(), /Кога яде\?/);
+  assert.match(await when.locator('.wnow').innerText(), /Сега \(08:10\)/);
+  assert.match(await when.locator('.wearlier').innerText(), /По-рано/);
+  await clearCel();
+  await sheetShot('v144-whenate-ask', false);
+  await when.locator('.wearlier').click();
+  const t24 = layer.locator('.whenate .t24i');
+  await t24.waitFor();
+  const prev = layer.locator('.whenate .wprev');
+  assert.match(await prev.innerText(), /\+40 мин · пропуснато/, 'now = 40 min after the window');
+  for (const [hm, re] of [
+    ['08:30', /още не е дошъл/],
+    ['06:30', /след старта/],
+  ]) {
+    await t24.fill(hm);
+    await t24.press('Tab');
+    await settle();
+    assert.match(await layer.locator('.whenate .ateerr').innerText(), re, hm);
+    assert.ok(await layer.locator('.whenate .wok').isDisabled());
+  }
+  await t24.fill('07:45');
+  await settle();
+  assert.match(await prev.innerText(), /\+15 мин · \+8 XP/);
+  await t24.fill('07:25');
+  await settle();
+  assert.match(await prev.innerText(), /Навреме ✓ · \+15 XP/);
+  await sheetShot('v144-whenate-pick', false);
+  await layer.locator('.whenate .wok').click();
+  await when.waitFor({ state: 'detached' });
+  assert.match(await page.locator('.toast').last().innerText(), /07:25 · Навреме/);
+  await page.waitForTimeout(400);
+  const day3 = (await rows('days')).find((/** @type {any} */ r) => r.id === D3);
+  assert.equal(day3.mealTimes.breakfast.actual, T('07:25'));
+  assert.equal(day3.mealTimes.breakfast.planned, T('07:30'));
+  assert.equal(day3.mealTimes.breakfast.asked, true);
+  const bf = (await rows('food')).filter((/** @type {any} */ r) => r.date === D3 && r.meal === 'breakfast');
+  assert.deepEqual(
+    bf.map((/** @type {any} */ r) => r.time),
+    ['07:25'],
+    'the row shows when she ate',
+  );
+  await page.waitForFunction(
+    (k) =>
+      new Promise((res) => {
+        const r = indexedDB.open('vidrichka-fitness');
+        r.onsuccess = () => {
+          const q = r.result.transaction('kv').objectStore('kv').get('xp');
+          q.onsuccess = () => (r.result.close(), res(q.result?.value?.[k]?.amt === 15));
+        };
+      }),
+    `quest:${D3}:protein`,
+    { timeout: 5000 },
+  );
+  // a second breakfast item: not asked again
+  await clickPast(page.locator('.cats .cat[data-act="cat"]').nth(1), layer.locator('.flist'));
+  await layer.locator('.flist [data-act="pick"]').first().click();
+  await layer.locator('#grams').waitFor();
+  await layer.locator('[data-act="done"]').click();
+  await page.waitForTimeout(1500);
+  assert.equal(await layer.locator('.whenate').count(), 0, 'asked only once per meal per day');
+  await closeAll();
+  // Progress › Хранене навреме shows the day on time
+  console.log('  ✔ 1.4.4 C3: „Кога яде?“ – Сега / По-рано, limits, live preview, actual time + 15 XP, asked once');
 }

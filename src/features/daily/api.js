@@ -10,7 +10,7 @@ import { addDays, dayKey, hhmm, parseDay } from '../../core/dates.js';
 import { dailySettings } from '../../core/settings.js';
 import { award, setAward } from '../motivation/api.js';
 import { eveningKey, fillBedtime, isEvening, isMorning, nights, proteinOnTime, sleepStreak } from './logic.js';
-import { TIMED_MEAL, actualAt, plannedAt } from './mealtime.js';
+import { TIMED_MEAL, actualAt, askWhenAte, checkAteAt, plannedAt, withActual } from './mealtime.js';
 
 export {
   BREAKFAST_LOGGER,
@@ -147,6 +147,41 @@ export function proteinLogged(row, now = Date.now()) {
   if (!proteinYes(now)) return false;
   if (u) patchDay(id, { proteinUndo: null });
   ateTimeOnRow(row);
+  // 1.4.4: logged after the window without a typed time → „Кога яде?“ (once a day)
+  if (askWhenAte(day(id), now)) emit('meal:whenAte', { meal: TIMED_MEAL });
+  return true;
+}
+
+/**
+ * 1.4.4 „Кога яде?“ answered. `at` = when she ate (checked: not in the future, not before
+ * the countdown started); null = „Сега“, the logged time stays. Either way it is not asked
+ * again today. The meal's actual time drives Хранене навреме and the graded quest XP
+ * (rewards re-grades it – no double pay); the breakfast rows of that logging get the time.
+ * @param {number|null} at @param {number} [now] @returns {boolean} true if the time changed.
+ */
+export function setMealActual(at, now = Date.now()) {
+  const id = dayKey(now),
+    rec = get('days', id),
+    mt = rec?.mealTimes?.[TIMED_MEAL];
+  if (!rec?.proteinAt || !mt) return false;
+  if (at == null) {
+    patchDay(id, withActual(rec, mt.actual));
+    return false;
+  }
+  const ok = checkAteAt(rec, hhmm(new Date(at)), now);
+  if (!ok.ok || Math.abs(ok.at - at) >= 60_000) return false;
+  patchDay(id, withActual(rec, at));
+  for (const r of all('food'))
+    if (
+      r.date === id &&
+      r.meal === TIMED_MEAL &&
+      r.type !== 'water' &&
+      r.ts >= rec.proteinAt - 60_000 &&
+      r.ts - rec.proteinAt < 60 * 60_000 &&
+      r.ts > at
+    )
+      put('food', { ...r, ts: at, time: hhmm(new Date(at)) });
+  emit('daily:changed');
   return true;
 }
 
