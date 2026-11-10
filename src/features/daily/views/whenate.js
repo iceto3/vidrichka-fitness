@@ -8,11 +8,11 @@
  */
 import { html } from '../../../ui/dom.js';
 import { t } from '../../../core/i18n.js';
-import { hhmm, hmComplete, parseHM, stepHM } from '../../../core/dates.js';
+import { dayKey, hhmm, hmComplete, parseHM, stepHM } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { time24 } from '../../../ui/components.js';
 import { closeSheet, openSheet, refreshSheet } from '../../../ui/sheet.js';
-import { day, setMealActual } from '../api.js';
+import { day, foodTimeFloor, setMealActual } from '../api.js';
 import { TIMED_MEAL, askWhenAte, checkAteAt, previewAt } from '../mealtime.js';
 import { lateText } from './mealsheet.js';
 
@@ -95,6 +95,10 @@ ${
       },
       hmstep: (el) => {
         st.hm = stepHM(st.hm, Number(el.dataset.d));
+        // 1.4.4 (time): − stops at the wake-up (a meal can't be before it)
+        const floor = foodTimeFloor(dayKey()),
+          c = checkAteAt(day(), st.hm, Date.now());
+        if (floor && 'err' in c && c.err === 'early') st.hm = floor;
         st.typed = undefined;
         refreshSheet();
         return false;
