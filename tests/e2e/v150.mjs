@@ -37,6 +37,20 @@ export async function v150(page, h) {
     await closeAll();
     await clearCel();
   };
+  /** A page-level tap past any prompt / sheet a timer may have opened. @param {any} l */
+  const tap = async (l) => {
+    for (let k = 0; k < 4; k++) {
+      await closeAll();
+      if (
+        await l.click({ timeout: 3000 }).then(
+          () => true,
+          () => false,
+        )
+      )
+        return;
+    }
+    throw new Error('could not tap past the prompts');
+  };
   const box = async (/** @type {any} */ l) =>
     /** @type {{x: number, y: number, width: number, height: number}} */ (await l.boundingBox());
   await page.setViewportSize({ width: 360, height: 780 });
@@ -74,6 +88,7 @@ export async function v150(page, h) {
     return (await rows('days')).find((/** @type {any} */ r) => r.id === '2026-11-20')?.steps ?? 0;
   };
   // drag the thumb to about 40 % of the track → a multiple of 500
+  await closeAll();
   const sb = await box(slider);
   await page.mouse.move(sb.x + 14, sb.y + sb.height / 2);
   await page.mouse.down();
@@ -86,10 +101,10 @@ export async function v150(page, h) {
     await sc.locator('.stepsn').innerText(),
     new RegExp(String(dragged).replace(/(\d)(\d{3})$/, '$1\\s?$2')),
   );
-  await sc.locator('[data-n="50"]').click();
+  await tap(sc.locator('[data-n="50"]'));
   await settle();
   assert.equal(await day(), dragged + 50);
-  await sc.locator('[data-n="-100"]').click();
+  await tap(sc.locator('[data-n="-100"]'));
   await settle();
   assert.equal(await day(), dragged - 50);
   await slider.fill('0');
@@ -137,9 +152,9 @@ export async function v150(page, h) {
   const ck = page.locator('.mealclock .t24i');
   await ck.waitFor();
   assert.equal(await ck.inputValue(), '13:00', 'default: now');
-  await page.locator('.mealclock .t24b[data-d="-5"]').click();
+  await tap(page.locator('.mealclock .t24b[data-d="-5"]'));
   await settle();
-  await page.locator('.mealclock .t24b[data-d="-5"]').click();
+  await tap(page.locator('.mealclock .t24b[data-d="-5"]'));
   await settle();
   assert.equal(await ck.inputValue(), '12:50');
   await page.evaluate(() => scrollTo(0, 0));
@@ -173,7 +188,7 @@ export async function v150(page, h) {
       .filter((/** @type {any} */ r) => r.date === D && r.meal === 'lunch')
       .map((/** @type {any} */ r) => r.time);
   assert.deepEqual(await lunch(), ['12:30', '12:30'], 'both at the clock time');
-  await page.locator('[data-act="finish"]').first().click();
+  await tap(page.locator('[data-act="finish"]').first());
   await settle();
   await closeAll();
   // 2a: the item editor's „Час“ on one entry moves the whole meal
@@ -216,7 +231,7 @@ export async function v150(page, h) {
   await settle();
   assert.match(await page.locator('.topbar').innerText(), /Междинно сутрешно/, 'the name follows the clock');
   await addOne(2);
-  await page.locator('[data-act="finish"]').first().click();
+  await tap(page.locator('[data-act="finish"]').first());
   await settle();
   await closeAll();
   const extra = (await rows('food')).filter((/** @type {any} */ r) => r.date === D && /^x_/.test(r.meal));
