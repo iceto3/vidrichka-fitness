@@ -63,7 +63,8 @@ test('B1: time-of-day pick only from the meals that are on', () => {
   assert.equal(mealFor(at(10, 30), five), 'snack_am');
   assert.equal(mealFor(at(11, 30), five), 'snack_am');
   assert.equal(mealFor(at(12), five), 'lunch');
-  assert.equal(mealFor(at(8), ['lunch', 'dinner']), 'dinner', 'before lunch with no breakfast: last meal');
+  // 1.5.0 1b: before lunch with no breakfast → the next meal (was the last one)
+  assert.equal(mealFor(at(8), ['lunch', 'dinner']), 'lunch', 'before lunch with no breakfast: next meal');
   assert.equal(mealFor(at(16), ['breakfast', 'lunch', 'dinner']), 'lunch', 'snack off');
   assert.equal(mealFor(at(19)), 'dinner', 'default list');
 });

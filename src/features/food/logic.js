@@ -58,17 +58,22 @@ const startHour = (m, enabled) =>
 /**
  * Meal that fits a time of day, chosen only from the enabled meals (1.4.3 part B). In the
  * small hours (before 04:00) it is the afternoon snack as before, else the last enabled meal.
+ * 1.5.0: from 04:00 on, before the first enabled meal has started (e.g. breakfast off, 09:00)
+ * it is the next meal of the day (lunch), never the afternoon snack.
  * @param {Date} [d] @param {string[]} [enabled] Enabled meal ids (default: the four classic meals).
  */
 export function mealFor(d = new Date(), enabled = DEFAULT_MEALS) {
   const list = MEALS.map(([m]) => m).filter((m) => enabled.includes(m));
   if (!list.length) return 'snack';
   const h = d.getHours();
-  return (
-    [...list].reverse().find((m) => h >= startHour(m, list)) ??
-    (list.includes('snack') ? 'snack' : list[list.length - 1])
-  );
+  const started = [...list].reverse().find((m) => h >= startHour(m, list));
+  if (started) return started;
+  if (h >= MORNING_HOUR) return list[0];
+  return list.includes('snack') ? 'snack' : list[list.length - 1];
 }
+
+/** 1.5.0: the day's meals start at 04:00 (earlier = the night before, see {@link mealFor}). */
+const MORNING_HOUR = 4;
 
 /**
  * 1.4.3 (fixes): the add page of a meal switched off in Profile (an old link, history back,
