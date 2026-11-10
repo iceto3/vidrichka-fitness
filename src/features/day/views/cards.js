@@ -75,7 +75,7 @@ export function stepsCard(date) {
 <div class="right"><span class="xb num big19 stepsn">${fmtNum(n)}</span><span class="muted xs b num"> / ${fmtNum(goal)}</span></div></div>
 <div class="stepsbar mt10">${bar(n / goal, done ? 'var(--ok, #1FB46B)' : 'var(--accent)')}</div>
 <div class="row gap8 mt10 wrap"><button class="chip" data-act="stepsAdd" data-n="1000">+${fmtNum(1000)}</button><button class="chip" data-act="stepsAdd" data-n="2000">+${fmtNum(2000)}</button>
-<span class="f1"></span><button class="btn sm sec" data-act="stepsShot" aria-label="${t('shot.stepsAria')}">📷 ${t('shot.btn')}</button><button class="btn sm sec" data-act="stepsSheet">${ic('edit', 15, 2.4)}${t('steps.enter')}</button></div></section>`;
+<span class="f1"></span><button class="btn sm sec nowrap" data-act="stepsShot" aria-label="${t('shot.stepsAria')}">📷 ${t('shot.btn')}</button><button class="btn sm sec nowrap stepsenter" data-act="stepsSheet">${ic('edit', 15, 2.4)}${t('steps.enter')}</button></div></section>`;
 }
 
 /** Steps entry sheet: add some or set the day's total (1.4.0: each button explained). @param {string} date */

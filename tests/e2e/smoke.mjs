@@ -25,6 +25,7 @@ import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { chromium, webkit, devices } from 'playwright-core';
 import { v144 } from './v144.mjs';
+import { v150 } from './v150.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
@@ -201,6 +202,11 @@ async function run(name, browser, P) {
     clickPast: (/** @type {any} */ target, /** @type {any} */ opened) =>
       clickPastPrompts(page, layer, settle, target, opened),
   };
+  if (FLOW === 'v150') {
+    await v150(page, h);
+    assert.deepEqual(errors, [], 'no page errors');
+    return void (await ctx.close());
+  }
   if (FLOW === 'v144') {
     await v144(page, h);
     assert.deepEqual(errors, [], 'no page errors');
@@ -374,6 +380,7 @@ async function run(name, browser, P) {
   await v143a(page, h);
   await v143b(page, h);
   await v144(page, h);
+  await v150(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
