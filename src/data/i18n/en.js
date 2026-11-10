@@ -1345,7 +1345,6 @@ export default {
   'whenAte.onTime': 'On time ✓ · +{xp} XP',
   'whenAte.late': '{late} · +{xp} XP',
   'whenAte.missed': '{late} · missed',
-  'whenAte.saved': 'Saved: {time} · {grade}',
   'whatsNew.fav144':
     'Favorites: tap ☆ next to a food. Favorites and regular meals are together in the “Favorites” tile.',
   'whatsNew.most144': 'Your most used foods come first – after your favorites, with a thin line between the groups.',
@@ -1354,4 +1353,10 @@ export default {
   'whatsNew.photo144': 'Snap the front of the package – a small photo next to the food, kept on your phone only.',
   'whatsNew.whenAte144':
     'Logged breakfast later? “When did you eat?” asks when it was – so Meals on time and XP are right.',
+  // 1.4.4 fixes: the protein-breakfast result by its final grade
+  'cel.proteinLateN': '{late} after the window · +{xp} XP',
+  'cel.proteinMissed': 'Breakfast logged',
+  'cel.proteinMissedSub': 'After the window this time – tomorrow you’ll make it!',
+  'home.proteinMissed': 'Protein breakfast logged · window missed',
+  'morning.missed': 'Eaten at {time} · after the window',
 };

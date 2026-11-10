@@ -12,7 +12,7 @@ import { emit } from '../../../core/bus.js';
 import { clock } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { rig } from '../../mascot/api.js';
-import { PROTEIN_WINDOW, MIN } from '../logic.js';
+import { PROTEIN_WINDOW, MIN, proteinQuest } from '../logic.js';
 import { closeNotifications } from '../notify.js';
 import { BREAKFAST_LOGGER, day, isMorning, lastNight, proteinState, sleepHours, wakeUp } from '../api.js';
 
@@ -32,9 +32,15 @@ function proteinCard() {
   const rec = day(),
     ps = proteinState(rec, Date.now());
   if (!dailySettings().protein) return '';
-  if (ps.state === 'done')
+  if (ps.state === 'done') {
+    // 1.4.4 (fixes): the time she ate (not when it was logged); grey once the window is missed
+    const ate = Number(rec.mealTimes?.breakfast?.actual) || rec.proteinAt;
+    if (proteinQuest(rec, Date.now()).state === 'missed')
+      return html`<div class="pcard done missed"><span class="sq">${ic('clock', 22, 2.6)}</span><div class="f1"><div class="b">${t('home.proteinMissed')}</div>
+<div class="muted xs b">${t('morning.missed', { time: hm(ate) })}</div></div></div>`;
     return html`<div class="pcard done"><span class="sq green">${ic('check', 22, 3)}</span><div class="f1"><div class="b">${t('morning.proteinDone')}</div>
-<div class="muted xs b">${ps.onTime ? t('morning.onTime', { time: hm(rec.proteinAt) }) : t('morning.late', { time: hm(rec.proteinAt) })}</div></div></div>`;
+<div class="muted xs b">${ps.onTime ? t('morning.onTime', { time: hm(ate) }) : t('morning.late', { time: hm(ate) })}</div></div></div>`;
+  }
   if (ps.state === 'skipped')
     return html`<div class="pcard done"><span class="sq">${ic('skip', 22, 2.6)}</span><div class="f1 b">${t('home.proteinSkipped')}</div></div>`;
   if (ps.state === 'idle') return '';

@@ -241,6 +241,9 @@ export async function v144(page, h) {
   console.log('  ✔ 1.4.4 C2: custom foods – photo thumbnail, edit, multi-delete + confirm + Undo, single delete');
 
   // ---- C3: „Кога яде?“ after a late protein breakfast (window 07:00–07:30, logged 08:10)
+  /** The celebration layer's text ('' when none was ever shown). */
+  const celText = () =>
+    page.evaluate(() => /** @type {HTMLElement|null} */ (document.getElementById('cel'))?.innerText ?? '');
   const D3 = '2026-11-17';
   const T = (/** @type {string} */ hm) => new Date(`${D3}T${hm}:00+02:00`).getTime();
   await page.clock.setSystemTime(new Date(T('08:10')));
@@ -258,6 +261,8 @@ export async function v144(page, h) {
   assert.match(await when.innerText(), /Кога яде\?/);
   assert.match(await when.locator('.wnow').innerText(), /Сега \(08:10\)/);
   assert.match(await when.locator('.wearlier').innerText(), /По-рано/);
+  // 1.4.4 fixes: no protein result before the answer (it depends on the time she picks)
+  assert.doesNotMatch(await celText(), /Протеинова закуска|пак се брои/);
   await clearCel();
   await sheetShot('v144-whenate-ask', false);
   await when.locator('.wearlier').click();
@@ -284,7 +289,10 @@ export async function v144(page, h) {
   await sheetShot('v144-whenate-pick', false);
   await layer.locator('.whenate .wok').click();
   await when.waitFor({ state: 'detached' });
-  assert.match(await page.locator('.toast').last().innerText(), /07:25 · Навреме/);
+  await page.locator('#cel .toastc').first().waitFor({ timeout: 4000 });
+  assert.match(await celText(), /Протеинова закуска ✓[\s\S]*перфектно/);
+  await page.waitForTimeout(900); // the toast's entry animation
+  await shot('v144fix-toast-ontime', false, true);
   await page.waitForTimeout(400);
   const day3 = (await rows('days')).find((/** @type {any} */ r) => r.id === D3);
   assert.equal(day3.mealTimes.breakfast.actual, T('07:25'));
@@ -316,6 +324,40 @@ export async function v144(page, h) {
   await page.waitForTimeout(1500);
   assert.equal(await layer.locator('.whenate').count(), 0, 'asked only once per meal per day');
   await closeAll();
-  // Progress › Хранене навреме shows the day on time
-  console.log('  ✔ 1.4.4 C3: „Кога яде?“ – Сега / По-рано, limits, live preview, actual time + 15 XP, asked once');
+
+  // 1.4.4 fixes: „Сега“ an hour after the window → missed: a gentle toast, the grey banner
+  const D4 = '2026-11-18';
+  const T4 = (/** @type {string} */ hm) => new Date(`${D4}T${hm}:00+02:00`).getTime();
+  await page.clock.setSystemTime(new Date(T4('08:30')));
+  await idb('days', [{ id: D4, wake: T4('07:00'), ack: T4('07:00'), proteinStart: T4('07:00') }]);
+  await reopen();
+  await go('food/add/breakfast');
+  await clickPast(page.locator('.cats .cat[data-act="cat"]').first(), layer.locator('.flist'));
+  await layer.locator('.flist [data-act="pick"]').first().click();
+  await layer.locator('#grams').waitFor();
+  await layer.locator('[data-act="done"]').click();
+  await when.waitFor({ timeout: 6000 });
+  assert.doesNotMatch(await celText(), /Протеинова закуска|пак се брои/);
+  await clearCel();
+  await when.locator('.wnow').click();
+  await when.waitFor({ state: 'detached' });
+  await page.locator('#cel .toastc').first().waitFor({ timeout: 4000 });
+  const celTxt = await celText();
+  assert.match(celTxt, /Закуската е записана[\s\S]*утре пак/);
+  assert.doesNotMatch(celTxt, /✓|пак се брои/);
+  await page.waitForTimeout(900); // the toast's entry animation
+  await shot('v144fix-toast-missed', false, true);
+  await clearCel();
+  await page.waitForTimeout(2500);
+  await go('home');
+  const missed = page.locator('.pbar.missed');
+  await missed.waitFor();
+  assert.match(await missed.innerText(), /Протеиновата закуска е записана · пропуснат прозорец/);
+  assert.equal(await page.locator('.pbar.done').count(), 0, 'no green „готова“ for a missed window');
+  await missed.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shot('v144fix-banner-missed');
+  console.log(
+    '  ✔ 1.4.4 C3: „Кога яде?“ – Сега / По-рано, limits, live preview, actual time + 15 XP, asked once; result toast after the answer, grey banner when missed',
+  );
 }

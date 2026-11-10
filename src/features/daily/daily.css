@@ -428,7 +428,8 @@
   background: var(--ok-soft);
   color: var(--ok-t);
 }
-.pbar.skipped {
+.pbar.skipped,
+.pbar.missed {
   background: var(--soft);
   color: var(--muted);
 }

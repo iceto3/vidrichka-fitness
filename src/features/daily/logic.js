@@ -169,16 +169,19 @@ export const mmss = (ms) => {
 /**
  * The Home protein bar: running (ticking), overdue (dark red, 00:00 until she answers —
  * survives reloads because it is computed from the stored start), then a short
- * done/skipped state; null when there is nothing to show.
+ * done/skipped state; null when there is nothing to show. 1.4.4 (fixes): a meal recorded
+ * too late for the quest („пропуснато“, 0 XP) is `missed` (grey), never the green „готова“.
  * @param {any} rec Today's record. @param {number} now
- * @returns {{mode: 'running'|'overdue'|'done'|'skipped', time: string, late?: {h: number, m: number}} | null}
+ * @returns {{mode: 'running'|'overdue'|'done'|'missed'|'skipped', time: string, late?: {h: number, m: number}} | null}
  */
 export function proteinBar(rec, now) {
   const ps = proteinState(rec, now);
   if (ps.state === 'idle') return null;
   if (ps.state === 'done' || ps.state === 'skipped') {
     const at = ps.state === 'done' ? rec.proteinAt : rec.proteinSkip;
-    return now - at < PROTEIN_ANSWERED_SHOW && now >= at ? { mode: ps.state, time: '' } : null;
+    if (!(now - at < PROTEIN_ANSWERED_SHOW && now >= at)) return null;
+    const missed = ps.state === 'done' && proteinQuest(rec, now).state === 'missed';
+    return { mode: missed ? 'missed' : ps.state, time: '' };
   }
   if (ps.state === 'overdue') return { mode: ps.state, time: '', late: lateParts(ps.over ?? 0) };
   return { mode: ps.state, time: mmss(ps.left) };

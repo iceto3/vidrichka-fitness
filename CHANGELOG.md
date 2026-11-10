@@ -16,6 +16,11 @@ All notable changes to this project are documented here. The format follows
 - **„Кога яде?“ after a late breakfast:** when the protein breakfast is logged after its 30-minute window (and no time was typed from the pill / banner), a sheet asks once a day: „Сега (HH:MM)“ keeps the logged time; „По-рано“ opens a 24-hour picker (±5 min; not later than now, not before the countdown started) with a live preview – „Навреме ✓ · +15 XP“, „+N мин · +8 XP“ or „+N мин · пропуснато“. „Готово“ stores the actual time in `mealTimes.breakfast.actual` (planned stays), moves that logging's breakfast rows to the time, and Хранене навреме and the graded protein quest XP follow; rewards re-grade the quest entry (no double pay). Closing the sheet = „Сега“. Works for any way the breakfast is logged (search, category, combination, voice).
 - What's new entry for 1.4.4 (bg + en). Unit tests in `tests/unit/v144.test.js` and `tests/unit/v144-whenate.test.js`; e2e flow `tests/e2e/v144.mjs` (also runnable alone with `--flow v144`).
 
+### Fixed (beta tester)
+
+- **The protein-breakfast toast waits for „Кога яде?“** and shows the final grade: on time „Протеинова закуска ✓ · До 30 минути – перфектно начало!“, late „Протеинова закуска ✓ · +N мин след прозореца · +8 XP“, missed (no ✓) „Закуската е записана · Този път след прозореца – утре пак ще успееш!“. Without the question (on time, a time typed from the pill, a breakfast saved before the wake-up) it comes at once, by the same grade – so a meal far past the window never says „пак се брои“. The `protein:done` event (push: stops the server reminders) is still sent when the breakfast is saved; the toast listens to the new `protein:graded`.
+- **No green „готова“ banner for a missed window:** Home shows a grey „Протеиновата закуска е записана · пропуснат прозорец“ (`proteinBar` mode `missed`); late within the limit (8 XP) stays green. The morning screen's card does the same and shows the time she ate (not when it was logged).
+
 ## [1.4.3] – 2026-11-04
 
 ### Added

@@ -19,6 +19,12 @@ import { exName } from '../library/api.js';
 import { stats, XP } from '../motivation/api.js';
 import { activeWorkout } from '../workouts/api.js';
 
+/** „+41 мин“ / „+1 ч 05 мин“ (the same words as the pill). @param {number} min */
+const lateMin = (min) =>
+  min >= 60
+    ? t('late.hm', { h: Math.floor(min / 60), mm: String(min % 60).padStart(2, '0') })
+    : t('late.m', { m: min });
+
 /** Done / total sets of a workout, or null. @param {any} w @returns {{done: number, total: number}|null} */
 export const setCount = (w) => {
   const sets = w?.items?.flatMap((/** @type {any} */ it) => it.sets) ?? [];
@@ -91,13 +97,21 @@ export function startCelebrations() {
       },
     });
   });
-  on('protein:done', (/** @type {{onTime: boolean}} */ e) =>
-    celebrate({
-      size: 'small',
-      icon: 'egg',
-      title: t('cel.protein'),
-      sub: e.onTime ? t('cel.proteinOnTime') : t('cel.proteinLate'),
-    }),
+  // 1.4.4 (fixes): by the final grade, once the meal time is known (see daily/api proteinGraded)
+  on('protein:graded', (/** @type {{state: string, delayMin: number, xp: number}} */ e) =>
+    celebrate(
+      e.state === 'missed'
+        ? { size: 'small', icon: 'egg', title: t('cel.proteinMissed'), sub: t('cel.proteinMissedSub') }
+        : {
+            size: 'small',
+            icon: 'egg',
+            title: t('cel.protein'),
+            sub:
+              e.state === 'late'
+                ? t('cel.proteinLateN', { late: lateMin(e.delayMin), xp: e.xp })
+                : t('cel.proteinOnTime'),
+          },
+    ),
   );
   // 1.3.4: the daily step goal (once a day; the XP comes from the steps quest).
   on(

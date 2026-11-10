@@ -1384,7 +1384,6 @@ export default {
   'whenAte.onTime': 'Навреме ✓ · +{xp} XP',
   'whenAte.late': '{late} · +{xp} XP',
   'whenAte.missed': '{late} · пропуснато',
-  'whenAte.saved': 'Записано: {time} · {grade}',
   'whatsNew.fav144': 'Любими: докосни ☆ до храна. Любимите и редовните хранения са заедно в плочката „Любими“.',
   'whatsNew.most144': 'Най-използваните храни излизат най-отгоре – след любимите, с тънка линия между групите.',
   'whatsNew.custom144':
@@ -1392,4 +1391,10 @@ export default {
   'whatsNew.photo144': 'Снимай опаковката отпред – малка снимка до храната, само на телефона ти.',
   'whatsNew.whenAte144':
     'Записа закуската по-късно? „Кога яде?“ пита кога е било – така Хранене навреме и XP са точни.',
+  // 1.4.4 fixes: the protein-breakfast result by its final grade
+  'cel.proteinLateN': '{late} след прозореца · +{xp} XP',
+  'cel.proteinMissed': 'Закуската е записана',
+  'cel.proteinMissedSub': 'Този път след прозореца – утре пак ще успееш!',
+  'home.proteinMissed': 'Протеиновата закуска е записана · пропуснат прозорец',
+  'morning.missed': 'Хапна в {time} · след прозореца',
 };

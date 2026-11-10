@@ -44,8 +44,15 @@ const barNow = () => (dailySettings().protein ? withLate(proteinBar(day(), Date.
 function proteinBarCard() {
   const b = barNow();
   if (!b) return '';
-  if (b.mode === 'done' || b.mode === 'skipped')
-    return html`<div class="card mt12 pbar small ${b.mode}" role="status"><span class="sq">${ic(b.mode === 'done' ? 'check' : 'skip', 18, 2.6)}</span><span class="b small">${t(b.mode === 'done' ? 'morning.proteinDone' : 'home.proteinSkipped')}</span></div>`;
+  // 1.4.4 (fixes): a breakfast recorded after the quest's limit is grey „… · пропуснат прозорец“
+  const ANSWERED = /** @type {Record<string, [string, string]>} */ ({
+    done: ['check', 'morning.proteinDone'],
+    missed: ['clock', 'home.proteinMissed'],
+    skipped: ['skip', 'home.proteinSkipped'],
+  });
+  const a = ANSWERED[b.mode];
+  if (a)
+    return html`<div class="card mt12 pbar small ${b.mode}" role="status"><span class="sq">${ic(a[0], 18, 2.6)}</span><span class="b small">${t(a[1])}</span></div>`;
   const [pre, post] = t(b.mode === 'running' ? 'home.proteinLeft' : 'home.proteinOver', { time: '\u0000' }).split(
     '\u0000',
   );

@@ -9,7 +9,16 @@ import { emit } from '../../core/bus.js';
 import { addDays, dayKey, hhmm, parseDay } from '../../core/dates.js';
 import { dailySettings } from '../../core/settings.js';
 import { award, setAward } from '../motivation/api.js';
-import { eveningKey, fillBedtime, isEvening, isMorning, nights, proteinOnTime, sleepStreak } from './logic.js';
+import {
+  eveningKey,
+  fillBedtime,
+  isEvening,
+  isMorning,
+  nights,
+  proteinOnTime,
+  proteinQuest,
+  sleepStreak,
+} from './logic.js';
 import { TIMED_MEAL, actualAt, askWhenAte, checkAteAt, plannedAt, withActual } from './mealtime.js';
 
 export {
@@ -113,9 +122,21 @@ export function proteinYes(now = Date.now()) {
     mealTimes,
     proteinAteAt: null,
   });
-  emit('protein:done', { onTime: proteinOnTime(next) });
+  emit('protein:done', { onTime: proteinOnTime(next) }); // push: stops the reminders on the server
   emit('daily:changed');
   return true;
+}
+
+/**
+ * 1.4.4 (fixes): the protein-breakfast result for the celebration toast, by its final grade
+ * (`proteinQuest`: on time 15 XP, late 8 XP, missed 0). Emitted once the time is known – at
+ * once for a meal on time or with a typed time, after the „Кога яде?“ answer otherwise – so
+ * the toast never says „пак се брои“ for a meal that ends up missed. @param {number} [now]
+ */
+export function proteinGraded(now = Date.now()) {
+  const rec = get('days', dayKey(now));
+  if (!rec?.proteinAt) return;
+  emit('protein:graded', proteinQuest(rec, now));
 }
 
 /**
@@ -151,6 +172,7 @@ export function proteinLogged(row, now = Date.now(), ask = true) {
   ateTimeOnRow(row);
   // 1.4.4: logged after the window without a typed time → „Кога яде?“ (once a day)
   if (ask && askWhenAte(day(id), now)) emit('meal:whenAte', { meal: TIMED_MEAL });
+  else proteinGraded(now); // 1.4.4 (fixes): otherwise the result after the answer
   return true;
 }
 
@@ -168,6 +190,7 @@ export function setMealActual(at, now = Date.now()) {
   if (!rec?.proteinAt || !mt) return false;
   if (at == null) {
     patchDay(id, withActual(rec, mt.actual));
+    proteinGraded(now);
     return false;
   }
   const ok = checkAteAt(rec, hhmm(new Date(at)), now);
@@ -183,6 +206,7 @@ export function setMealActual(at, now = Date.now()) {
       r.ts > at
     )
       put('food', { ...r, ts: at, time: hhmm(new Date(at)) });
+  proteinGraded(now);
   emit('daily:changed');
   return true;
 }
@@ -268,8 +292,9 @@ export function proteinSkip(now = Date.now()) {
 export function catchUpProtein() {
   const rec = get('days', dayKey());
   if (!rec?.proteinAt || rec.proteinCelebrated) return;
-  patchDay(rec.id, { proteinCelebrated: true });
-  emit('protein:done', { onTime: proteinOnTime(rec) });
+  const next = patchDay(rec.id, { proteinCelebrated: true });
+  emit('protein:done', { onTime: proteinOnTime(next) });
+  proteinGraded();
 }
 
 /** Morning check-in: how she feels + how she slept (1–5). @param {{mood?: number, sleepQ?: number}} v */

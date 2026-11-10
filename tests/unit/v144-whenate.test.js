@@ -187,3 +187,70 @@ test("1.4.4: version, What's new (bg + en), no English in Bulgarian", async () =
   assert.equal(t('whenAte.now', { time: '08:10' }), 'Сега (08:10)');
   assert.equal(t('whenAte.earlier'), 'По-рано');
 });
+
+// ---- 1.4.4 fixes: the result toast by the final grade; no green banner for a missed window
+const { proteinBar } = await import('../../src/features/daily/logic.js');
+/** @type {any[]} */
+const graded = [];
+on('protein:graded', (/** @type {any} */ e) => graded.push(e));
+
+test('the result comes after „Кога яде?“, matching the final grade', () => {
+  reset();
+  graded.length = 0;
+  logBreakfast('08:10');
+  assert.equal(asks, 1);
+  assert.equal(graded.length, 0, 'no „пак се брои“ before the answer');
+  atClock('08:10', (n) => api.setMealActual(null, n)); // „Сега“: 40 min after the window
+  assert.deepEqual(graded, [{ state: 'missed', delayMin: 40, xp: 0 }]);
+  reset();
+  graded.length = 0;
+  logBreakfast('08:10');
+  atClock('08:11', (n) => api.setMealActual(at(D, '07:25'), n)); // „Готово“ with 07:25
+  assert.deepEqual(graded, [{ state: 'done', delayMin: 0, xp: 15 }]);
+});
+
+test('without „Кога яде?“ the result is shown at once, by its grade', () => {
+  // typed from the pill: 07:40 → +10 мин, 8 XP
+  reset();
+  graded.length = 0;
+  atClock('08:00', (now) => api.setAteAt(at(D, '07:40'), now));
+  logBreakfast('08:00');
+  assert.deepEqual(graded, [{ state: 'late', delayMin: 10, xp: 8 }]);
+  // typed 08:45 → 75 min after the window: missed, never „пак се брои“
+  reset();
+  graded.length = 0;
+  atClock('09:00', (now) => api.setAteAt(at(D, '08:45'), now));
+  logBreakfast('09:00');
+  assert.equal(asks, 0);
+  assert.deepEqual(graded, [{ state: 'missed', delayMin: 75, xp: 0 }]);
+  // on time
+  reset();
+  graded.length = 0;
+  logBreakfast('07:20');
+  assert.deepEqual(graded, [{ state: 'done', delayMin: 0, xp: 15 }]);
+});
+
+test('Home banner: green when on time or late (8 XP), grey „пропуснат прозорец“ when missed', () => {
+  reset();
+  logBreakfast('07:20');
+  assert.equal(proteinBar(get('days', D), at(D, '07:21'))?.mode, 'done');
+  reset();
+  logBreakfast('07:50');
+  assert.equal(proteinBar(get('days', D), at(D, '07:51'))?.mode, 'done', 'late within the limit stays green');
+  reset();
+  logBreakfast('08:10');
+  atClock('08:10', (n) => api.setMealActual(null, n));
+  assert.equal(proteinBar(get('days', D), at(D, '08:11'))?.mode, 'missed');
+  atClock('08:12', (n) => api.setMealActual(at(D, '07:25'), n)); // a later correction turns it green
+  assert.equal(proteinBar(get('days', D), at(D, '08:12'))?.mode, 'done');
+  assert.equal(t('home.proteinMissed'), 'Протеиновата закуска е записана · пропуснат прозорец');
+  for (const k of [
+    'cel.proteinLateN',
+    'cel.proteinMissed',
+    'cel.proteinMissedSub',
+    'home.proteinMissed',
+    'morning.missed',
+  ])
+    assert.ok(bg[k] && en[k], k);
+  assert.doesNotMatch(bg['cel.proteinMissed'] + bg['cel.proteinMissedSub'], /✓|пак се брои/);
+});

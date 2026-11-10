@@ -11,7 +11,7 @@ import { t } from '../../../core/i18n.js';
 import { hhmm, hmComplete, parseHM, stepHM } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { time24 } from '../../../ui/components.js';
-import { closeSheet, openSheet, refreshSheet, toast } from '../../../ui/sheet.js';
+import { closeSheet, openSheet, refreshSheet } from '../../../ui/sheet.js';
 import { day, setMealActual } from '../api.js';
 import { TIMED_MEAL, askWhenAte, checkAteAt, previewAt } from '../mealtime.js';
 import { lateText } from './mealsheet.js';
@@ -43,10 +43,9 @@ export function openWhenAte() {
   };
   const answer = (/** @type {number|null} */ at) => {
     st.done = true;
-    const changed = setMealActual(at);
+    // the result toast (by the final grade) comes from daily/api proteinGraded – 1.4.4 fixes
+    setMealActual(at);
     closeSheet();
-    if (changed && at != null)
-      toast(t('whenAte.saved', { time: hhmm(new Date(at)), grade: previewText(previewAt(day(), at)) }));
   };
   openSheet({
     render: () => {
