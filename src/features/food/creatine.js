@@ -12,10 +12,13 @@ export const DEFAULT_CREATINE_DOSE = 3;
 
 /**
  * mg of creatine in one diary row, or null when its food has no data.
- * @param {{foodId?: string, grams?: number}} row @param {Record<string, number>} [table]
+ * 1.4.4: a custom food's own value (`cr`, g per 100 g, copied into the row when logged) wins.
+ * @param {{foodId?: string, grams?: number, cr?: number}} row @param {Record<string, number>} [table]
  */
 export function creatineMg(row, table = CREATINE_MG) {
-  const per100 = row?.foodId ? table[row.foodId] : undefined;
+  const own = Number(row?.cr);
+  const per100 =
+    row?.cr != null && Number.isFinite(own) && own >= 0 ? own * 1000 : row?.foodId ? table[row.foodId] : undefined;
   if (per100 == null || !(Number(row.grams) > 0)) return null;
   return (per100 * Number(row.grams)) / 100;
 }

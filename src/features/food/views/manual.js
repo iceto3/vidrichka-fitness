@@ -16,19 +16,41 @@ import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { uid } from '../../../core/store.js';
 import { closeSheet, openSheet } from '../../../ui/sheet.js';
-import { applyFix, known, missingValues, validateFood } from '../logic.js';
+import { applyFix, known, missingValues, parseCreatine, safePhoto, validateFood } from '../logic.js';
+import { saveCustomFood } from '../api.js';
 import { missingNotice } from './notice.js';
 import { voiceUrl } from '../../voice/config.js';
 
 const FIELDS = /** @type {const} */ (['kcal', 'p', 'c', 'f', 'fib', 'salt']);
 
 /**
- * The form sheet shared by "new food" and "fill in missing values".
+ * The form sheet shared by "new food", "edit a custom food" and "fill in missing values".
+ * `custom` (1.4.4) adds the creatine field and the package photo; `onDelete` a delete button.
  * @param {{v: Record<string, string>, title: string, intro: any, miss: string[], requireKcal: boolean,
- *   label?: boolean, onValid: (r: ReturnType<typeof validateFood>) => void}} o
+ *   label?: boolean, custom?: {photo: string}, onDelete?: () => void, saveText?: string,
+ *   onValid: (r: ReturnType<typeof validateFood>) => void}} o
  */
 function openForm(o) {
   const { v, miss } = o;
+  /** 1.4.4 package photo state. */
+  const pkg = { busy: false, err: false };
+  const photoBox = () => {
+    if (!o.custom) return '';
+    const url = safePhoto(o.custom.photo);
+    const pick = (/** @type {string} */ key) =>
+      html`<label class="btn sec sm f1 pkgpick">${ic('camera', 16, 2.2)}${t(key)}<input type="file" accept="image/*" class="sr-only" data-change="pkgFile" aria-label="${t(key)}"></label>`;
+    return html`<div class="pkgbox mt12">${
+      url
+        ? html`<div class="row gap12"><img class="pkgthumb" src="${url}" alt="${t('custom.photoAlt')}"><div class="col gap8 f1">${pick('custom.photoChange')}<button class="btn sec sm danger-t" data-act="pkgDel">${ic('trash', 16, 2.2)}${t('custom.photoRemove')}</button></div></div>`
+        : pkg.busy
+          ? html`<div class="row gap10 center-j pad8"><span class="spin" aria-hidden="true"></span></div>`
+          : html`<div class="row">${pick('custom.photoPick')}</div>`
+    }${pkg.err ? html`<p class="verr small b mt8" role="alert">${t('label.err.image')}</p>` : ''}<p class="muted xs b mt6">${t('custom.photoPrivacy')}</p></div>`;
+  };
+  const crField = () =>
+    !o.custom
+      ? ''
+      : html`<label class="field"><span>${t('manual.cr')}</span><input class="input${errors.cr ? ' bad' : ''}" id="mcr" inputmode="decimal" data-input="v" data-k="cr" value="${v.cr ?? ''}" placeholder="${t('manual.optional')}" aria-invalid="${String(!!errors.cr)}">${err('cr')}</label>`;
   /** @type {Record<string, string>} */
   let errors = {};
   /** 1.4.2 label photo state; `scan` = the values the last reading put in. @type {{phase: 'idle'|'busy'|'done'|'error', err: string, filled: string[], cleared: string[], scan: Record<string, string>}} */
@@ -61,12 +83,13 @@ ${lab.phase === 'error' ? html`<p class="verr small b mt8 labelerr" role="alert"
         ? html` placeholder="${t('manual.optional')}"`
         : '';
   openSheet({
-    render: () => html`<h2 class="h2">${o.title}</h2>${o.intro}${labelBox()}
+    render: () => html`<h2 class="h2">${o.title}</h2>${o.intro}${photoBox()}${labelBox()}
 <label class="field mt12"><span>${t('manual.name')}</span><input class="input${errors.name ? ' bad' : ''}${fromLabel('name')}" id="mname" data-input="v" data-k="name" value="${v.name}" autocomplete="off">${err('name')}</label>
 <div class="grid2 mt10">${FIELDS.map((k) => html`<label class="field${miss.includes(k) ? ' miss' : ''}"><span>${t(`manual.${k}`)}</span><input class="input${errors[k] ? ' bad' : ''}${miss.includes(k) && !v[k] ? ' missing' : ''}${fromLabel(k)}" id="m${k}" inputmode="decimal" data-input="v" data-k="${k}" value="${v[k]}"${ph(k)} aria-invalid="${String(!!errors[k])}">${err(k)}</label>`)}
-<label class="field"><span>${t('manual.portion')}</span><input class="input${errors.portion ? ' bad' : ''}" id="mportion" inputmode="numeric" data-input="v" data-k="portion" value="${v.portion}" aria-invalid="${String(!!errors.portion)}">${err('portion')}</label></div>
+<label class="field"><span>${t('manual.portion')}</span><input class="input${errors.portion ? ' bad' : ''}" id="mportion" inputmode="numeric" data-input="v" data-k="portion" value="${v.portion}" aria-invalid="${String(!!errors.portion)}">${err('portion')}</label>${crField()}</div>
 <div id="kcalhint" aria-live="polite">${hint()}</div>
-<button class="btn w100 mt16" data-act="save">${t('common.save')}</button>`,
+<button class="btn w100 mt16" data-act="save">${o.saveText ?? t('common.save')}</button>
+${o.onDelete ? html`<button class="btn sec w100 mt10 danger-t" data-act="delFood">${ic('trash', 18, 2.2)}${t('custom.deleteOne')}</button>` : ''}`,
     mount: (el) => {
       // 1.4.0: take the user straight to the first value that is missing
       const first = FIELDS.find((k) => miss.includes(k));
@@ -117,9 +140,35 @@ ${lab.phase === 'error' ? html`<p class="verr small b mt8 labelerr" role="alert"
         emit('ui:refresh');
         return false;
       },
+      pkgFile: async (el) => {
+        const input = /** @type {HTMLInputElement} */ (el),
+          f = input.files?.[0];
+        if (!f || !o.custom || pkg.busy) return false;
+        Object.assign(pkg, { busy: true, err: false });
+        emit('ui:refresh');
+        try {
+          const { thumbnail } = await import('../../improve/images.js');
+          o.custom.photo = await thumbnail(f); // on the device only, never sent
+        } catch {
+          pkg.err = true;
+        }
+        pkg.busy = false;
+        input.value = '';
+        emit('ui:refresh');
+        return false;
+      },
+      pkgDel: () => {
+        if (o.custom) o.custom.photo = '';
+      },
+      delFood: () => {
+        closeSheet();
+        o.onDelete?.();
+        return false;
+      },
       save: () => {
         const r = validateFood(v);
         errors = { ...r.errors };
+        if (o.custom && Number.isNaN(parseCreatine(v.cr))) errors.cr = 'manual.errCr';
         if (!v.name.trim()) errors.name = 'manual.errName';
         if (o.requireKcal && !errors.kcal && !r.values.kcal) errors.kcal = 'manual.errKcal';
         if (Object.keys(errors).length) return; // re-render with inline errors (the kcal hint never blocks)
@@ -138,7 +187,8 @@ ${lab.phase === 'error' ? html`<p class="verr small b mt8 labelerr" role="alert"
  */
 export function openManualForm(init, onSave) {
   /** @type {Record<string, string>} */
-  const v = { name: init.name ?? '', kcal: '', p: '', c: '', f: '', fib: '', salt: '', portion: '100' };
+  const v = { name: init.name ?? '', kcal: '', p: '', c: '', f: '', fib: '', salt: '', portion: '100', cr: '' };
+  const custom = { photo: '' };
   openForm({
     v,
     title: t('food.manual'),
@@ -146,8 +196,10 @@ export function openManualForm(init, onSave) {
     miss: [],
     requireKcal: true,
     label: !!voiceUrl(), // needs the voice server (it reads the photo)
+    custom,
     onValid: (r) => {
       const n = (/** @type {'kcal'|'p'|'c'|'f'|'portion'} */ k) => r.values[k];
+      const cr = parseCreatine(v.cr);
       const food = {
         id: uid('custom'),
         source: 'custom',
@@ -162,16 +214,62 @@ export function openManualForm(init, onSave) {
         portion: n('portion') || 100,
         ...(r.values.fib != null ? { fib: r.values.fib } : {}),
         ...(r.values.salt != null ? { salt: r.values.salt } : {}),
+        ...(cr != null ? { cr } : {}),
+        ...(safePhoto(custom.photo) ? { photo: custom.photo } : {}),
       };
+      if (!food.barcode) delete food.barcode;
       // 1.4.0: the first manual food says what is shared (once) before anything is sent.
       setTimeout(
         () =>
           void confirmDataNotice().then(() => {
-            shareFood(food); // name + per-100 g values only, anonymous, off in Profile
-            onSave(food);
+            const saved = saveCustomFood(food); // 1.4.4: in Ръчно добавени храни right away
+            shareFood(saved); // name + per-100 g values only (never the photo), anonymous, off in Profile
+            onSave(saved);
           }),
         0,
       );
+    },
+  });
+}
+
+/**
+ * 1.4.4: edit a saved custom food (name, values, creatine, package photo). Diary rows logged
+ * before keep their values. Nothing is shared.
+ * @param {any} food
+ * @param {{onSave: (change: Record<string, any>) => void, onDelete?: () => void}} cb
+ */
+export function openEditForm(food, cb) {
+  const str = (/** @type {string} */ k) => (known(food[k]) ? String(food[k]) : '');
+  /** @type {Record<string, string>} */
+  const v = {
+    name: typeof food.name === 'string' ? food.name : String(food.name?.bg ?? food.name?.en ?? ''),
+    ...Object.fromEntries(FIELDS.map((k) => [k, str(k)])),
+    portion: String(food.portion ?? 100),
+    cr: str('cr'),
+  };
+  const custom = { photo: safePhoto(food.photo) };
+  openForm({
+    v,
+    title: t('custom.editTitle'),
+    intro: html`<p class="muted small b mt4">${t('custom.editHint')}</p>`,
+    miss: [],
+    requireKcal: true,
+    custom,
+    onDelete: cb.onDelete,
+    onValid: (r) => {
+      const cr = parseCreatine(v.cr);
+      cb.onSave({
+        name: v.name.trim(),
+        kcal: r.values.kcal,
+        p: r.values.p,
+        c: r.values.c,
+        f: r.values.f,
+        portion: r.values.portion || 100,
+        fib: r.values.fib,
+        salt: r.values.salt,
+        cr,
+        photo: safePhoto(custom.photo) || undefined,
+      });
     },
   });
 }

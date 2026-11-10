@@ -14,6 +14,9 @@ import { all, fromOtherTab } from '../../core/store.js';
 import { dayKey } from '../../core/dates.js';
 import { proteinOnTime, proteinQuest } from './logic.js';
 
+/** 1.4.4: „Кога яде?“ opens this long after the late breakfast was saved (the add sheet closes first). */
+const WHEN_ATE_DELAY = 700;
+
 register(
   'routes',
   { pattern: 'morning', load: async () => (await import('./views/morning.js')).default() },
@@ -107,6 +110,10 @@ export async function startDaily() {
     else if (!api.proteinLogged(row) && !had) api.ateTimeOnRow(row);
   });
   on('store:replaced', () => (bf = breakfastIds()));
+  // 1.4.4 „Кога яде?“ after a late protein breakfast – once the add sheet has closed
+  on('meal:whenAte', () =>
+    setTimeout(() => void import('./views/whenate.js').then((m) => m.maybeAskWhenAte()), WHEN_ATE_DELAY),
+  );
   // Not awaited: it waits for the service worker; pushOn() alone already decides local planning.
   push.startPush().catch((e) => console.warn('[push]', e));
   notify.syncDaily().catch(() => {});

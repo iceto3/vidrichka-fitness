@@ -65,3 +65,32 @@ export async function prepareImage(file) {
   }
   throw new Error('image');
 }
+
+/** 1.4.4: package photos of custom foods – small, on the device only. */
+export const THUMB_SIDE = 320;
+
+/**
+ * A small JPEG data URL (≤ {@link THUMB_SIDE} px, ~20–40 KB) of a photo, for the front of a
+ * custom food's package. Nothing is sent anywhere; the photo-read limit is not touched.
+ * @param {Blob} file
+ * @returns {Promise<string>}
+ * @throws {Error} 'image' when it can't be read.
+ */
+export async function thumbnail(file, side = THUMB_SIDE) {
+  if (!/^image\//.test(file.type || 'image/')) throw new Error('image');
+  const src = await decode(file).catch(() => {
+    throw new Error('image');
+  });
+  const { w, h } = fitSize(src.width, src.height, side);
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d');
+  if (!g) throw new Error('image');
+  g.fillStyle = '#fff';
+  g.fillRect(0, 0, w, h);
+  g.drawImage(src, 0, 0, w, h);
+  const url = c.toDataURL('image/jpeg', 0.7);
+  if (!url.startsWith('data:image/jpeg')) throw new Error('image');
+  return url;
+}

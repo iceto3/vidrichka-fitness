@@ -428,7 +428,8 @@
   background: var(--ok-soft);
   color: var(--ok-t);
 }
-.pbar.skipped {
+.pbar.skipped,
+.pbar.missed {
   background: var(--soft);
   color: var(--muted);
 }
@@ -536,4 +537,18 @@ body.has-mpill #page {
 .ateok[disabled] {
   opacity: 0.45;
   pointer-events: none;
+}
+
+/* 1.4.4 „Кога яде?“ */
+.whenate .wprev {
+  font-size: 15px;
+}
+.whenate .wprev.done {
+  color: var(--accent-d);
+}
+.whenate .wprev.late {
+  color: #b7791f;
+}
+.whenate .wprev.missed {
+  color: var(--muted);
 }

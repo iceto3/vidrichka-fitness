@@ -29,14 +29,11 @@ const TODAY = dayKey(T0);
 const rec = (o = {}) => ({ id: TODAY, proteinStart: T0, ...o });
 
 test('1.4.3: version, What’s new entry, strings in both languages, no English in Bulgarian', async () => {
-  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.4.3');
-  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-  assert.equal(lock.version, '1.4.3');
-  assert.equal(lock.packages[''].version, '1.4.3');
-  const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.4.3');
-  const { NOTES } = await import('../../src/features/whatsnew/notes.js');
-  assert.equal(NOTES[0].v, '1.4.3');
+  // the version itself is checked by the newest release's test (1.4.4: v144-whenate.test.js)
+  assert.ok(JSON.parse(readFileSync('package.json', 'utf8')).version >= '1.4.3');
+  const { NOTES: ALL } = await import('../../src/features/whatsnew/notes.js');
+  const NOTES = ALL.filter((n) => n.v === '1.4.3');
+  assert.equal(NOTES.length, 1);
   assert.deepEqual(
     NOTES[0].items.map(([, k]) => k),
     [

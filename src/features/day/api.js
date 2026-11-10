@@ -22,6 +22,7 @@ import {
   setSleep,
   setSleepTimes,
   sleepRun,
+  wakeConflict,
 } from '../daily/api.js';
 import { checkNight, editorTimes } from '../daily/sleeptimes.js';
 import { setWater } from '../food/api.js';
@@ -95,9 +96,17 @@ export function setDaySleep(date, v) {
 export function setDaySleepTimes(date, v) {
   const n = checkNight(assertEditable(date), v);
   if (n.err) throw new DayEditError(n.err);
+  // 1.4.4 (time): a meal can never be before the wake-up
+  if (wakeConflict(date, n.wake) != null) throw new DayEditError('wakeAfterBreakfast');
   setSleepTimes(date, n);
   return n;
 }
+
+/**
+ * 1.4.4 (time): the breakfast time a wake-up for `date` would come after (refused), or null.
+ * @param {string} date @param {number} wake
+ */
+export const sleepWakeConflict = (date, wake) => wakeConflict(date, wake);
 
 /** What the sleep editor opens with for the night before `date` (see daily/sleeptimes). @param {string} date */
 export function sleepEditorTimes(date) {
