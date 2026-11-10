@@ -265,9 +265,38 @@ test('2c: unplanned meals – named by their place in the day, listed by time, n
     proteinGoal: 100,
     now: new Date(`${D}T12:00`),
   });
-  assert.equal(stats.todayMeals.size, 0);
-  assert.equal(stats.todayProtein, 0);
-  assert.equal(stats.food.current ?? 0, 0);
+  assert.equal(stats.todayMeals.size, 0, 'no meal quest');
+  assert.equal(stats.todayProtein, 40, 'its protein counts for the protein goal');
+  assert.equal(stats.food.current ?? 0, 0, 'not a food-streak day');
+});
+
+test('2c: protein from an unplanned meal completes the protein goal (the goal’s own 15 XP)', async () => {
+  const { computeStats } = await import('../../src/features/motivation/stats.js');
+  const { QUESTS, QUEST_XP } = await import('../../src/features/motivation/quests.js');
+  const D = '2026-11-20';
+  const r = (/** @type {string} */ meal, /** @type {number} */ p) => ({ date: D, meal, ts: 1, p, kcal: 100 });
+  const s = (/** @type {any[]} */ food) =>
+    computeStats({
+      sessions: [],
+      food,
+      measurements: [],
+      photos: [],
+      goalAt: () => 3,
+      waterGoal: 8,
+      proteinGoal: 100,
+      now: new Date(`${D}T20:00`),
+    });
+  const goal = /** @type {any} */ (QUESTS.find((q) => q.id === 'proteinGoal'));
+  const planned = s([r('lunch', 90)]);
+  assert.equal(goal.done(planned), false);
+  const both = s([r('lunch', 90), r('x_a', 20)]);
+  assert.equal(both.todayProtein, 110, '90 g planned + 20 g unplanned');
+  assert.deepEqual(goal.detail(both), { n: 110, goal: 100 });
+  assert.equal(goal.done(both), true);
+  assert.equal(goal.xp, QUEST_XP.proteinGoal);
+  assert.deepEqual([...both.todayMeals], ['lunch'], 'no meal quest for the unplanned meal');
+  const meal = /** @type {any} */ (QUESTS.find((q) => q.id === 'meal_snack_am'));
+  assert.equal(meal.done(s([r('x_a', 20)])), false);
 });
 
 test('2c: the name follows the time; the day totals include unplanned meals', async () => {
@@ -318,4 +347,21 @@ test("1.5.0: version, What's new (bg + en), no English in Bulgarian", async () =
   assert.equal(bg['meal.extraAm'], 'Междинно сутрешно');
   assert.equal(bg['meal.extraPm'], 'Междинно следобедно');
   assert.equal(bg['meal.extra'], 'Допълнително хранене');
+});
+
+test('2c: rewards pay the protein goal’s XP when an unplanned meal completes it – once', async () => {
+  const { put, kv, clear, syncRewards } = await p2();
+  const { setSettings } = await import('../../src/core/settings.js');
+  clear();
+  setSettings({ daily: { protein: true }, proteinGoal: 100 });
+  put('food', { id: 'pl', date: P2, meal: 'lunch', ts: p2at('12:00'), time: '12:00', kcal: 400, p: 90, c: 0, f: 0 });
+  withClock('15:00', () => syncRewards());
+  const amt = () => kv('xp', {})[`quest:${P2}:proteinGoal`]?.amt ?? 0;
+  assert.equal(amt(), 0, '90/100 g');
+  put('food', { id: 'ex', date: P2, meal: 'x_q', ts: p2at('16:00'), time: '16:00', kcal: 150, p: 20, c: 0, f: 0 });
+  withClock('16:05', () => syncRewards());
+  assert.equal(amt(), 15, 'goal completed by the unplanned meal: the goal’s normal XP');
+  withClock('16:10', () => syncRewards());
+  assert.equal(amt(), 15, 'not paid twice');
+  assert.equal(Object.keys(kv('xp', {})).filter((k) => k.includes('x_')).length, 0, 'nothing for the meal itself');
 });

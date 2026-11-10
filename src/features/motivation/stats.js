@@ -52,8 +52,10 @@ export function computeStats(i) {
   const sessions = all.filter((s) => !s.partial);
   const workoutDays = sessions.map((s) => dayKey(s.endedAt));
   const last = sessions[sessions.length - 1];
-  // 1.5.0: unplanned meals („Добави хранене“, meal `x_…`) give no XP and count for no goal
-  const meals = i.food.filter((f) => f.type !== 'water' && !String(f.meal ?? '').startsWith('x_'));
+  const eaten = i.food.filter((f) => f.type !== 'water');
+  // 1.5.0: unplanned meals („Добави хранене“, meal `x_…`) give no XP of their own: no meal
+  // quest, no food-streak day – but their protein counts for the protein goal (like the total)
+  const meals = eaten.filter((f) => !String(f.meal ?? '').startsWith('x_'));
   const foodDays = new Set(meals.map((f) => f.date));
   const todayMeals = new Set(meals.filter((f) => f.date === today).map((f) => f.meal));
   const water = i.food.find((f) => f.type === 'water' && f.date === today)?.glasses ?? 0;
@@ -92,7 +94,7 @@ export function computeStats(i) {
     /** 1.4.3 (part B): the monthly measurements goal. */
     measuredThisMonth: i.measurements.some((m) => String(m.date).slice(0, 7) === month),
     /** 1.4.3 (part B): today's protein from the food diary (g, rounded) and the day's goal. */
-    todayProtein: Math.round(meals.filter((f) => f.date === today).reduce((a, f) => a + (Number(f.p) || 0), 0)),
+    todayProtein: Math.round(eaten.filter((f) => f.date === today).reduce((a, f) => a + (Number(f.p) || 0), 0)),
     proteinGoal: i.proteinGoal ?? 0,
     daysSinceMeasure: lastMeasure ? daysBetween(parseDay(lastMeasure.date), now) : null,
     photos: i.photos.length,
