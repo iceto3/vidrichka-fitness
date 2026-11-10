@@ -181,6 +181,9 @@ export function proteinLogged(row, now = Date.now(), ask = true) {
   if (!rec.proteinStart || rec.proteinAt || rec.proteinSkip) return false;
   // 1.4.3 (part A): the protein breakfast switched off in Profile → a breakfast is just a breakfast
   if (!dailySettings().protein) return false;
+  // 1.5.0: saved with an earlier time on the add page's clock (or the meal's time) – graded by
+  // that time, as if typed from the pill, so „Кога яде?“ isn't asked for it
+  if (row.ts > 0 && row.ts < now - 60_000 && !(rec.proteinAteAt > 0)) patchDay(id, { proteinAteAt: row.ts });
   if (!proteinYes(now)) return false;
   if (u) patchDay(id, { proteinUndo: null });
   ateTimeOnRow(row);

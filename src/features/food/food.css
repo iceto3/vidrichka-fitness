@@ -548,3 +548,12 @@
 .delbar .btn[disabled] {
   opacity: 0.45;
 }
+
+/* 1.5.0: the meal's clock on the add page */
+.mealclock {
+  align-items: center;
+  padding: 10px 12px;
+}
+.mealclock .t24 {
+  flex: none;
+}

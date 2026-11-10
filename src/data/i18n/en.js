@@ -1371,4 +1371,6 @@ export default {
   'steps.plus': 'Add {n} steps',
   // 1.5.0 2a: one time per meal
   'food.timeMeal': 'The time applies to the whole meal.',
+  // 1.5.0 2b: the clock on the add page
+  'food.mealTime': 'Meal time',
 };

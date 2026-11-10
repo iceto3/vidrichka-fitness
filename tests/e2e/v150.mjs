@@ -127,5 +127,74 @@ export async function v150(page, h) {
   await closeAll();
   console.log('  ✔ 1.5.0 1c: kcal live while typing the amount');
 
+  // ---- 2b + 2a: the clock in the food picker; one time per meal
+  const D = '2026-11-20';
+  const T = (/** @type {string} */ hm) => new Date(`${D}T${hm}:00+02:00`).getTime();
+  await page.clock.setSystemTime(new Date(T('13:00')));
+  await idb('days', [{ id: D, wake: T('07:00'), ack: T('07:00') }]);
+  await reopen();
+  await go('food/add/lunch');
+  const ck = page.locator('.mealclock .t24i');
+  await ck.waitFor();
+  assert.equal(await ck.inputValue(), '13:00', 'default: now');
+  await page.locator('.mealclock .t24b[data-d="-5"]').click();
+  await settle();
+  await page.locator('.mealclock .t24b[data-d="-5"]').click();
+  await settle();
+  assert.equal(await ck.inputValue(), '12:50');
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.waitForTimeout(200);
+  await shot('v150-picker-clock');
+  for (const [hm, re] of [
+    ['13:30', /още не е дошъл/],
+    ['06:50', /преди ставането/],
+  ]) {
+    await ck.fill(hm);
+    await ck.press('Tab');
+    await settle();
+    assert.match(await page.locator('.clockerr').innerText(), re, hm);
+  }
+  await ck.fill('12:30');
+  await ck.press('Tab');
+  await settle();
+  assert.equal(await page.locator('.clockerr').count(), 0);
+  const addOne = async (/** @type {number} */ i) => {
+    await h.clickPast(page.locator('.cats .cat[data-act="cat"]').nth(i), layer.locator('.flist'));
+    await layer.locator('.flist [data-act="pick"]').first().click();
+    await layer.locator('#grams').waitFor();
+    await layer.locator('[data-act="done"]').click();
+    await settle();
+  };
+  await addOne(0);
+  await page.clock.setSystemTime(new Date(T('13:04')));
+  await addOne(1);
+  const lunch = async () =>
+    (await rows('food'))
+      .filter((/** @type {any} */ r) => r.date === D && r.meal === 'lunch')
+      .map((/** @type {any} */ r) => r.time);
+  assert.deepEqual(await lunch(), ['12:30', '12:30'], 'both at the clock time');
+  await page.locator('[data-act="finish"]').first().click();
+  await settle();
+  await closeAll();
+  // 2a: the item editor's „Час“ on one entry moves the whole meal
+  await go('food');
+  await h.clickPast(page.locator('.meal[data-m="lunch"]'), layer.locator('.mealitems'));
+  await layer.locator('.mealitems .itembtn').nth(1).click();
+  const it = layer.locator('.itemedit .itemtime input.t24i');
+  await it.waitFor();
+  assert.match(await layer.locator('.itemedit').innerText(), /важи за цялото хранене/);
+  await it.fill('12:45');
+  await it.press('Tab');
+  await settle();
+  await layer.locator('.itemedit [data-act="save"]').click();
+  await settle();
+  assert.deepEqual(await lunch(), ['12:45', '12:45'], 'the whole meal moved');
+  await h.clickPast(page.locator('.meal[data-m="lunch"]'), layer.locator('.mealitems'));
+  assert.equal((await layer.locator('.mealitems').innerText()).match(/12:45/g)?.length, 2);
+  await page.waitForTimeout(400);
+  await shot('v150-meal-time-moved');
+  await closeAll();
+  console.log('  ✔ 1.5.0 2a/2b: clock in the picker (default now, ±5, no future, not before wake), one time per meal');
+
   await page.setViewportSize(vp ?? { width: 390, height: 844 });
 }

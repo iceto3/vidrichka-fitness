@@ -172,3 +172,43 @@ test('2a: breakfast re-grades through the „Кога яде?“ save – no dou
   withClock('09:05', () => syncRewards());
   assert.equal(xp(), 15, 'not paid twice');
 });
+
+test('2b: a breakfast saved with an earlier clock time is graded by it – no „Кога яде?“', async () => {
+  const { food, daily, get, put, clear, egg, kv, syncRewards } = await p2();
+  const { on } = await import('../../src/core/bus.js');
+  let asks = 0;
+  on('meal:whenAte', () => asks++);
+  /** @type {any[]} */
+  const graded = [];
+  on('protein:graded', (q) => graded.push(q));
+  clear();
+  put('days', { id: P2, wake: p2at('07:00'), proteinStart: p2at('07:00') }); // window 07:00–07:30
+  food.view.date = P2;
+  withClock('08:30', (now) => {
+    const x = food.logFood(egg, 150, 'breakfast', P2, p2at('07:20')); // the clock set to 07:20
+    daily.proteinLogged(x, now);
+    syncRewards();
+  });
+  assert.equal(asks, 0, 'the time was given on the clock');
+  assert.equal(get('days', P2).mealTimes.breakfast.actual, p2at('07:20'));
+  assert.equal(graded.at(-1)?.state, 'done');
+  assert.equal(kv('xp', {})[`quest:${P2}:protein`]?.amt, 15);
+  // the clock left at now (late) → „Кога яде?“ as in 1.4.4
+  clear();
+  put('days', { id: P2, wake: p2at('07:00'), proteinStart: p2at('07:00') });
+  withClock('08:30', (now) => {
+    const x = food.logFood(egg, 150, 'breakfast', P2, now);
+    daily.proteinLogged(x, now);
+  });
+  assert.equal(asks, 1, 'asked once');
+  // the clock: never in the future, never before the wake-up
+  assert.deepEqual(
+    withClock('08:30', (now) => daily.checkFoodTime(P2, '08:35', now)),
+    { ok: false, err: 'future' },
+  );
+  assert.deepEqual(
+    withClock('08:30', (now) => daily.checkFoodTime(P2, '06:55', now)),
+    { ok: false, err: 'early' },
+  );
+  assert.equal(daily.foodTimeFloor(P2), '07:00');
+});

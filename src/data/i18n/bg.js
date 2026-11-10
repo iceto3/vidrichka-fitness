@@ -1409,4 +1409,6 @@ export default {
   'steps.plus': 'Добави {n} крачки',
   // 1.5.0 2a: one time per meal
   'food.timeMeal': 'Часът важи за цялото хранене.',
+  // 1.5.0 2b: the clock on the add page
+  'food.mealTime': 'Час на храненето',
 };
