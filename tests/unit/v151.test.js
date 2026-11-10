@@ -126,3 +126,26 @@ test('3b: herring is a built-in fish with sourced creatine, saturated fat and su
   const salmon = csv.find((l) => l.startsWith('salmon,'));
   assert.ok(salmon?.split(',')[11], 'creatine stays filled for foods that had it');
 });
+
+test('4a: Начало – sleep, then mood / energy and water (the day view cards), then meals; the rest stays', async () => {
+  const { readFileSync } = await import('node:fs');
+  const js = readFileSync('src/features/home/views/home.js', 'utf8');
+  const pos = (/** @type {string} */ s) => js.indexOf(s);
+  const order = [
+    '${stepsCard(dayKey())}',
+    '${sleepCard(dayKey())}',
+    'moodCard(dayKey())',
+    '${waterCard(dayKey())}',
+    '${mealsCard(dayKey())}',
+  ];
+  for (const s of order) assert.ok(pos(s) > 0, s);
+  for (let i = 1; i < order.length; i++)
+    assert.ok(pos(order[i - 1]) < pos(order[i]), `${order[i - 1]} before ${order[i]}`);
+  for (const s of ['${dailyCards()}', '${workoutCard()}']) assert.ok(pos(s) > 0, `${s} stays`);
+  assert.equal(
+    /measureCard|bodyCard|\$\{\w*[Mm]easure\w*\(/.test(js.slice(pos('${workoutCard()}'), pos('${QUEST_SECTIONS'))),
+    false,
+    'no body measurements',
+  );
+  assert.match(js, /\.\.\.cardActions\(\(\) => dayKey\(\)\)/, 'moodSheet / water actions come with the shared cards');
+});
