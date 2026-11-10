@@ -1302,4 +1302,12 @@ export default {
   'profile.mealsNote': 'Meals that are off are hidden, but their old entries stay on the days that have them.',
   'profile.mealsOneOn': 'At least one meal has to stay on.',
   'whatsNew.meals143': 'Choose your meals in Profile – including a morning snack if you need one.',
+  // 1.4.4 C1: favorites, most used, Любими
+  'food.favorites': 'Favorites',
+  'food.favFoods': 'Favorite foods',
+  'food.favEmpty': 'No favorites yet. Tap ☆ next to a food to add it here. Your regular meals show up here too.',
+  'food.fav': 'Add {name} to favorites',
+  'food.unfav': 'Remove {name} from favorites',
+  'food.favAdded': 'Added to favorites ☆',
+  'food.favRemoved': 'Removed from favorites',
 };

@@ -11,6 +11,7 @@ import { dayKey, hhmm } from '../../core/dates.js';
 import { FOODS, FOOD_CATEGORIES, QUICK_PICKS } from '../../data/foods.js';
 import { known, mealFor, mealTs, portion, scaleRow } from './logic.js';
 import { enabledMeals } from '../../core/settings.js';
+import { bump, byPoints, categoriesByPoints, groupFoods } from './usage.js';
 
 export { FOODS, FOOD_CATEGORIES, QUICK_PICKS };
 
@@ -58,7 +59,7 @@ export function setWater(date, glasses) {
 export function logFood(food, grams, meal, date = view.date) {
   if (food.source && !local.has(food.id)) put('foods', food);
   const use = kv('foodUse', {});
-  setKv('foodUse', { ...use, [food.id]: { n: (use[food.id]?.n ?? 0) + 1, ts: Date.now(), cat: food.cat } });
+  setKv('foodUse', { ...use, [food.id]: bump(use[food.id], Date.now(), food.cat) }); // 1.4.4: points
   const ts = mealTs(date, meal, dayKey());
   const row = put('food', {
     id: uid('f'),
@@ -210,14 +211,8 @@ export function logSavedMeal(id, meal) {
   return { rows, before: m };
 }
 
-/** Category ids ordered by usage (most used first, ties keep default order). */
-export function categoriesByUse() {
-  const use = Object.values(kv('foodUse', {}));
-  /** @type {Record<string, number>} */
-  const n = {};
-  use.forEach((u) => u.cat && (n[u.cat] = (n[u.cat] ?? 0) + u.n));
-  return [...FOOD_CATEGORIES].sort((a, b) => (n[b.id] ?? 0) - (n[a.id] ?? 0));
-}
+/** Categories ordered by usage points (1.4.4: with decay; ties keep the default order). */
+export const categoriesByUse = () => categoriesByPoints(FOOD_CATEGORIES, kv('foodUse', {}), Date.now());
 
 /** Recently used foods (most recent first). @param {number} [max] */
 export const recentFoods = (max = 8) =>
@@ -227,13 +222,46 @@ export const recentFoods = (max = 8) =>
     .filter(Boolean)
     .slice(0, max);
 
-/** Quick picks: personal most-used foods, topped up with defaults. */
+/** Quick picks: personal most-used foods (by points), topped up with defaults. */
 export function quickPicks() {
-  const used = Object.entries(kv('foodUse', {}))
-    .sort((a, b) => b[1].n - a[1].n)
-    .map(([id]) => id);
+  const used = byPoints(kv('foodUse', {}), Date.now(), (id) => !!foodById(id));
   return [...new Set([...used.slice(0, 6), ...QUICK_PICKS])].slice(0, 6).map(foodById).filter(Boolean);
 }
+
+/** 1.4.4: favorite food ids (manual ☆, on the device) → when they were starred. */
+export const favorites = () => /** @type {Record<string, number>} */ (kv('foodFav', {}));
+
+/** Is the food a favorite? @param {string} id */
+export const isFav = (id) => !!favorites()[id];
+
+/** Star / unstar a food. @param {string} id @returns {boolean} starred now */
+export function toggleFav(id) {
+  const f = { ...favorites() };
+  const on = !f[id];
+  if (on) f[id] = Date.now();
+  else delete f[id];
+  setKv('foodFav', f);
+  return on;
+}
+
+/** 1.4.4: foods the user entered by hand (Ръчно добавени храни), newest first. */
+export const customFoods = () =>
+  all('foods')
+    .filter((f) => f.source === 'custom')
+    .sort((a, b) => String(b.id).localeCompare(String(a.id)));
+
+/** All favorite foods (built-in, custom or online ones that were saved), starred order. */
+export const favoriteFoods = () =>
+  Object.entries(favorites())
+    .sort((a, b) => a[1] - b[1])
+    .map(([id]) => foodById(id))
+    .filter(Boolean);
+
+/**
+ * 1.4.4: a food list in the add screen's order: favorites, the 5 most used, the rest.
+ * @param {any[]} list
+ */
+export const orderedFoods = (list) => groupFoods(list, favorites(), kv('foodUse', {}), Date.now());
 
 /**
  * Local search across both languages.

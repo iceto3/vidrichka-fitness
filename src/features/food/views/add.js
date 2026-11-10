@@ -16,15 +16,18 @@ import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
 import {
   FOODS,
   categoriesByUse,
+  favoriteFoods,
   foodName,
   logFood,
   quickPicks,
   recentFoods,
   savedMeals,
   searchLocal,
+  toggleFav,
   view,
 } from '../api.js';
-import { addMealRedirect, known, signature, timesEaten, totals } from '../logic.js';
+import { addMealRedirect, signature, timesEaten, totals } from '../logic.js';
+import { foodRow, groupedList } from './foodlist.js';
 import { enabledMeals } from '../../../core/settings.js';
 import { navigate } from '../../../core/router.js';
 import { openGrams } from './grams.js';
@@ -32,24 +35,7 @@ import { SEARCH_TIMEOUT, offView, search, within } from '../off.js';
 import { deleteFoodRow } from './item.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 
-/** One food result row. @param {any} f */
-/**
- * Second line of a food row: kcal / 100 g, then fibre and salt when the food lists them (1.4.0).
- * @param {any} f
- */
-export const foodSub = (f) =>
-  [
-    `${fmtNum(f.kcal)} ${t('unit.kcal')} / 100 ${t('unit.g')}`,
-    known(f.fib) ? `${t('food.fiberShort')} ${fmtNum(f.fib, 1)} ${t('unit.g')}` : '',
-    known(f.salt) ? `${t('food.saltShort')} ${fmtNum(f.salt, 1)} ${t('unit.g')}` : '',
-  ]
-    .filter(Boolean)
-    .join(' · ');
-
-const foodRow = (
-  f,
-) => html`<button class="lrow" data-act="pick" data-id="${f.id}"><span class="fic">${f.emoji ?? '🍽️'}</span>
-<span class="f1 left"><span class="b block">${foodName(f)}</span><span class="muted xs b">${foodSub(f)}</span></span>${ic('plus', 18, 2.6, 'var(--accent-d)')}</button>`;
+export { foodSub } from './foodlist.js';
 
 /** @param {{meal: string}} p @returns {import('../../../core/registry.js').View} */
 export default ({ meal }) => {
@@ -94,7 +80,7 @@ export default ({ meal }) => {
 
   const results = () => {
     const loc = searchLocal(q);
-    return html`${loc.length ? html`<div class="card list mt10">${loc.map(foodRow)}</div>` : ''}
+    return html`${loc.length ? html`<div class="card list mt10 flist">${loc.map((f) => foodRow(f))}</div>` : ''}
 <div id="offres" aria-live="polite">${offBlock()}</div>
 ${!loc.length && q && offView(off, q) !== 'none' ? html`<button class="btn sec w100 mt10" data-act="manual">${ic('edit', 18)}${t('food.manual')}</button>` : ''}`;
   };
@@ -110,7 +96,7 @@ ${!loc.length && q && offView(off, q) !== 'none' ? html`<button class="btn sec w
     if (v === 'none')
       return html`<div class="card mt10 center noreliable"><p class="b small">${t('food.noReliable')}</p><button class="btn sec w100 mt8" data-act="manual">${ic('edit', 18)}${t('food.enterSelf')}</button></div>`;
     if (v === 'list')
-      return html`<div class="xs xb muted caps mt12">${t('food.onlineResults')}</div><div class="card list mt6">${off.list.map(foodRow)}</div>`;
+      return html`<div class="xs xb muted caps mt12">${t('food.onlineResults')}</div><div class="card list mt6 flist">${off.list.map((f) => foodRow(f))}</div>`;
     return '';
   };
 
@@ -157,14 +143,45 @@ ${!loc.length && q && offView(off, q) !== 'none' ? html`<button class="btn sec w
     emit('nav', { back: 'food' });
   };
 
+  /** Pick a food in a sheet: close it, then the grams sheet. @param {HTMLElement} el */
+  const pickIn = (el) => {
+    closeSheet();
+    setTimeout(() => add(findFood(el.dataset.id ?? '')), 0);
+    return false;
+  };
+  /** ☆ in a sheet or on the page (re-renders both). @param {HTMLElement} el */
+  const fav = (el) => {
+    const on = toggleFav(el.dataset.id ?? '');
+    toast(t(on ? 'food.favAdded' : 'food.favRemoved'));
+    emit('ui:refresh');
+    return false;
+  };
+
   const openCategory = (/** @type {string} */ cat) =>
     openSheet({
       render: () =>
-        html`<h2 class="h2">${t(`foodcat.${cat}`)}</h2><div class="list mt8">${FOODS.filter((f) => f.cat === cat).map(foodRow)}</div>`,
+        html`<h2 class="h2">${t(`foodcat.${cat}`)}</h2><div class="list mt8 flist">${groupedList(FOODS.filter((f) => f.cat === cat))}</div>`,
+      actions: { pick: pickIn, fav },
+    });
+
+  /** 1.4.4 Любими: the starred foods and the saved combinations in one list. */
+  const openFavorites = () =>
+    openSheet({
+      render: () => {
+        const foods = favoriteFoods(),
+          combos = savedMeals();
+        return html`<h2 class="h2">${t('food.favorites')}</h2>
+${!foods.length && !combos.length ? html`<p class="muted small b mt8">${t('food.favEmpty')}</p>` : ''}
+${combos.length ? html`<div class="xs xb muted caps mt12">${t('food.regularMeals')}</div><div class="list mt4 favcombos">${combos.map((m) => html`<button class="lrow combo" data-act="logCombo" data-id="${m.id}"><span class="fic">⭐</span><span class="f1 left minw0"><span class="b block ellip">${m.name}</span><span class="muted xs b ellip block">${m.items.map((/** @type {any} */ i) => `${foodName(i)} ${i.grams} ${t('unit.g')}`).join(' · ')}</span></span><span class="b num small nowrap">${fmtNum(totals(m.items).kcal)} ${t('unit.kcal')}</span></button>`)}</div>` : ''}
+${foods.length ? html`<div class="xs xb muted caps mt12">${t('food.favFoods')}</div><div class="list mt4 flist">${foods.map((f) => foodRow(f))}</div>` : ''}`;
+      },
       actions: {
-        pick: (el) => {
+        pick: pickIn,
+        fav,
+        logCombo: async (el) => {
           closeSheet();
-          setTimeout(() => add(findFood(el.dataset.id ?? '')), 0);
+          const { addCombo } = await import('./combo.js');
+          if (addCombo(el.dataset.id ?? '', meal)) emit('nav', { back: 'food' });
           return false;
         },
       },
@@ -210,7 +227,8 @@ ${(() => {
 <div class="section-title"><h2 class="h3">${showRecent ? t('food.recent') : t('food.quickPicks')}</h2><button class="link" data-act="recent" aria-pressed="${String(showRecent)}">${showRecent ? t('food.quickPicks') : t('food.recent')}</button></div>
 <div class="chips">${picks.length ? picks.map((f) => html`<button class="chip" data-act="pick" data-id="${f.id}">${f.emoji} ${foodName(f)}</button>`) : html`<span class="muted small b">${t('food.noRecent')}</span>`}</div>
 <div class="section-title"><h2 class="h3">${t('food.categories')}</h2></div>
-<div class="cats">${categoriesByUse().map((c) => html`<button class="cat" data-act="cat" data-id="${c.id}"><span class="e" style="background:${c.bg}">${c.emoji}</span>${t(`foodcat.${c.id}`)}</button>`)}</div>
+<div class="cats"><button class="cat favcat" data-act="favs"><span class="e" style="background:#FFF4C7">⭐</span>${t('food.favorites')}</button>
+${categoriesByUse().map((c) => html`<button class="cat" data-act="cat" data-id="${c.id}"><span class="e" style="background:${c.bg}">${c.emoji}</span>${t(`foodcat.${c.id}`)}</button>`)}</div>
 <button class="btn sec w100 mt16" data-act="manual">${ic('edit', 18)}${t('food.manual')}</button>`
 }
 </div>`;
@@ -238,6 +256,8 @@ ${(() => {
       voice: () => (openVoice({ meal }), false),
       pick: (el) => (add(findFood(el.dataset.id ?? '')), false),
       cat: (el) => (openCategory(el.dataset.id ?? ''), false),
+      favs: () => (openFavorites(), false),
+      fav: (el) => fav(el),
       recent: () => void (showRecent = !showRecent),
       undo: (el, ev) => {
         ev.stopPropagation();

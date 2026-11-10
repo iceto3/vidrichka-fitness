@@ -472,3 +472,50 @@
     margin-left: 50px;
   }
 }
+
+/* 1.4.4 food rows with ☆, groups with a faint divider, package photos */
+.frow {
+  gap: 4px;
+  padding: 0;
+}
+.frow .fpick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 10px 2px;
+  min-height: 52px;
+  text-align: left;
+  background: none;
+  color: inherit;
+}
+.fstar {
+  color: var(--muted);
+  opacity: 0.55;
+}
+.fstar.on {
+  color: #f2b705;
+  opacity: 1;
+}
+.fstar.on svg {
+  fill: currentColor;
+}
+.fdiv {
+  border: 0;
+  border-top: 1.5px dashed var(--muted);
+  opacity: 0.35;
+  margin: 6px 0;
+}
+.flist .fdiv + .lrow {
+  border-top: 0;
+}
+.fic.fphoto {
+  overflow: hidden;
+  padding: 0;
+}
+.fic.fphoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
