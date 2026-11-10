@@ -105,3 +105,24 @@ test('1.5.1: the new i18n keys exist in both languages', () => {
     assert.ok(/** @type {any} */ (en)[k], `en ${k}`);
   }
 });
+
+test('3b: herring is a built-in fish with sourced creatine, saturated fat and sugar; the sheet has the columns', async () => {
+  const { FOODS } = await import('../../src/data/foods.js');
+  const { CREATINE_MG } = await import('../../src/data/creatine.js');
+  const h = FOODS.find((f) => f.id === 'herring');
+  assert.ok(h);
+  assert.equal(h.cat, 'meat');
+  assert.deepEqual([h.kcal, h.p, h.c, h.f, h.sat, h.sug], [158, 18, 0, 9, 2, 0]);
+  assert.equal(CREATINE_MG.herring, 650);
+  assert.equal(FOODS.filter((f) => 'sat' in f).length, 1, 'no invented values: the rest stay unknown');
+  const { readFileSync } = await import('node:fs');
+  const csv = readFileSync('docs/foods.csv', 'utf8').split('\n');
+  assert.equal(
+    csv[0],
+    'id,category,name_bg,name_en,kcal,protein,carbs,fat,fiber,salt,portion_g,creatine_mg,sat_fat,sugar',
+  );
+  assert.ok(csv.includes('herring,meat,Херинга (сурова),Herring (raw),158,18,0,9,0,0.23,100,650,2,0'));
+  assert.equal(csv.length - 2, FOODS.length, 'every food (regenerated with tools/export-foods.mjs)');
+  const salmon = csv.find((l) => l.startsWith('salmon,'));
+  assert.ok(salmon?.split(',')[11], 'creatine stays filled for foods that had it');
+});

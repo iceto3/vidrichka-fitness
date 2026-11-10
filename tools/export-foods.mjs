@@ -5,7 +5,9 @@
  *   node tools/export-foods.mjs --since <ref>  → also docs/foods-changes.csv (new / changed rows vs
  *                                                that git ref, e.g. main = the live 1.3.4 list)
  * Columns: id, category, name_bg, name_en, kcal, protein, carbs, fat, fiber, salt, portion_g,
- * creatine_mg (1.4.2: mg per 100 g from src/data/creatine.js, empty = no data).
+ * creatine_mg (1.4.2: mg per 100 g from src/data/creatine.js, empty = no data), sat_fat, sugar
+ * (1.5.1: g per 100 g from SAT_SUGAR in src/data/foods.js, empty = no sourced value yet; new
+ * columns go at the end so the shared sheet's existing columns do not move).
  */
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
@@ -13,8 +15,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const COLS = ['id', 'cat', 'bg', 'en', 'kcal', 'p', 'c', 'f', 'fib', 'salt', 'portion', 'cr'];
-const HEAD = 'id,category,name_bg,name_en,kcal,protein,carbs,fat,fiber,salt,portion_g,creatine_mg';
+const COLS = ['id', 'cat', 'bg', 'en', 'kcal', 'p', 'c', 'f', 'fib', 'salt', 'portion', 'cr', 'sat', 'sug'];
+const HEAD = 'id,category,name_bg,name_en,kcal,protein,carbs,fat,fiber,salt,portion_g,creatine_mg,sat_fat,sugar';
 /** @param {unknown} v */
 const cell = (v) => (/[",\n]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? ''));
 const { CREATINE_MG } = await import(pathToFileURL(join(process.cwd(), 'src/data/creatine.js')).href);
@@ -40,7 +42,9 @@ if (i > 0) {
     const o = old.get(f.id);
     if (!o) return [`new,${line(f)},`];
     const diff = COLS.filter((k) => String(o[k]) !== String(f[k]));
-    return diff.length ? [`changed,${line(f)},${cell(diff.map((k) => `${k}: ${o[k]} → ${f[k]}`).join('; '))}`] : [];
+    return diff.length
+      ? [`changed,${line(f)},${cell(diff.map((k) => `${k}: ${o[k] ?? '–'} → ${f[k] ?? '–'}`).join('; '))}`]
+      : [];
   });
   writeFileSync('docs/foods-changes.csv', [`change,${HEAD},was`, ...rows].join('\n') + '\n');
   console.log(`docs/foods-changes.csv: ${rows.length} rows vs ${ref}`);
