@@ -24,12 +24,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { chromium, webkit, devices } from 'playwright-core';
+import { v144 } from './v144.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
 const DIR = opt('--dir', '.');
 const ONLY = opt('--only', '');
 const SHOTS = args.includes('--shots');
+/** Dev: `--flow v144` runs only onboarding + that flow. */
+const FLOW = opt('--flow', '');
 // A port the OS says is free (a fixed or random one can collide with other local services).
 const PORT = await new Promise((resolve) => {
   const srv = createServer().listen(0, '127.0.0.1', () => {
@@ -184,6 +187,25 @@ async function run(name, browser, P) {
   await layer.locator('input').first().fill('Maria');
   await page.getByRole('button', { name: "Let's go" }).click();
   await settle();
+  const h = {
+    go,
+    settle,
+    shot,
+    clearCel,
+    tag,
+    same,
+    layer,
+    rows,
+    dayField,
+    closeAll: () => closeAllSheets(page, layer, settle),
+    clickPast: (/** @type {any} */ target, /** @type {any} */ opened) =>
+      clickPastPrompts(page, layer, settle, target, opened),
+  };
+  if (FLOW === 'v144') {
+    await v144(page, h);
+    assert.deepEqual(errors, [], 'no page errors');
+    return void (await ctx.close());
+  }
   // 1.4.0: no anonymous-data notice after onboarding (it comes with the first manual food)
   assert.equal(await page.locator('.datanotice').count(), 0, 'no data notice after onboarding');
   assert.match(await page.locator('h1').first().innerText(), /Maria/);
@@ -333,7 +355,6 @@ async function run(name, browser, P) {
     console.log('  ✔ offline reload works');
   }
 
-  const h = { go, settle, shot, clearCel, tag, same, layer, rows, dayField };
   await daily(page, h);
   if (name === 'android') await fixes(page, h);
   await photos121(page, h, name);
@@ -352,6 +373,7 @@ async function run(name, browser, P) {
   await v143r3(page, h, name, ctx);
   await v143a(page, h);
   await v143b(page, h);
+  await v144(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();

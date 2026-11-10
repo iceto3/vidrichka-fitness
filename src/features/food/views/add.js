@@ -16,6 +16,7 @@ import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
 import {
   FOODS,
   categoriesByUse,
+  customFoods,
   favoriteFoods,
   foodName,
   logFood,
@@ -187,6 +188,12 @@ ${foods.length ? html`<div class="xs xb muted caps mt12">${t('food.favFoods')}</
       },
     });
 
+  /** 1.4.4 Ръчно добавени храни (edit, delete, package photo: ./custom.js). */
+  const openCustom = async () => {
+    const { openCustomFoods } = await import('./custom.js');
+    openCustomFoods((food) => add(food));
+  };
+
   return {
     tab: 'food',
     render: () => {
@@ -228,7 +235,8 @@ ${(() => {
 <div class="chips">${picks.length ? picks.map((f) => html`<button class="chip" data-act="pick" data-id="${f.id}">${f.emoji} ${foodName(f)}</button>`) : html`<span class="muted small b">${t('food.noRecent')}</span>`}</div>
 <div class="section-title"><h2 class="h3">${t('food.categories')}</h2></div>
 <div class="cats"><button class="cat favcat" data-act="favs"><span class="e" style="background:#FFF4C7">⭐</span>${t('food.favorites')}</button>
-${categoriesByUse().map((c) => html`<button class="cat" data-act="cat" data-id="${c.id}"><span class="e" style="background:${c.bg}">${c.emoji}</span>${t(`foodcat.${c.id}`)}</button>`)}</div>
+${categoriesByUse().map((c) => html`<button class="cat" data-act="cat" data-id="${c.id}"><span class="e" style="background:${c.bg}">${c.emoji}</span>${t(`foodcat.${c.id}`)}</button>`)}
+${customFoods().length ? html`<button class="cat customcat" data-act="custom"><span class="e" style="background:#E8EEF2">✍️</span>${t('food.customFoods')}</button>` : ''}</div>
 <button class="btn sec w100 mt16" data-act="manual">${ic('edit', 18)}${t('food.manual')}</button>`
 }
 </div>`;
@@ -257,6 +265,7 @@ ${categoriesByUse().map((c) => html`<button class="cat" data-act="cat" data-id="
       pick: (el) => (add(findFood(el.dataset.id ?? '')), false),
       cat: (el) => (openCategory(el.dataset.id ?? ''), false),
       favs: () => (openFavorites(), false),
+      custom: () => (void openCustom(), false),
       fav: (el) => fav(el),
       recent: () => void (showRecent = !showRecent),
       undo: (el, ev) => {

@@ -119,3 +119,100 @@ test('logFood counts a point; favorites toggle; Любими lists starred foods
     assert.ok(bg[k] && en[k], k);
   assert.equal(t('food.favorites'), 'Любими');
 });
+
+// ---- 1.4.4 C2: Ръчно добавени храни ----
+const { matchesFood, parseCreatine, safePhoto, scaleRow, MAX_CREATINE } =
+  await import('../../src/features/food/logic.js');
+const { creatineMg } = await import('../../src/features/food/creatine.js');
+const { all, get } = await import('../../src/core/store.js');
+const { trash, restore } = await import('../../src/core/trash.js');
+
+test('custom food: saved right away, newest first; built-in foods can never be edited', () => {
+  const a = api.saveCustomFood({ id: 'custom_a', name: 'Протеинов бар', kcal: 380, p: 30, c: 40, f: 10, portion: 60 });
+  const b = api.saveCustomFood({
+    id: 'custom_b',
+    name: 'Боза',
+    kcal: 90,
+    p: 1,
+    c: 20,
+    f: 0,
+    portion: 250,
+    created: a.created + 5,
+  });
+  assert.equal(a.source, 'custom');
+  assert.ok(a.created > 0);
+  assert.deepEqual(
+    api
+      .customFoods()
+      .slice(0, 2)
+      .map((f) => f.id),
+    [b.id, a.id],
+  );
+  const builtIn = api.FOODS[0];
+  assert.equal(api.isCustom(builtIn), false);
+  assert.equal(api.updateCustomFood(builtIn.id, { kcal: 1 }), null);
+  assert.notEqual(api.foodById(builtIn.id).kcal, 1);
+});
+
+test('editing a custom food keeps the past diary rows as they were (also when their grams change)', () => {
+  const food = api.saveCustomFood({ id: 'custom_hist', name: 'Баница', kcal: 300, p: 8, c: 30, f: 16, portion: 150 });
+  const row = api.logFood(food, 200, 'breakfast', '2026-11-01');
+  assert.equal(row.kcal, 600);
+  const after = api.updateCustomFood(food.id, { kcal: 350, p: 10, photo: undefined, cr: 0.2 });
+  assert.equal(after.kcal, 350);
+  assert.equal(get('food', row.id).kcal, 600, 'the logged row is untouched');
+  assert.equal(matchesFood(row, after), false);
+  const edited = api.editRow(row.id, { grams: 100 });
+  assert.equal(edited?.after.kcal, 300, 'scaled from the row itself, not from the new values');
+  assert.equal(edited?.after.p, 8);
+  // a new log uses the new values and copies the creatine
+  const fresh = api.logFood(food, 100, 'lunch', '2026-11-02'); // stale object → the saved (edited) food wins
+  assert.equal(fresh.kcal, 350);
+  assert.equal(fresh.cr, 0.2);
+  assert.equal(creatineMg(fresh), 200);
+  // rows still matching the food are scaled from the food (1.4.3 behaviour kept)
+  assert.equal(matchesFood(fresh, after), true);
+  assert.equal(scaleRow(fresh, 160, after).kcal, 560);
+});
+
+test('creatine field and photo checks', () => {
+  assert.equal(parseCreatine(''), undefined);
+  assert.equal(parseCreatine('0,45'), 0.45);
+  assert.ok(Number.isNaN(parseCreatine('-1')));
+  assert.ok(Number.isNaN(parseCreatine(String(MAX_CREATINE + 1))));
+  assert.ok(Number.isNaN(parseCreatine('abc')));
+  assert.equal(creatineMg({ foodId: 'x', grams: 50 }, {}), null, 'no data → unknown');
+  assert.equal(creatineMg({ foodId: 'x', grams: 50, cr: 0 }, {}), 0);
+  assert.equal(safePhoto('data:image/jpeg;base64,/9j/4AAQ=='), 'data:image/jpeg;base64,/9j/4AAQ==');
+  assert.equal(safePhoto('javascript:alert(1)'), '');
+  assert.equal(safePhoto('data:image/svg+xml;base64,PHN2Zz4='), '');
+  assert.equal(safePhoto('data:image/jpeg;base64,abc" onerror="x'), '');
+});
+
+test('delete custom foods (several) → Recently deleted → Undo puts them back; diary rows stay', () => {
+  const x = api.saveCustomFood({ id: 'custom_x', name: 'X', kcal: 100, p: 1, c: 1, f: 1, portion: 100 });
+  const y = api.saveCustomFood({ id: 'custom_y', name: 'Y', kcal: 200, p: 1, c: 1, f: 1, portion: 100 });
+  api.toggleFav(x.id);
+  const row = api.logFood(x, 100, 'lunch', '2026-11-03');
+  const id = trash(
+    'customFood',
+    [x, y].map((r) => ({ store: 'foods', row: r })),
+    { label: '2' },
+  );
+  assert.equal(api.foodById(x.id), undefined);
+  assert.equal(api.foodById(y.id), undefined);
+  assert.ok(!api.customFoods().some((f) => f.id === x.id));
+  assert.ok(!api.favoriteFoods().some((f) => f.id === x.id), 'a deleted favorite is not listed');
+  assert.equal(get('food', row.id).kcal, 100, 'the diary keeps its rows');
+  assert.ok(restore(id));
+  assert.equal(api.foodById(x.id).name, 'X');
+  assert.ok(
+    api.favoriteFoods().some((f) => f.id === x.id),
+    'Undo brings the ☆ back too',
+  );
+  assert.ok(all('foods').some((f) => f.id === y.id));
+  for (const k of ['custom.deleteMode', 'custom.deleteN', 'custom.photoPick', 'trash.kind.customFood', 'manual.cr'])
+    assert.ok(bg[k] && en[k], k);
+  assert.equal(bg['custom.photoPick'], 'Снимай опаковката отпред');
+  assert.equal(bg['custom.deleteMode'], 'Изтрий храни');
+});

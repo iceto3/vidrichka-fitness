@@ -519,3 +519,32 @@
   height: 100%;
   object-fit: cover;
 }
+.pkgbox .pkgthumb {
+  width: 84px;
+  height: 84px;
+  border-radius: 16px;
+  object-fit: cover;
+  flex: none;
+  background: var(--soft);
+}
+.pkgpick {
+  cursor: pointer;
+}
+.delrow {
+  gap: 12px;
+  padding: 10px 2px;
+  min-height: 52px;
+  cursor: pointer;
+}
+.delrow .fchk {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--red);
+}
+.delmode {
+  flex: none;
+}
+.delbar .btn[disabled] {
+  opacity: 0.45;
+}

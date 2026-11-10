@@ -5,11 +5,11 @@
  * rest – with a faint divider between the groups.
  * @module features/food/views/foodlist
  */
-import { html, raw } from '../../../ui/dom.js';
+import { html } from '../../../ui/dom.js';
 import { fmtNum, t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
 import { foodName, isFav, orderedFoods } from '../api.js';
-import { known } from '../logic.js';
+import { known, safePhoto } from '../logic.js';
 
 /**
  * Second line of a food row: kcal / 100 g, then fibre and salt when the food lists them (1.4.0).
@@ -26,8 +26,8 @@ export const foodSub = (f) =>
 
 /** The food's icon: its package photo (1.4.4) or its emoji. @param {any} f @param {string} [cls] */
 export const foodIcon = (f, cls = 'fic') =>
-  f.photo
-    ? html`<span class="${cls} fphoto"><img src="${raw(String(f.photo))}" alt="" loading="lazy" decoding="async"></span>`
+  safePhoto(f.photo)
+    ? html`<span class="${cls} fphoto"><img src="${safePhoto(f.photo)}" alt="" loading="lazy" decoding="async"></span>`
     : html`<span class="${cls}">${f.emoji ?? '🍽️'}</span>`;
 
 /**

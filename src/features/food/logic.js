@@ -137,6 +137,19 @@ export const totals = (rows) =>
   );
 
 /**
+ * 1.4.4: is the row still what its food gives at the row's grams? False once a custom food
+ * was edited after the row was logged – the row then keeps its own (old) values.
+ * @param {{grams: number, kcal: number, p: number, c: number, f: number}} row @param {any} food
+ */
+export function matchesFood(row, food) {
+  if (!food || !(row.grams > 0)) return false;
+  const n = portion(food, row.grams);
+  const near = (/** @type {number} */ a, /** @type {number} */ b, /** @type {number} */ d) =>
+    !known(a) || !known(b) || Math.abs(a - b) <= d;
+  return near(row.kcal, n.kcal, 1) && near(row.p, n.p, 0.15) && near(row.c, n.c, 0.15) && near(row.f, n.f, 0.15);
+}
+
+/**
  * A diary row (or saved-meal item) at a new weight: every nutrient scales with the grams,
  * unknown fiber/salt stay unknown. Ids, meal, date and time are kept.
  * 1.4.3 (fixes): with the row's food (catalog or saved food, per 100 g) the values come from
@@ -151,6 +164,7 @@ export const totals = (rows) =>
 export function scaleRow(row, grams, food = null) {
   const g = Math.max(1, Math.round(grams));
   if (!(row.grams > 0)) return { ...row, grams: g };
+  if (food && !matchesFood(row, food)) food = null; // 1.4.4: an edited custom food keeps old rows as they were
   const per100 = Object.fromEntries(
     ['kcal', 'p', 'c', 'f', 'fib', 'salt'].map((k) => {
       const v = /** @type {any} */ (row)[k],
@@ -323,6 +337,29 @@ export const parseNum = (v) => {
     .trim()
     .replace(',', '.');
   return x === '' ? 0 : /^-?\d*\.?\d+$/.test(x) ? Number(x) : NaN;
+};
+
+/**
+ * 1.4.4: a custom food's package photo is used only if it is one of our own image data URLs
+ * (a restored backup can't inject anything else). @param {any} u @returns {string} '' if not.
+ */
+export const safePhoto = (u) =>
+  typeof u === 'string' && u.length < 400_000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(u)
+    ? u
+    : '';
+
+/** 1.4.4: highest creatine accepted for a custom food (g per 100 g; meat and fish are ~0.3–0.7). */
+export const MAX_CREATINE = 5;
+
+/**
+ * 1.4.4: a custom food's creatine field (g / 100 g, optional): '' → undefined (unknown),
+ * 0…{@link MAX_CREATINE} → the number (2 decimals), anything else → NaN (an error).
+ * @param {string} v
+ */
+export const parseCreatine = (v) => {
+  if (String(v ?? '').trim() === '') return undefined;
+  const x = parseNum(v);
+  return Number.isFinite(x) && x >= 0 && x <= MAX_CREATINE ? Math.round(x * 100) / 100 : NaN;
 };
 
 /**

@@ -57,7 +57,9 @@ export function setWater(date, glasses) {
  * @param {string} [date]
  */
 export function logFood(food, grams, meal, date = view.date) {
-  if (food.source && !local.has(food.id)) put('foods', food);
+  if (food.source === 'custom')
+    food = get('foods', food.id) ?? saveCustomFood(food); // 1.4.4: the saved (edited) one
+  else if (food.source && !local.has(food.id)) put('foods', food);
   const use = kv('foodUse', {});
   setKv('foodUse', { ...use, [food.id]: bump(use[food.id], Date.now(), food.cat) }); // 1.4.4: points
   const ts = mealTs(date, meal, dayKey());
@@ -73,6 +75,7 @@ export function logFood(food, grams, meal, date = view.date) {
     grams,
     ...portion(food, grams),
     ...(food.missing?.length ? { missing: food.missing } : {}),
+    ...(known(food.cr) ? { cr: food.cr } : {}), // 1.4.4: a custom food's creatine, g / 100 g
   });
   emit('food:logged', { meal, emoji: row.emoji ?? '🍽️' });
   return row;
@@ -248,7 +251,30 @@ export function toggleFav(id) {
 export const customFoods = () =>
   all('foods')
     .filter((f) => f.source === 'custom')
-    .sort((a, b) => String(b.id).localeCompare(String(a.id)));
+    .sort((a, b) => (b.created ?? 0) - (a.created ?? 0) || String(b.id).localeCompare(String(a.id)));
+
+/** Is it a food the user may edit / delete (their own, not the built-in database)? @param {any} f */
+export const isCustom = (f) => !!f && f.source === 'custom' && !local.has(f.id);
+
+/**
+ * 1.4.4: save a new custom food right away (so it is in Ръчно добавени храни even if it is
+ * never added to the diary). @param {any} food
+ */
+export const saveCustomFood = (food) => put('foods', { created: Date.now(), ...food, source: 'custom' });
+
+/**
+ * 1.4.4: change a custom food's values / name / photo. Diary rows keep the values they were
+ * logged with (rows are copies; see logic.matchesFood). Built-in foods are never changed.
+ * @param {string} id @param {Record<string, any>} change Keys set to undefined are removed.
+ * @returns {any|null} The saved food.
+ */
+export function updateCustomFood(id, change) {
+  const before = get('foods', id);
+  if (!isCustom(before)) return null;
+  const after = { ...before, ...change, id, source: 'custom' };
+  for (const k of Object.keys(after)) if (after[k] === undefined) delete after[k];
+  return put('foods', after);
+}
 
 /** All favorite foods (built-in, custom or online ones that were saved), starred order. */
 export const favoriteFoods = () =>
