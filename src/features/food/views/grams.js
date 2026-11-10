@@ -8,7 +8,7 @@ import { emit } from '../../../core/bus.js';
 import { html } from '../../../ui/dom.js';
 import { fmtNum, t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
-import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
+import { closeSheet, openSheet, refreshSheet, toast } from '../../../ui/sheet.js';
 import { FOOD_CATEGORIES, foodName, saveFoodFix } from '../api.js';
 import { GRAM_STEPS, known, missingValues, nextGrams, portion } from '../logic.js';
 import { missingNotice } from './notice.js';
@@ -23,17 +23,21 @@ export const gramStepper = (o) => {
   const btn = (/** @type {number} */ d) =>
     html`<button class="sb gsb" data-act="${o.act}" data-d="${d}" aria-label="${t(d < 0 ? 'food.gramsMinus' : 'food.gramsPlus', { n: Math.abs(d) })}">${d < 0 ? '−' : '+'}${Math.abs(d)}</button>`;
   const [a, b, c, d] = GRAM_STEPS;
-  return html`<div class="step big gstep">${btn(a)}${btn(b)}<label class="sv num"><input id="${o.id}" type="text" inputmode="decimal" value="${o.value}" data-change="${o.act}" aria-label="${t('food.grams')}"/><small>${t('unit.g')}</small></label>${btn(c)}${btn(d)}</div>`;
+  return html`<div class="step big gstep">${btn(a)}${btn(b)}<label class="sv num"><input id="${o.id}" class="keeptyped" type="text" inputmode="decimal" value="${o.value}" data-change="${o.act}" data-input="${o.act}" aria-label="${t('food.grams')}"/><small>${t('unit.g')}</small></label>${btn(c)}${btn(d)}</div>`;
 };
 
 /**
  * The `g` action of both sheets: a button adds its step, a typed value replaces the grams.
+ * 1.5.0: also while typing (`input`) – the sheet is re-rendered at once so kcal and the other
+ * totals follow each key; the field keeps what is typed (`.keeptyped`, see ui/dom.js morph).
  * @param {number} g @param {HTMLElement} el @param {Event} ev
  */
-export const gramsFrom = (g, el, ev) =>
-  ev.type === 'change'
-    ? nextGrams(g, { typed: /** @type {HTMLInputElement} */ (el).value })
-    : nextGrams(g, { d: Number(el.dataset.d) });
+export const gramsFrom = (g, el, ev) => {
+  if (ev.type !== 'change' && ev.type !== 'input') return nextGrams(g, { d: Number(el.dataset.d) });
+  const v = nextGrams(g, { typed: /** @type {HTMLInputElement} */ (el).value });
+  if (ev.type === 'input') queueMicrotask(refreshSheet); // input events don't refresh by themselves
+  return v;
+};
 
 /**
  * Macro line (П / В / М). A macro the product does not list (`food.missing`, e.g. an Open Food

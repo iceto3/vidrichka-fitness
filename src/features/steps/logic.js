@@ -18,6 +18,29 @@ export const clampSteps = (n) => {
   return Number.isFinite(v) ? Math.min(MAX_STEPS, Math.max(0, v)) : 0;
 };
 
+/** 1.5.0: the steps slider snaps every this many steps; fine-tune buttons beside it. */
+export const SLIDER_STEP = 500;
+export const FINE_STEPS = /** @type {const} */ ([-100, -50, 50, 100]);
+
+/**
+ * 1.5.0: a change of steps (± whole number, bounded by MAX_STEPS) – the total it gives is
+ * clamped again, so steps never go below 0. @param {any} n
+ */
+export const clampDelta = (n) => {
+  const v = Math.round(Number(n));
+  return Number.isFinite(v) ? Math.min(MAX_STEPS, Math.max(-MAX_STEPS, v)) : 0;
+};
+
+/**
+ * 1.5.0: the slider's range for a day – twice the goal, or more when the day already has more
+ * (always a whole number of slider steps, at most MAX_STEPS). @param {number} n @param {number} goal
+ */
+export const sliderMax = (n, goal) =>
+  Math.min(MAX_STEPS, Math.ceil(Math.max(goal * 2, n, SLIDER_STEP) / SLIDER_STEP) * SLIDER_STEP);
+
+/** 1.5.0: a slider value snapped to SLIDER_STEP. @param {any} n */
+export const snapSteps = (n) => clampSteps(Math.round(clampSteps(n) / SLIDER_STEP) * SLIDER_STEP);
+
 /**
  * Days in a row the goal was reached, ending today (if reached) or yesterday.
  * @param {{id: string, steps?: number}[]} rows `days` records @param {number} goal @param {string} today

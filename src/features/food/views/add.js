@@ -8,11 +8,13 @@
  */
 import { html, patch } from '../../../ui/dom.js';
 import { fmtDate, fmtNum, getLang, t } from '../../../core/i18n.js';
-import { dayKey, parseDay } from '../../../core/dates.js';
+import { dayKey, hhmm, hmComplete, parseDay, parseHM, stepHM } from '../../../core/dates.js';
 import { all } from '../../../core/store.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
+import { time24 } from '../../../ui/components.js';
+import { checkFoodTime, foodTimeFloor, setMealClock } from '../../daily/api.js';
 import {
   FOODS,
   categoriesByUse,
@@ -20,6 +22,7 @@ import {
   favoriteFoods,
   foodName,
   logFood,
+  mealName,
   quickPicks,
   recentFoods,
   savedMeals,
@@ -27,7 +30,7 @@ import {
   toggleFav,
   view,
 } from '../api.js';
-import { addMealRedirect, signature, timesEaten, totals } from '../logic.js';
+import { MEAL_TIME, addMealRedirect, isExtra, mealTimeOf, signature, timesEaten, totals } from '../logic.js';
 import { foodRow, groupedList } from './foodlist.js';
 import { enabledMeals } from '../../../core/settings.js';
 import { navigate } from '../../../core/router.js';
@@ -44,11 +47,13 @@ export default ({ meal }) => {
   if (protein) view.date = dayKey(); // always today's breakfast
   // 1.4.3 (fixes): a switched-off meal has no add page – open the meal of this time instead
   // (the `?protein` hint belongs to the breakfast only; a search / scan link keeps its flag).
-  const other = addMealRedirect(
-    meal,
-    enabledMeals(),
-    all('food').some((r) => r.date === view.date && r.meal === meal && r.type !== 'water'),
-  );
+  const other = isExtra(meal) // 1.5.0: an unplanned meal is always fine
+    ? null
+    : addMealRedirect(
+        meal,
+        enabledMeals(),
+        all('food').some((r) => r.date === view.date && r.meal === meal && r.type !== 'water'),
+      );
   if (other) {
     const qs = (location.hash.split('?')[1] ?? '')
       .split('&')
@@ -71,13 +76,58 @@ export default ({ meal }) => {
   const findFood = (/** @type {string} */ id) =>
     FOODS.find((f) => f.id === id) ?? online.get(id) ?? all('foods').find((f) => f.id === id);
 
-  const add = (/** @type {any} */ food) =>
+  // ---- 1.5.0: the clock – one time for the whole meal (default: the meal's time, else now;
+  // ±5 min, never in the future, never before the wake-up). Applied when food is added and
+  // when the page is left, so stepping through times never re-grades on every tap.
+  /** @type {{hm: string, typed?: string, touched: boolean}} */
+  const clk = { hm: '', touched: false };
+  const mealAt = () => mealTimeOf(all('food'), view.date, meal);
+  const clockHM = () => {
+    if (clk.touched) return clk.hm;
+    const at = mealAt();
+    if (at) return hhmm(new Date(at));
+    if (view.date === dayKey()) return hhmm(new Date());
+    const usual = MEAL_TIME[meal] ?? '12:00',
+      floor = foodTimeFloor(view.date);
+    return floor && floor > usual ? floor : usual;
+  };
+  const clockErr = () => {
+    if (clk.typed != null) return 'time24.bad';
+    if (!clk.touched) return '';
+    const r = checkFoodTime(view.date, clk.hm);
+    return 'err' in r ? `mealTime.err.${r.err}` : '';
+  };
+  /** The picked time (ms), or undefined to keep the meal's time / now. */
+  const pickedAt = () => {
+    if (!clk.touched) return undefined;
+    const r = checkFoodTime(view.date, clk.hm);
+    return r.ok ? r.at : undefined;
+  };
+  /** 1.5.0: the meal's name – an unplanned one is named by the time on the clock. */
+  const name = () => {
+    if (!isExtra(meal)) return t(`meal.${meal}`);
+    const r = checkFoodTime(view.date, clockHM());
+    return mealName(meal, view.date, r.ok ? r.at : undefined);
+  };
+  /** Move the meal's entries to the picked time (one time per meal). */
+  const applyClock = () => {
+    const at = pickedAt();
+    if (at == null) return;
+    const rows = all('food').filter((r) => r.date === view.date && r.meal === meal && r.type !== 'water');
+    if (rows.some((r) => r.ts !== at)) setMealClock(view.date, meal, clk.hm);
+  };
+
+  const add = (/** @type {any} */ food) => {
+    const err = clockErr();
+    if (err) return void toast(t(err));
     openGrams(food, (g, used) => {
-      const row = logFood(used, g, meal);
+      const row = logFood(used, g, meal, view.date, pickedAt());
+      applyClock();
       basket.push(row);
       toast(t('food.added', { name: foodName(used), g }));
       emit('ui:refresh');
     });
+  };
 
   const results = () => {
     const loc = searchLocal(q);
@@ -135,7 +185,7 @@ ${!loc.length && q && offView(off, q) !== 'none' ? html`<button class="btn sec w
           times >= 1
             ? t('food.saveBodyTimes', {
                 items: rows.map(foodName).join(' + '),
-                meal: t(`meal.${meal}`).toLowerCase(),
+                meal: name().toLowerCase(),
                 n: times + 1,
               })
             : undefined,
@@ -203,7 +253,7 @@ ${foods.length ? html`<div class="xs xb muted caps mt12">${t('food.favFoods')}</
         view.date === dayKey() ? t('common.today') : fmtDate(parseDay(view.date), { day: 'numeric', month: 'short' });
       return html`<div class="content add">
 <header class="row between topbar"><button class="iconbtn" data-act="finish" aria-label="${t('common.back')}">${ic('back', 22)}</button>
-<div class="center"><h1 class="h2">${t('food.add')}</h1><div class="muted xs b">${t('food.toMeal', { meal: t(`meal.${meal}`), day })}</div></div>
+<div class="center"><h1 class="h2">${t('food.add')}</h1><div class="muted xs b">${t('food.toMeal', { meal: name(), day })}</div></div>
 <span class="iconbtn ghost" aria-hidden="true"></span>${basket.length ? html`<button class="btn sm finishmeal" data-act="finish">${t('food.finishMeal')}</button>` : ''}</header>
 <label class="search mt14">${ic('search', 20, 2.2)}<input id="fq" class="bare f1" type="search" data-input="q" value="${q}" placeholder="${t('food.searchPh')}" autocomplete="off" enterkeyhint="search" aria-label="${t('food.search')}">
 ${voiceReady() ? html`<button class="iconbtn flat sm" data-act="voice" aria-label="${t('voice.say')}">${ic('mic', 20, 2.2)}</button>` : ''}<button class="iconbtn flat sm acc-bg" data-act="scan" aria-label="${t('food.scan')}">${ic('scan', 20, 2.2)}</button></label>
@@ -213,6 +263,9 @@ ${
 <div class="row gap6 wrap mt8">${basket.map((r, i) => html`<span class="chip">${r.emoji} ${foodName(r)} · ${r.grams} ${t('unit.g')}<button class="x" data-act="undo" data-i="${i}" aria-label="${t('common.remove')} ${foodName(r)}">${ic('close', 14, 2.6)}</button></span>`)}</div></div>`
     : ''
 }
+<div class="card mt12 row gap10 mealclock"><span class="sq">${ic('clock', 20, 2.2)}</span><span class="f1 b">${t('food.time')}</span>${time24({ value: clk.typed ?? clockHM(), act: 'clk', step: 'clkstep', mins: 5, label: t('food.mealTime'), bad: !!clockErr() })}</div>
+${clockErr() ? html`<p class="small b danger-t mt6 px4 clockerr" role="alert">${t(clockErr())}</p>` : ''}
+${isExtra(meal) ? html`<p class="muted xs b mt6 px4 extrahint">${t('food.addMealHint')}</p>` : ''}
 ${protein ? html`<div class="card mt12 row gap10 phint" role="note"><span class="sq">🍳</span><span class="f1 b small">${t('food.proteinHint')}</span></div>` : ''}
 <div id="results">${q ? results() : ''}</div>
 ${
@@ -226,7 +279,7 @@ ${
 ${(() => {
   const m = meals.find((x) => x.id === picked);
   return m
-    ? html`<div class="combohint muted small b mt6" role="status">${m.items.map((/** @type {any} */ i) => `${foodName(i)} ${i.grams} ${t('unit.g')}`).join(' · ')}<br><span class="acc">${t('food.tapAgain', { meal: t(`mealTo.${meal}`) })}</span></div>`
+    ? html`<div class="combohint muted small b mt6" role="status">${m.items.map((/** @type {any} */ i) => `${foodName(i)} ${i.grams} ${t('unit.g')}`).join(' · ')}<br><span class="acc">${t('food.tapAgain', { meal: isExtra(meal) ? name().toLowerCase() : t(`mealTo.${meal}`) })}</span></div>`
     : '';
 })()}`
     : ''
@@ -250,8 +303,31 @@ ${customFoods().length ? html`<button class="cat customcat" data-act="custom"><s
         );
       if (hash.endsWith('?q')) document.getElementById('fq')?.focus();
     },
-    unmount: () => clearTimeout(timer),
+    unmount: () => (clearTimeout(timer), applyClock()),
     actions: {
+      clk: (el, ev) => {
+        const txt = /** @type {HTMLInputElement} */ (el).value,
+          v = parseHM(txt);
+        if (ev?.type === 'input') {
+          if (!hmComplete(txt) || !v) return false;
+          Object.assign(clk, { hm: v, typed: undefined, touched: true });
+        } else if (v) {
+          Object.assign(clk, { hm: v, typed: undefined, touched: true });
+          /** @type {HTMLInputElement} */ (el).value = v;
+        } else clk.typed = txt;
+        emit('ui:refresh');
+        return false;
+      },
+      clkstep: (el) => {
+        const hm = stepHM(clockHM(), Number(el.dataset.d)),
+          floor = foodTimeFloor(view.date),
+          c = checkFoodTime(view.date, hm);
+        Object.assign(clk, {
+          hm: floor && 'err' in c && c.err === 'early' ? floor : hm,
+          typed: undefined,
+          touched: true,
+        });
+      },
       q: (el) => {
         q = /** @type {HTMLInputElement} */ (el).value;
         patch('#results', q ? results() : '');
@@ -283,7 +359,7 @@ ${customFoods().length ? html`<button class="cat customcat" data-act="custom"><s
         if (addCombo(id, meal)) emit('nav', { back: 'food' });
         return false;
       },
-      finish: () => (finish(), false),
+      finish: () => (applyClock(), finish(), false),
       scan: async () => {
         const { openScanner } = await import('./scan.js');
         openScanner(

@@ -123,13 +123,7 @@ test('older data with a breakfast before the stored wake-up: other sleep fields 
 });
 
 test('the i18n keys exist in both languages; the unused „Малко късно“ toast is gone', () => {
-  for (const k of [
-    'day.err.wakeAfterBreakfast',
-    'food.time',
-    'food.timeHint',
-    'food.timeBreakfast',
-    'whatsNew.time144',
-  ])
+  for (const k of ['day.err.wakeAfterBreakfast', 'food.time', 'food.timeMeal', 'whatsNew.time144'])
     assert.ok(bg[k] && en[k], k);
   assert.equal(bg['cel.proteinLate'], undefined);
   assert.equal(en['cel.proteinLate'], undefined);
@@ -168,7 +162,7 @@ test('item editor time: today’s graded breakfast re-grades – all its entries
   assert.equal(xp(), 8, 'stable');
 });
 
-test('item editor time: refused in the future / before the wake-up; other meals move alone', () => {
+test('item editor time: refused in the future / before the wake-up; (1.5.0) other meals move as one too', () => {
   clear();
   gradedBreakfast('07:20');
   assert.deepEqual(
@@ -185,7 +179,7 @@ test('item editor time: refused in the future / before the wake-up; other meals 
   row('12:30', 'lunch', 'l2');
   atClock('14:00', (now) => api.setFoodTime('l1', '13:05', now));
   assert.equal(get('food', 'l1').time, '13:05');
-  assert.equal(get('food', 'l2').time, '12:30', 'only that entry');
+  assert.equal(get('food', 'l2').time, '13:05', '1.5.0: one time per meal');
   assert.equal(get('food', 'bf0_07:20').time, '07:20');
   assert.equal(graded.length, 0, 'no protein toast for a lunch');
 });

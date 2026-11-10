@@ -25,6 +25,7 @@ import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { chromium, webkit, devices } from 'playwright-core';
 import { v144 } from './v144.mjs';
+import { v150 } from './v150.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
@@ -201,6 +202,11 @@ async function run(name, browser, P) {
     clickPast: (/** @type {any} */ target, /** @type {any} */ opened) =>
       clickPastPrompts(page, layer, settle, target, opened),
   };
+  if (FLOW === 'v150') {
+    await v150(page, h);
+    assert.deepEqual(errors, [], 'no page errors');
+    return void (await ctx.close());
+  }
   if (FLOW === 'v144') {
     await v144(page, h);
     assert.deepEqual(errors, [], 'no page errors');
@@ -374,6 +380,7 @@ async function run(name, browser, P) {
   await v143a(page, h);
   await v143b(page, h);
   await v144(page, h);
+  await v150(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -1593,7 +1600,8 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.4/);
+  assert.match(txt, /Какво ново в 1\.5\.0/);
+  assert.match(txt, /Добави хранене/, 'the 1.5.0 items');
   assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
   assert.match(txt, /поле „Час“/, 'the 1.4.4 time item');
   assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
@@ -1606,7 +1614,7 @@ async function v132(page, { go, settle, clearCel, layer }) {
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    37, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6
+    41, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4
     'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -1912,7 +1920,8 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.4/);
+  assert.match(txt, /Какво ново в 1\.5\.0/);
+  assert.match(txt, /Добави хранене/, 'the 1.5.0 items');
   assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
   assert.match(txt, /поле „Час“/, 'the 1.4.4 time item');
   assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
@@ -1922,7 +1931,7 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   assert.match(txt, /Обичайният ти обяд/);
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    34, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6
+    38, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4
     'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -2026,7 +2035,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.4\.4/);
+  assert.match(txt, /Какво ново в 1\.5\.0/);
+  assert.match(txt, /Добави хранене/, 'the 1.5.0 items');
   assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
   assert.match(txt, /поле „Час“/, 'the 1.4.4 time item');
   assert.match(txt, /Хапче с таймера/, 'the 1.4.3 items');
@@ -2037,8 +2047,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    32,
-    'six 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
+    36,
+    'four 1.5.0, six 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
   );
   await page.waitForTimeout(700);
   await shot('whats-new-134');
@@ -2135,9 +2145,9 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   const card = page.locator('.stepscard');
   await card.scrollIntoViewIfNeeded();
   const s0 = (await dayField('steps')) ?? 0;
-  await card.locator('[data-act="stepsAdd"][data-n="2000"]').click();
+  await card.locator('[data-act="stepsAdd"][data-n="100"]').click(); // 1.5.0: fine-tune buttons
   await settle();
-  assert.equal(await dayField('steps'), s0 + 2000);
+  assert.equal(await dayField('steps'), s0 + 100);
   await card.locator('[data-act="stepsSheet"]').click();
   await layer.locator('#stepsin').fill('6500');
   await layer.locator('[data-act="set"]').click();
@@ -2146,12 +2156,12 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.match(await page.locator('.stepscard').innerText(), /6\s?500/);
   await page.locator('.stepscard').scrollIntoViewIfNeeded();
   await shot('steps-card');
-  await page.locator('.stepscard [data-act="stepsAdd"][data-n="2000"]').click();
+  await page.locator('.stepscard .stepsrange').fill('8500'); // 1.5.0: the slider
   await page.locator('#cel > *').first().waitFor({ timeout: 4000 });
   assert.match(await page.locator('#cel').innerText(), /крачки/i, 'goal celebration');
   await clearCel();
   assert.ok(page.locator('.stepscard.done'), 'goal met');
-  await page.locator('.stepscard [data-act="stepsAdd"][data-n="1000"]').click();
+  await page.locator('.stepscard [data-act="stepsAdd"][data-n="100"]').click();
   await page.waitForTimeout(600);
   assert.equal(await page.locator('#cel > *').count(), 0, 'the goal celebrates once a day');
   await go('profile');
@@ -2469,7 +2479,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.deepEqual(Object.keys(fb).sort(), ['images', 'lang', 'text', 'version']);
   assert.match(fb.text, /пулса/);
   assert.equal(fb.lang, 'bg');
-  assert.match(fb.version, /^1\.(3\.4|4\.\d)/);
+  assert.match(fb.version, /^1\.(3\.4|4\.\d|5\.\d)/);
   assert.equal(fb.images.length, 1);
   assert.equal(fb.images[0].mime, 'image/jpeg');
   const bytes = Buffer.from(fb.images[0].data, 'base64');
@@ -3011,9 +3021,9 @@ async function v140(page, { go, settle, shot, layer, rows }) {
   await page.locator('.dayview').waitFor();
   for (const sel of ['.stepscard', '.sleepcard', '.homemeals', '.dayworkouts'])
     assert.equal(await page.locator(`.dayview ${sel}`).count(), 1, `${sel} on the day view`);
-  await page.locator('.dayview [data-act="stepsAdd"][data-n="1000"]').click();
+  await page.locator('.dayview [data-act="stepsAdd"][data-n="100"]').click();
   await settle();
-  assert.equal((await dayRow()).steps, before + 1000, 'steps added to the past day');
+  assert.equal((await dayRow()).steps, before + 100, 'steps added to the past day');
   // water: − (left) … glasses … + (right); − is disabled at 0
   const w0 = await page.locator('.dayview .glasses .glass.on').count();
   if (w0 === 0) assert.ok(await page.locator('.dayview .waterminus').isDisabled(), '− disabled at 0');
@@ -3402,9 +3412,9 @@ async function v141tester(page, { go, settle, shot }, name, ctx) {
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
   // build id: 1.4.1-<hash> / 1.4.1-beta-<hash> from a build, the plain version from the sources
-  const idRe = DIR === '.' ? /^Билд: 1\.4\.4$/ : /^Билд: 1\.4\.4(-beta)?-[0-9a-f]{7,}$/;
+  const idRe = DIR === '.' ? /^Билд: 1\.5\.0$/ : /^Билд: 1\.5\.0(-beta)?-[0-9a-f]{7,}$/;
   const meta = await page.evaluate(
-    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.4.4',
+    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.5.0',
   );
   const foot = page.locator('#pbuild');
   await foot.scrollIntoViewIfNeeded();

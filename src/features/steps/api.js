@@ -9,9 +9,21 @@ import { emit } from '../../core/bus.js';
 import { dayKey } from '../../core/dates.js';
 import { settings } from '../../core/settings.js';
 import { day, patchDay } from '../daily/api.js';
-import { clampSteps, stepStreak } from './logic.js';
+import { clampDelta, clampSteps, stepStreak } from './logic.js';
 
-export { MAX_STEPS, GOAL_MIN, GOAL_MAX, GOAL_STEP, clampSteps, stepStreak } from './logic.js';
+export {
+  MAX_STEPS,
+  GOAL_MIN,
+  GOAL_MAX,
+  GOAL_STEP,
+  FINE_STEPS,
+  SLIDER_STEP,
+  clampDelta,
+  clampSteps,
+  sliderMax,
+  snapSteps,
+  stepStreak,
+} from './logic.js';
 
 /** XP for reaching the step goal (once a day, as a daily quest). */
 export const STEPS_XP = 20;
@@ -39,8 +51,8 @@ export function setSteps(date, n) {
   return total;
 }
 
-/** Add steps to a day. @param {string} date @param {number} n */
-export const addSteps = (date, n) => setSteps(date, steps(date) + clampSteps(n));
+/** Add (1.5.0: or take off) steps; the day never goes below 0. @param {string} date @param {number} n */
+export const addSteps = (date, n) => setSteps(date, steps(date) + clampDelta(n));
 
 /** Days in a row the goal was reached. */
 export const stepRun = () => stepStreak(all('days'), stepGoal(), dayKey());

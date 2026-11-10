@@ -1361,9 +1361,30 @@ export default {
   // 1.4.4 (time): meal time in the item editor, no meal before the wake-up
   'day.err.wakeAfterBreakfast': 'Breakfast is logged at {time} – the wake-up has to be before that',
   'food.time': 'Time',
-  'food.timeHint': 'Not later than now and not before you woke up.',
-  'food.timeBreakfast': 'The time applies to the whole breakfast.',
   'whatsNew.time144': 'Change a food’s time in its editor (the “Time” field). A meal can’t be before you woke up.',
   // 1.4.4 (time): toast after a changed time
   'food.timeChanged': '{name} – time {time}',
+  // 1.5.0 1d: steps slider + fine-tune
+  'steps.slider': 'Steps for the day (drag)',
+  'steps.n': '{n} steps',
+  'steps.minus': 'Remove {n} steps',
+  'steps.plus': 'Add {n} steps',
+  // 1.5.0 2a: one time per meal
+  'food.timeMeal': 'The time applies to the whole meal.',
+  // 1.5.0 2b: the clock on the add page
+  'food.mealTime': 'Meal time',
+  // 1.5.0 2c: unplanned meals
+  'meal.extraAm': 'Mid-morning meal',
+  'meal.extraPm': 'Mid-afternoon meal',
+  'meal.extra': 'Extra meal',
+  'food.addMeal': 'Add a meal',
+  'food.addMealHint':
+    'An unplanned meal – no points of its own; its calories and protein count in the day’s totals and the protein goal.',
+  // 1.5.0 What's new
+  'whatsNew.extra150':
+    '“Add a meal” on Home and Food – for an unplanned meal. It is named by its time (mid-morning, mid-afternoon, extra meal); no points of its own, but its calories and protein count in the day’s totals and the protein goal.',
+  'whatsNew.clock150':
+    'A clock when adding food: the time applies to the whole meal. Change one food’s time and the whole meal moves with it.',
+  'whatsNew.steps150': 'Steps with a slider (every 500) and −100, −50, +50, +100 buttons.',
+  'whatsNew.kcal150': 'Calories update while you type the grams.',
 };

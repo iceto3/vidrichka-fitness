@@ -12,7 +12,7 @@
  */
 import { all, get } from '../../core/store.js';
 import { addDays, dayKey, parseDay } from '../../core/dates.js';
-import { addSteps, clampSteps, setSteps, stepGoal, stepRun } from '../steps/api.js';
+import { addSteps, clampDelta, clampSteps, setSteps, stepGoal, stepRun } from '../steps/api.js';
 import {
   MAX_SLEEP_H,
   clearSleep,
@@ -70,7 +70,7 @@ export function readDays(dates) {
 export const setDaySteps = (date, n) => setSteps(assertEditable(date), clampSteps(n));
 
 /** Add steps to the day. @param {string} date @param {number} n */
-export const addDaySteps = (date, n) => addSteps(assertEditable(date), clampSteps(n));
+export const addDaySteps = (date, n) => addSteps(assertEditable(date), clampDelta(n));
 
 /** Glasses of water on the day (0…MAX_GLASSES). @param {string} date @param {number} n */
 export function setDayWater(date, n) {
