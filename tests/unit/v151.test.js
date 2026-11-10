@@ -149,3 +149,52 @@ test('4a: Начало – sleep, then mood / energy and water (the day view car
   );
   assert.match(js, /\.\.\.cardActions\(\(\) => dayKey\(\)\)/, 'moodSheet / water actions come with the shared cards');
 });
+
+test('4b: each „Часове сън“ bar is a button that opens that night’s sleep editor', async () => {
+  const { readFileSync } = await import('node:fs');
+  const js = readFileSync('src/features/daily/views/sleep.js', 'utf8');
+  assert.match(js, /<button type="button" class="sb[^"]*\$\{[^`]*data-act="sleepDay" data-d="\$\{n\.day\}"/);
+  assert.match(js, /sleepDay: async \(el\) =>[\s\S]*openSleepSheet\(d\)/);
+  assert.match(js, /role="group" aria-label="\$\{t\('sleep\.hours'\)\}"/, 'no longer a plain picture');
+  for (const k of ['sleep.tapBar', 'sleep.editNight'])
+    assert.ok(/** @type {any} */ (bg)[k] && /** @type {any} */ (en)[k], k);
+});
+
+test('4b: an empty past night is filled in from its bar; same rules – 16 h cap, wake-up not after breakfast', async () => {
+  globalThis.addEventListener ??= () => {};
+  const { addDays, dayKey } = await import('../../src/core/dates.js');
+  const { all, get, put, remove } = await import('../../src/core/store.js');
+  const { at } = await import('../../src/features/daily/logic.js');
+  const { setDaySleepTimes, sleepEditorTimes } = await import('../../src/features/day/api.js');
+  const { sleepNights } = await import('../../src/features/daily/api.js');
+  for (const st of ['food', 'days']) all(st).forEach((r) => remove(st, r.id));
+  const P = dayKey(addDays(new Date(), -3));
+  assert.equal(sleepNights(14).find((n) => n.day === P)?.hours, null, 'empty bar');
+  const open = sleepEditorTimes(P);
+  assert.ok(open.bed && open.wake, 'the editor opens with times to start from');
+  setDaySleepTimes(P, { bed: '23:30', wake: '07:00' });
+  assert.equal(get('days', P).sleepWake, at(P, '07:00'));
+  assert.equal(sleepNights(14).find((n) => n.day === P)?.hours, 7.5, 'the bar shows it');
+  // corrected later, still within the rules
+  setDaySleepTimes(P, { bed: '23:00', wake: '06:30' });
+  assert.equal(sleepNights(14).find((n) => n.day === P)?.hours, 7.5);
+  // more than 16 h stays refused (the cap is unchanged)
+  assert.throws(() => setDaySleepTimes(P, { bed: '12:00', wake: '06:30', shift: -1 }), { code: 'sleepLong' });
+  // a past day's breakfast at 07:10: a wake-up after it is refused like today
+  put('food', {
+    id: 'bfP',
+    date: P,
+    meal: 'breakfast',
+    ts: at(P, '07:10'),
+    time: '07:10',
+    name: 'Яйца',
+    grams: 100,
+    kcal: 140,
+    p: 12,
+    c: 1,
+    f: 10,
+  });
+  assert.throws(() => setDaySleepTimes(P, { bed: '23:00', wake: '07:30' }), { code: 'wakeAfterBreakfast' });
+  setDaySleepTimes(P, { bed: '23:00', wake: '07:00' });
+  assert.equal(get('days', P).sleepWake, at(P, '07:00'), 'before the breakfast is fine');
+});

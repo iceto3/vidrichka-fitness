@@ -1434,4 +1434,7 @@ export default {
   'manual.sug': 'Захар / 100 г',
   'manual.errSat': 'Не може да е повече от мазнините.',
   'manual.errSug': 'Не може да е повече от въглехидратите.',
+  // 1.5.1: tap a sleep bar
+  'sleep.tapBar': 'Докосни стълб, за да въведеш или поправиш нощта.',
+  'sleep.editNight': 'Сън: {day} – промени',
 };

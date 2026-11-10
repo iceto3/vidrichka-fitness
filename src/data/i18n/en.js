@@ -1396,4 +1396,7 @@ export default {
   'manual.sug': 'Sugar / 100 g',
   'manual.errSat': 'Cannot be more than the fat.',
   'manual.errSug': 'Cannot be more than the carbs.',
+  // 1.5.1: tap a sleep bar
+  'sleep.tapBar': 'Tap a bar to add or fix that night.',
+  'sleep.editNight': 'Sleep: {day} – edit',
 };
