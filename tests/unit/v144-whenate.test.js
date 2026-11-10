@@ -1,6 +1,7 @@
 // 1.4.4 C3: „Кога яде?“ – asked once after a late protein breakfast, the picked time drives
 // the timing chart and the graded protein-quest XP (15 / 8 / 0), corrected without double pay.
 import { test } from 'node:test';
+import { dayKey } from '../../src/core/dates.js';
 import assert from 'node:assert/strict';
 import { all, get, kv, put, remove, setKv } from '../../src/core/store.js';
 import { setSettings } from '../../src/core/settings.js';
@@ -21,7 +22,8 @@ const api = await import('../../src/features/daily/api.js');
 await import('../../src/features/daily/index.js');
 const { previewText } = await import('../../src/features/daily/views/whenate.js');
 
-const D = '2026-11-10';
+// 1.5.1: real today (rewards only grade today; a fixed date broke the test the next day)
+const D = dayKey();
 const realNow = Date.now;
 /** @template T @param {string} hm @param {(now: number) => T} fn @returns {T} */
 const atClock = (hm, fn) => {

@@ -21,7 +21,7 @@ import { saveCustomFood } from '../api.js';
 import { missingNotice } from './notice.js';
 import { voiceUrl } from '../../voice/config.js';
 
-const FIELDS = /** @type {const} */ (['kcal', 'p', 'c', 'f', 'fib', 'salt']);
+const FIELDS = /** @type {const} */ (['kcal', 'p', 'c', 'sug', 'f', 'sat', 'fib', 'salt']); // 1.5.1: + sugar, saturated fat
 
 /**
  * The form sheet shared by "new food", "edit a custom food" and "fill in missing values".
@@ -79,7 +79,7 @@ ${lab.phase === 'error' ? html`<p class="verr small b mt8 labelerr" role="alert"
   const ph = (/** @type {string} */ k) =>
     miss.includes(k) && !v[k]
       ? html` placeholder="${t('manual.missingPh')}"`
-      : k === 'fib' || k === 'salt'
+      : k === 'fib' || k === 'salt' || k === 'sat' || k === 'sug'
         ? html` placeholder="${t('manual.optional')}"`
         : '';
   openSheet({
@@ -187,7 +187,19 @@ ${o.onDelete ? html`<button class="btn sec w100 mt10 danger-t" data-act="delFood
  */
 export function openManualForm(init, onSave) {
   /** @type {Record<string, string>} */
-  const v = { name: init.name ?? '', kcal: '', p: '', c: '', f: '', fib: '', salt: '', portion: '100', cr: '' };
+  const v = {
+    name: init.name ?? '',
+    kcal: '',
+    p: '',
+    c: '',
+    f: '',
+    fib: '',
+    salt: '',
+    sat: '',
+    sug: '',
+    portion: '100',
+    cr: '',
+  };
   const custom = { photo: '' };
   openForm({
     v,
@@ -214,6 +226,8 @@ export function openManualForm(init, onSave) {
         portion: n('portion') || 100,
         ...(r.values.fib != null ? { fib: r.values.fib } : {}),
         ...(r.values.salt != null ? { salt: r.values.salt } : {}),
+        ...(r.values.sat != null ? { sat: r.values.sat } : {}),
+        ...(r.values.sug != null ? { sug: r.values.sug } : {}),
         ...(cr != null ? { cr } : {}),
         ...(safePhoto(custom.photo) ? { photo: custom.photo } : {}),
       };
@@ -267,6 +281,8 @@ export function openEditForm(food, cb) {
         portion: r.values.portion || 100,
         fib: r.values.fib,
         salt: r.values.salt,
+        sat: r.values.sat,
+        sug: r.values.sug,
         cr,
         photo: safePhoto(custom.photo) || undefined,
       });

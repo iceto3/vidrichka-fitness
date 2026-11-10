@@ -134,7 +134,7 @@ ${macros.map(([k, v, g, c], i) => {
       : html` <span class="macroover">+${fmtNum(Math.round(Number(v) - Number(g)))} ${t('unit.g')}</span>`;
   return html`<div class="macro ${i ? 'mt8' : 'mt10'}${over ? ` over-${k}` : ''}"><div class="row between small b"><span>${t(`food.${k}`)}${cue}</span><span class="muted num">${fmtNum(Math.round(Number(v)))} / ${fmtNum(Number(g))} ${t('unit.g')}</span></div>${bar(Number(v) / Number(g), over && k === 'protein' ? 'var(--ok, #2fae6b)' : String(c))}</div>`;
 })}
-<div class="row gap12 mt10 small b fibsalt"><span>${t('food.fiber')} <span class="num muted">${tot.fibN ? `${fmtNum(tot.fib, 1)} ${t('unit.g')}` : '—'}</span></span><span>${t('food.salt')} <span class="num muted">${tot.saltN ? `${fmtNum(tot.salt, 1)} ${t('unit.g')}` : '—'}</span></span></div></div></div>
+<div class="row wrap gap12 mt10 small b fibsalt"><span>${t('food.fiber')} <span class="num muted">${tot.fibN ? `${fmtNum(tot.fib, 1)} ${t('unit.g')}` : '—'}</span></span><span>${t('food.salt')} <span class="num muted">${tot.saltN ? `${fmtNum(tot.salt, 1)} ${t('unit.g')}` : '—'}</span></span><span class="satsum">${t('food.satFat')} <span class="num muted">${tot.satN ? `${fmtNum(tot.sat, 1)} ${t('unit.g')}` : '—'}</span></span><span class="sugsum">${t('food.sugar')} <span class="num muted">${tot.sugN ? `${fmtNum(tot.sug, 1)} ${t('unit.g')}` : '—'}</span></span></div></div></div>
 ${waterCard(view.date)}
 ${creatineCard(view.date)}
 <div class="section-title"><h2 class="h3">${t('food.meals')}</h2><button class="link" data-go="food/meals">${t('food.regularMeals')}</button></div>

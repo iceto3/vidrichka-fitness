@@ -52,12 +52,14 @@ export const macroLine = (n, food) => {
 
 /**
  * Fiber / salt line (1.4.0: always both; an unknown one shows "–", never 0).
- * @param {{fib?: number, salt?: number}} n
+ * 1.5.1: plus saturated fat and sugar on a second line (same rule).
+ * @param {{fib?: number, salt?: number, sat?: number, sug?: number}} n
  */
 export const extraLine = (n) => {
   const g = (/** @type {number|undefined} */ v) =>
     known(v) ? `${fmtNum(/** @type {number} */ (v), 1)} ${t('unit.g')}` : '–';
-  return html`<div class="muted small b num px4 mt6 extra">${t('food.fiber')} ${g(n.fib)} · ${t('food.salt')} ${g(n.salt)}</div>`;
+  return html`<div class="muted small b num px4 mt6 extra">${t('food.fiber')} ${g(n.fib)} · ${t('food.salt')} ${g(n.salt)}</div>
+<div class="muted small b num px4 mt4 extra2">${t('food.satFat')} ${g(n.sat)} · ${t('food.sugar')} ${g(n.sug)}</div>`;
 };
 
 /**

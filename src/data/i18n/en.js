@@ -1387,4 +1387,13 @@ export default {
     'A clock when adding food: the time applies to the whole meal. Change one food’s time and the whole meal moves with it.',
   'whatsNew.steps150': 'Steps with a slider (every 500) and −100, −50, +50, +100 buttons.',
   'whatsNew.kcal150': 'Calories update while you type the grams.',
+  // 1.5.1: saturated fat and sugar
+  'food.satFat': 'Saturated fat',
+  'food.sugar': 'Sugar',
+  'nutr.sat': 'sf',
+  'nutr.sug': 'sg',
+  'manual.sat': 'Saturated fat / 100 g',
+  'manual.sug': 'Sugar / 100 g',
+  'manual.errSat': 'Cannot be more than the fat.',
+  'manual.errSug': 'Cannot be more than the carbs.',
 };

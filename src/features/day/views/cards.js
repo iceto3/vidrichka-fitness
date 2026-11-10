@@ -387,7 +387,12 @@ export function mealsCard(date) {
   const head = isToday(date) ? t('home.mealsToday') : t('day.food');
   return html`<section class="card mt12 meals homemeals" aria-label="${head}"><div class="row between mhead"><h2 class="h3 xb">${head}</h2><span class="b num small">${fmtNum(tot?.kcal ?? 0)} ${t('unit.kcal')}</span></div>
 <div class="row gap12 small b muted dayfoodsum"><span class="${p > s.proteinGoal ? 'okc' : ''}">${t('food.protein')} <span class="num">${fmtNum(p)}/${s.proteinGoal} ${t('unit.g')}</span>${p >= s.proteinGoal ? ' ✓' : ''}</span>
-<span>${t('food.fiber')} <span class="num">${gramsOrDash(tot, tot?.fib)}</span></span><span>${t('food.salt')} <span class="num">${gramsOrDash(tot, tot?.salt)}</span></span></div>
+<span>${t('food.fiber')} <span class="num">${gramsOrDash(tot, tot?.fib)}</span></span><span>${t('food.salt')} <span class="num">${gramsOrDash(tot, tot?.salt)}</span></span>${
+    // 1.5.1: saturated fat / sugar only once something logged lists them
+    tot?.sat != null
+      ? html`<span class="satsum">${t('food.satFat')} <span class="num">${gramsOrDash(tot, tot.sat)}</span></span>`
+      : ''
+  }${tot?.sug != null ? html`<span class="sugsum">${t('food.sugar')} <span class="num">${gramsOrDash(tot, tot.sug)}</span></span>` : ''}</div>
 ${mealsWithExtras(enabledMeals(), rows, date).map((m) => {
   const items = rows.filter((r) => r.meal === m),
     [emo, bg] = mealStyle(m);

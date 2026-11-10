@@ -70,7 +70,7 @@ test('buildDay gathers steps, sleep, ratings, water, food totals and workouts of
     d.food.map((r) => r.id),
     ['b', 'a'],
   );
-  assert.deepEqual(d.totals, { kcal: 150, p: 12, c: 13, f: 3, fib: 3, salt: 0.5 });
+  assert.deepEqual(d.totals, { kcal: 150, p: 12, c: 13, f: 3, fib: 3, salt: 0.5, sat: null, sug: null });
   assert.equal(d.workouts.length, 1);
   assert.deepEqual([d.workouts[0].volume, d.workouts[0].exercises], [1234, 1]);
   assert.ok(hasData(d));

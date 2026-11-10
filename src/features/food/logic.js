@@ -169,30 +169,33 @@ export const known = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 
 /**
  * Nutrition of `grams` of a food given per 100 g. Fiber (`fib`) and salt (`salt`) are only
  * included when the food has them (older foods and the built-in list don't – "unknown").
- * @param {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number}} per100
+ * 1.5.1: saturated fat (`sat`) and sugar (`sug`) work the same way (optional, unknown = absent).
+ * @param {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, sat?: number, sug?: number}} per100
  * @param {number} grams
- * @returns {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number}}
+ * @returns {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, sat?: number, sug?: number}}
  */
 export const portion = (per100, grams) => {
   const k = grams / 100,
     r = (/** @type {number} */ v) => Math.round((v || 0) * k * 10) / 10;
-  /** @type {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number}} */
+  /** @type {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, sat?: number, sug?: number}} */
   const out = { kcal: Math.round((per100.kcal || 0) * k), p: r(per100.p), c: r(per100.c), f: r(per100.f) };
   if (known(per100.fib)) out.fib = r(/** @type {number} */ (per100.fib));
   if (known(per100.salt)) out.salt = Math.round(/** @type {number} */ (per100.salt) * k * 100) / 100;
+  if (known(per100.sat)) out.sat = r(/** @type {number} */ (per100.sat)); // 1.5.1 saturated fat
+  if (known(per100.sug)) out.sug = r(/** @type {number} */ (per100.sug)); // 1.5.1 sugar
   return out;
 };
 
 /**
  * Sum nutrition rows. Fiber and salt sum only the rows that know them; `fibN` / `saltN`
- * count those rows (0 → show "unknown").
- * @param {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number}[]} rows
- * @returns {{kcal: number, p: number, c: number, f: number, fib: number, salt: number, fibN: number, saltN: number}}
+ * count those rows (0 → show "unknown"). 1.5.1: saturated fat / sugar the same (`satN` / `sugN`).
+ * @param {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, sat?: number, sug?: number}[]} rows
+ * @returns {{kcal: number, p: number, c: number, f: number, fib: number, salt: number, fibN: number, saltN: number, sat: number, sug: number, satN: number, sugN: number}}
  */
 export const totals = (rows) =>
   rows.reduce(
     (
-      /** @type {{kcal: number, p: number, c: number, f: number, fib: number, salt: number, fibN: number, saltN: number}} */ a,
+      /** @type {{kcal: number, p: number, c: number, f: number, fib: number, salt: number, fibN: number, saltN: number, sat: number, sug: number, satN: number, sugN: number}} */ a,
       r,
     ) => ({
       kcal: a.kcal + (r.kcal || 0),
@@ -203,8 +206,12 @@ export const totals = (rows) =>
       salt: a.salt + (known(r.salt) ? /** @type {number} */ (r.salt) : 0),
       fibN: a.fibN + (known(r.fib) ? 1 : 0),
       saltN: a.saltN + (known(r.salt) ? 1 : 0),
+      sat: a.sat + (known(r.sat) ? /** @type {number} */ (r.sat) : 0),
+      sug: a.sug + (known(r.sug) ? /** @type {number} */ (r.sug) : 0),
+      satN: a.satN + (known(r.sat) ? 1 : 0),
+      sugN: a.sugN + (known(r.sug) ? 1 : 0),
     }),
-    { kcal: 0, p: 0, c: 0, f: 0, fib: 0, salt: 0, fibN: 0, saltN: 0 },
+    { kcal: 0, p: 0, c: 0, f: 0, fib: 0, salt: 0, fibN: 0, saltN: 0, sat: 0, sug: 0, satN: 0, sugN: 0 },
   );
 
 /**
@@ -226,7 +233,7 @@ export function matchesFood(row, food) {
  * 1.4.3 (fixes): with the row's food (catalog or saved food, per 100 g) the values come from
  * the food, exactly like when it was added (`portion`) – 160 g is the same kcal in the add
  * sheet and in the edit sheet. Without it (voice / custom rows) they are scaled from the row.
- * @template {{grams: number, kcal: number, p: number, c: number, f: number, fib?: number, salt?: number}} R
+ * @template {{grams: number, kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, sat?: number, sug?: number}} R
  * @param {R} row
  * @param {number} grams
  * @param {any} [food] The row's food (per 100 g), if known.
@@ -237,7 +244,7 @@ export function scaleRow(row, grams, food = null) {
   if (!(row.grams > 0)) return { ...row, grams: g };
   if (food && !matchesFood(row, food)) food = null; // 1.4.4: an edited custom food keeps old rows as they were
   const per100 = Object.fromEntries(
-    ['kcal', 'p', 'c', 'f', 'fib', 'salt'].map((k) => {
+    ['kcal', 'p', 'c', 'f', 'fib', 'salt', 'sat', 'sug'].map((k) => {
       const v = /** @type {any} */ (row)[k],
         fv = food?.[k];
       if (!known(v)) return [k, undefined];
@@ -247,6 +254,8 @@ export function scaleRow(row, grams, food = null) {
   const out = { ...row, grams: g, ...portion(/** @type {any} */ (per100), g) };
   if (!known(row.fib)) delete out.fib;
   if (!known(row.salt)) delete out.salt;
+  if (!known(row.sat)) delete out.sat;
+  if (!known(row.sug)) delete out.sug;
   return out;
 }
 
@@ -282,7 +291,7 @@ const listed = (v) => v != null && v !== '' && Number.isFinite(+v);
  * (fiber/salt: unknown) and its key goes to `missing`, so the UI can ask the user to fill it
  * in; kcal may be missing too as long as at least one of kcal/П/В/М is listed.
  * @param {any} p OFF product JSON.
- * @returns {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, alc?: number, missing?: string[]}|null}
+ * @returns {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, sat?: number, sug?: number, alc?: number, missing?: string[]}|null}
  */
 export function fromOff(p) {
   const n = p?.nutriments ?? {};
@@ -293,7 +302,7 @@ export function fromOff(p) {
       : null;
   const key = { p: 'proteins_100g', c: 'carbohydrates_100g', f: 'fat_100g' };
   if (kcalRaw == null && !Object.values(key).some((k) => listed(n[k]))) return null; // no nutrition at all
-  /** @type {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, missing?: string[]}} */
+  /** @type {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, sat?: number, sug?: number, missing?: string[]}} */
   const out = {
     kcal: kcalRaw == null ? 0 : Math.round(kcalRaw),
     p: listed(n[key.p]) ? +n[key.p] : 0,
@@ -305,6 +314,11 @@ export function fromOff(p) {
   // kept even when impossible (negative, over 100 g) so that implausible() rejects the product
   if (Number.isFinite(fib)) out.fib = Math.round(fib * 10) / 10;
   if (Number.isFinite(salt)) out.salt = Math.round(salt * 100) / 100;
+  // 1.5.1: saturated fat / sugar when listed and possible (≤ fat / ≤ carbs); else just unknown
+  const sat = listed(n['saturated-fat_100g']) ? +n['saturated-fat_100g'] : NaN;
+  const sug = listed(n.sugars_100g) ? +n.sugars_100g : NaN;
+  if (Number.isFinite(sat) && sat >= 0 && sat <= out.f + 0.05) out.sat = Math.round(sat * 10) / 10;
+  if (Number.isFinite(sug) && sug >= 0 && sug <= out.c + 0.05) out.sug = Math.round(sug * 10) / 10;
   const missing = [
     ...(kcalRaw == null ? ['kcal'] : []),
     .../** @type {const} */ (['p', 'c', 'f']).filter((m) => !listed(n[key[m]])),
@@ -394,8 +408,12 @@ export function applyFix(food, v) {
   };
   delete out.fib;
   delete out.salt;
+  delete out.sat;
+  delete out.sug;
   if (r.values.fib != null) out.fib = r.values.fib;
   if (r.values.salt != null) out.salt = r.values.salt;
+  if (r.values.sat != null) out.sat = r.values.sat; // 1.5.1
+  if (r.values.sug != null) out.sug = r.values.sug;
   const missing = ['kcal', 'p', 'c', 'f'].filter((k) => !typed(k));
   if (missing.length) out.missing = missing;
   else delete out.missing;
@@ -448,28 +466,36 @@ export const kcalOff = (kcal, est) => {
  * 4·П + 4·В + 9·М, see kcalOff) is a live hint only (1.4.0: saving is never blocked). No value is silently clamped. Fiber and salt
  * are optional: left empty they stay unknown (not 0).
  * @param {Record<string, string>} v  Raw field values: kcal, p, c, f, fib, salt, portion.
- * @returns {{errors: Record<string, string>, warn: string|null, est: number, values: {kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, portion: number}}}
+ * @returns {{errors: Record<string, string>, warn: string|null, est: number, values: {kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, sat?: number, sug?: number, portion: number}}}
  */
 export function validateFood(v) {
   /** @type {Record<string, string>} */
   const errors = {};
-  const n = Object.fromEntries(['kcal', 'p', 'c', 'f', 'fib', 'salt', 'portion'].map((k) => [k, parseNum(v[k])]));
-  for (const k of ['kcal', 'p', 'c', 'f', 'fib', 'salt', 'portion'])
+  const n = Object.fromEntries(
+    ['kcal', 'p', 'c', 'f', 'fib', 'salt', 'sat', 'sug', 'portion'].map((k) => [k, parseNum(v[k])]),
+  );
+  for (const k of ['kcal', 'p', 'c', 'f', 'fib', 'salt', 'sat', 'sug', 'portion'])
     if (!Number.isFinite(n[k])) errors[k] = 'manual.errNumber';
     else if (n[k] < 0) errors[k] = 'manual.errNegative';
   if (!errors.kcal && n.kcal > 900) errors.kcal = 'manual.errKcalMax';
-  for (const k of ['p', 'c', 'f', 'fib', 'salt']) if (!errors[k] && n[k] > 100) errors[k] = 'manual.errOver100';
+  for (const k of ['p', 'c', 'f', 'fib', 'salt', 'sat', 'sug'])
+    if (!errors[k] && n[k] > 100) errors[k] = 'manual.errOver100';
+  // 1.5.1: saturated fat is part of the fat, sugar part of the carbs
+  if (!errors.sat && !errors.f && n.sat > n.f) errors.sat = 'manual.errSat';
+  if (!errors.sug && !errors.c && n.sug > n.c) errors.sug = 'manual.errSug';
   if (!errors.p && !errors.c && !errors.f && n.p + n.c + n.f > 100)
     for (const k of ['p', 'c', 'f']) errors[k] = 'manual.errSum';
   if (!errors.portion && n.portion > 5000) errors.portion = 'manual.errPortion';
   let warn = null;
   const est = Math.round(4 * (n.p || 0) + 4 * (n.c || 0) + 9 * (n.f || 0));
   if (!Object.keys(errors).length && n.p + n.c + n.f > 0 && kcalOff(n.kcal, est)) warn = 'manual.warnKcal';
-  /** @type {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, portion: number}} */
+  /** @type {{kcal: number, p: number, c: number, f: number, fib?: number, salt?: number, sat?: number, sug?: number, portion: number}} */
   const values = { kcal: n.kcal, p: n.p, c: n.c, f: n.f, portion: n.portion || 100 };
   const typed = (/** @type {string} */ k) => String(v[k] ?? '').trim() !== '';
   if (typed('fib') && !errors.fib) values.fib = n.fib;
   if (typed('salt') && !errors.salt) values.salt = n.salt;
+  if (typed('sat') && !errors.sat) values.sat = n.sat;
+  if (typed('sug') && !errors.sug) values.sug = n.sug;
   return { errors, warn, est, values };
 }
 
