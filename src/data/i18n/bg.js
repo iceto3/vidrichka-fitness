@@ -1411,4 +1411,10 @@ export default {
   'food.timeMeal': 'Часът важи за цялото хранене.',
   // 1.5.0 2b: the clock on the add page
   'food.mealTime': 'Час на храненето',
+  // 1.5.0 2c: unplanned meals
+  'meal.extraAm': 'Междинно сутрешно',
+  'meal.extraPm': 'Междинно следобедно',
+  'meal.extra': 'Допълнително хранене',
+  'food.addMeal': 'Добави хранене',
+  'food.addMealHint': 'Непланирано хранене – без XP, влиза само в общите калории и хранителни вещества.',
 };

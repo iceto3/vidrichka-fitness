@@ -6,10 +6,10 @@
 import { searchFoods } from './search.js';
 import { all, get, kv, put, remove, setKv, uid } from '../../core/store.js';
 import { emit } from '../../core/bus.js';
-import { L } from '../../core/i18n.js';
+import { L, t } from '../../core/i18n.js';
 import { dayKey, hhmm } from '../../core/dates.js';
 import { FOODS, FOOD_CATEGORIES, QUICK_PICKS } from '../../data/foods.js';
-import { known, mealFor, mealTimeOf, mealTs, portion, scaleRow } from './logic.js';
+import { extraKind, isExtra, known, mealFor, mealTimeOf, mealTs, portion, scaleRow } from './logic.js';
 import { enabledMeals } from '../../core/settings.js';
 import { bump, byPoints, categoriesByPoints, groupFoods } from './usage.js';
 
@@ -34,6 +34,17 @@ export const dayRows = (date) =>
   all('food')
     .filter((r) => r.date === date && r.type !== 'water')
     .sort((a, b) => a.ts - b.ts);
+
+/**
+ * 1.5.0: a meal's name for the UI. An unplanned meal is named by its time (`at`, default its
+ * entries' time): „Междинно сутрешно“ / „Междинно следобедно“ / „Допълнително хранене“.
+ * @param {string} meal @param {string} date @param {number} [at]
+ */
+export function mealName(meal, date, at) {
+  if (!isExtra(meal)) return t(`meal.${meal}`);
+  const rows = dayRows(date);
+  return t(`meal.${extraKind(at ?? mealTimeOf(rows, date, meal) ?? Date.now(), date, rows)}`);
+}
 
 /** Glasses of water on a day. @param {string} date */
 export const water = (date) => get('food', `water_${date}`)?.glasses ?? 0;

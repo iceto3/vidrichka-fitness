@@ -212,3 +212,73 @@ test('2b: a breakfast saved with an earlier clock time is graded by it – no �
   );
   assert.equal(daily.foodTimeFloor(P2), '07:00');
 });
+
+test('2c: unplanned meals – named by their place in the day, listed by time, no XP / goals', async () => {
+  const { extraKind, isExtra, mealsWithExtras, newExtraId, mealStyle } =
+    await import('../../src/features/food/logic.js');
+  const { computeStats } = await import('../../src/features/motivation/stats.js');
+  const D = '2026-11-20';
+  const ts = (/** @type {string} */ hm) => new Date(`${D}T${hm}`).getTime();
+  const row = (/** @type {string} */ meal, /** @type {string} */ hm, p = 10) => ({
+    id: `${meal}${hm}`,
+    date: D,
+    meal,
+    ts: ts(hm),
+    time: hm,
+    kcal: 100,
+    p,
+  });
+  assert.equal(isExtra('x_abc'), true);
+  assert.equal(isExtra('snack'), false);
+  assert.match(newExtraId(1_700_000_000_000), /^x_[0-9a-z]+$/);
+  assert.deepEqual(mealStyle('x_1'), ['🍽️', '#F1ECE4']);
+  // usual times 08:00 / 13:00 / 19:00
+  assert.equal(extraKind(ts('07:30'), D, []), 'extra', 'before breakfast');
+  assert.equal(extraKind(ts('10:30'), D, []), 'extraAm');
+  assert.equal(extraKind(ts('15:00'), D, []), 'extraPm');
+  assert.equal(extraKind(ts('21:00'), D, []), 'extra', 'after dinner');
+  // the logged times count: lunch at 11:30 → 12:00 is already „следобедно“
+  const rows = [row('breakfast', '07:00'), row('lunch', '11:30'), row('dinner', '18:00')];
+  assert.equal(extraKind(ts('12:00'), D, rows), 'extraPm');
+  assert.equal(extraKind(ts('18:30'), D, rows), 'extra');
+  assert.equal(extraKind(ts('06:30'), D, rows), 'extra');
+  // listed chronologically among the planned meals
+  const day = [...rows, row('x_a', '10:00'), row('x_b', '21:30'), row('x_c', '15:00')];
+  assert.deepEqual(mealsWithExtras(['breakfast', 'lunch', 'snack', 'dinner'], day, D), [
+    'breakfast',
+    'x_a',
+    'lunch',
+    'x_c',
+    'snack',
+    'dinner',
+    'x_b',
+  ]);
+  assert.deepEqual(mealsWithExtras(['breakfast', 'lunch'], [], D), ['breakfast', 'lunch'], 'old data as before');
+  // no XP, no goals: not a meal of the day, not a food day, not in the protein goal
+  const stats = computeStats({
+    sessions: [],
+    food: [row('x_a', '10:00', 40)],
+    measurements: [],
+    photos: [],
+    goalAt: () => 3,
+    waterGoal: 8,
+    proteinGoal: 100,
+    now: new Date(`${D}T12:00`),
+  });
+  assert.equal(stats.todayMeals.size, 0);
+  assert.equal(stats.todayProtein, 0);
+  assert.equal(stats.food.current ?? 0, 0);
+});
+
+test('2c: the name follows the time; the day totals include unplanned meals', async () => {
+  const { food, put, clear } = await p2();
+  const { totals } = await import('../../src/features/food/logic.js');
+  clear();
+  put('food', { id: 'e1', date: P2, meal: 'x_q', ts: p2at('10:20'), time: '10:20', kcal: 200, p: 20, c: 0, f: 0 });
+  put('food', { id: 'l1', date: P2, meal: 'lunch', ts: p2at('13:00'), time: '13:00', kcal: 500, p: 30, c: 0, f: 0 });
+  assert.equal(food.mealName('x_q', P2), 'Междинно сутрешно');
+  assert.equal(food.mealName('x_q', P2, p2at('16:00')), 'Междинно следобедно');
+  assert.equal(food.mealName('x_q', P2, p2at('22:00')), 'Допълнително хранене');
+  assert.equal(food.mealName('lunch', P2), 'Обяд');
+  assert.equal(totals(food.dayRows(P2)).kcal, 700);
+});

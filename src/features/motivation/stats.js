@@ -52,7 +52,8 @@ export function computeStats(i) {
   const sessions = all.filter((s) => !s.partial);
   const workoutDays = sessions.map((s) => dayKey(s.endedAt));
   const last = sessions[sessions.length - 1];
-  const meals = i.food.filter((f) => f.type !== 'water');
+  // 1.5.0: unplanned meals („Добави хранене“, meal `x_…`) give no XP and count for no goal
+  const meals = i.food.filter((f) => f.type !== 'water' && !String(f.meal ?? '').startsWith('x_'));
   const foodDays = new Set(meals.map((f) => f.date));
   const todayMeals = new Set(meals.filter((f) => f.date === today).map((f) => f.meal));
   const water = i.food.find((f) => f.type === 'water' && f.date === today)?.glasses ?? 0;

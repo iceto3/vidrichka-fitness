@@ -1373,4 +1373,10 @@ export default {
   'food.timeMeal': 'The time applies to the whole meal.',
   // 1.5.0 2b: the clock on the add page
   'food.mealTime': 'Meal time',
+  // 1.5.0 2c: unplanned meals
+  'meal.extraAm': 'Mid-morning meal',
+  'meal.extraPm': 'Mid-afternoon meal',
+  'meal.extra': 'Extra meal',
+  'food.addMeal': 'Add a meal',
+  'food.addMealHint': 'An unplanned meal – no XP, it only adds to the day’s calories and nutrients.',
 };

@@ -52,6 +52,55 @@ export function mealTimeOf(rows, date, meal) {
   return t === Infinity ? null : t;
 }
 
+/**
+ * 1.5.0: an unplanned meal („Добави хранене“) is its own meal id `x_<base36 time>` – old
+ * data has none and older versions simply don't list it. It gives no XP, counts for no daily
+ * goal; its entries only add to the day's totals and charts. @param {any} m
+ */
+export const isExtra = (m) => typeof m === 'string' && m.startsWith('x_');
+
+/** A new unplanned meal's id. @param {number} [now] */
+export const newExtraId = (now = Date.now()) => `x_${now.toString(36)}`;
+
+/** The planned meals that name an unplanned one by its place in the day. */
+const ANCHORS = /** @type {const} */ (['breakfast', 'lunch', 'dinner']);
+
+/** A meal's time on `date`: its entries' time, else its usual time. */
+const anchorAt = (/** @type {any[]} */ rows, /** @type {string} */ date, /** @type {string} */ m) =>
+  mealTimeOf(rows, date, m) ?? new Date(`${date}T${MEAL_TIME[m] ?? '12:00'}`).getTime();
+
+/**
+ * 1.5.0: the name of an unplanned meal at `ts` (pure): between breakfast and lunch
+ * „Междинно сутрешно“ (`extraAm`), between lunch and dinner „Междинно следобедно“ (`extraPm`),
+ * before breakfast or after dinner „Допълнително хранене“ (`extra`). The planned meals count
+ * at their logged time, else at their usual time (08:00 / 13:00 / 19:00).
+ * @param {number} ts @param {string} date @param {any[]} rows That day's (or all) food rows.
+ * @returns {'extraAm'|'extraPm'|'extra'}
+ */
+export function extraKind(ts, date, rows) {
+  const [bf, lunch, dinner] = ANCHORS.map((m) => anchorAt(rows, date, m));
+  if (ts < bf || ts > dinner) return 'extra';
+  return ts < lunch ? 'extraAm' : 'extraPm';
+}
+
+/**
+ * 1.5.0: the meals to list for a day – the planned ones ({@link mealsForDay}) with the day's
+ * unplanned meals placed among them by time (after the last meal at or before it).
+ * @param {string[]} enabled @param {any[]} rows That day's food rows. @param {string} date
+ */
+export function mealsWithExtras(enabled, rows, date) {
+  const list = mealsForDay(enabled, rows).map((m) => ({ m, at: anchorAt(rows, date, m) }));
+  const extras = [...new Set(rows.filter((r) => r.date === date && isExtra(r.meal)).map((r) => r.meal))]
+    .map((m) => ({ m, at: mealTimeOf(rows, date, m) ?? 0 }))
+    .sort((a, b) => a.at - b.at);
+  for (const x of extras) {
+    let i = list.length - 1;
+    while (i >= 0 && list[i].at > x.at) i--;
+    list.splice(i + 1, 0, x);
+  }
+  return list.map((x) => x.m);
+}
+
 /** Emoji tile + background per meal slot. */
 export const MEAL_STYLE = {
   breakfast: ['🥣', '#FFF2D9'],
@@ -60,6 +109,10 @@ export const MEAL_STYLE = {
   snack: ['🥜', '#EEE8FF'],
   dinner: ['🍝', '#FFE9E3'],
 };
+
+/** 1.5.0: a meal's tile (unplanned meals: 🍽️). @param {string} m @returns {[string, string]} */
+export const mealStyle = (m) =>
+  /** @type {any} */ (MEAL_STYLE)[m] ?? (isExtra(m) ? ['🍽️', '#F1ECE4'] : ['🍽️', '#EEF3F5']);
 
 /**
  * Start hour of a meal among the enabled ones: with the morning snack on, lunch starts at 12

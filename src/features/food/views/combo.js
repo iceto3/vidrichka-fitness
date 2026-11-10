@@ -9,7 +9,7 @@ import { fmtNum, t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
 import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
 import { deleteWithUndo } from '../../../ui/undo.js';
-import { comboNameError, foodName, logSavedMeal, renameMeal, saveMeal } from '../api.js';
+import { comboNameError, foodName, logSavedMeal, mealName, renameMeal, saveMeal, view } from '../api.js';
 import { totals } from '../logic.js';
 
 /** Meals with their own suggested name (the BG article agrees with each meal's gender). */
@@ -117,7 +117,9 @@ ${nameField(name, err)}
 export function addCombo(id, meal) {
   const res = logSavedMeal(id, meal);
   if (!res) return false;
-  toast(t('food.comboAdded', { meal: t(`meal.${meal}`).toLowerCase(), items: res.rows.map(foodName).join(', ') }));
+  toast(
+    t('food.comboAdded', { meal: mealName(meal, view.date).toLowerCase(), items: res.rows.map(foodName).join(', ') }),
+  );
   return true;
 }
 

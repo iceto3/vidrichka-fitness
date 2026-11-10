@@ -13,8 +13,8 @@ import { closeSheet, openSheet, refreshSheet, toast } from '../../../ui/sheet.js
 import { hhmm, hmComplete, parseHM, stepHM } from '../../../core/dates.js';
 import { checkFoodTime, foodTimeFloor, setFoodTime } from '../../daily/api.js';
 import { deleteWithUndo } from '../../../ui/undo.js';
-import { editRow, foodById, foodName } from '../api.js';
-import { MEALS, missingValues, scaleRow } from '../logic.js';
+import { editRow, foodById, foodName, mealName } from '../api.js';
+import { MEALS, isExtra, missingValues, scaleRow } from '../logic.js';
 import { enabledMeals } from '../../../core/settings.js';
 import { extraLine, fixFood, gramStepper, gramsFrom, macroLine } from './grams.js';
 import { missingNotice } from './notice.js';
@@ -29,7 +29,7 @@ export function deleteFoodRow(r) {
     [{ store: 'food', row: r }],
     {
       label: foodName(r),
-      sub: `${t(`meal.${r.meal}`)} · ${fmtDate(`${r.date}T12:00`, { day: 'numeric', month: 'short' })} · ${r.grams} ${t('unit.g')}`,
+      sub: `${mealName(r.meal, r.date)} · ${fmtDate(`${r.date}T12:00`, { day: 'numeric', month: 'short' })} · ${r.grams} ${t('unit.g')}`,
       emoji: r.emoji ?? '🍽️',
     },
     t('undo.deleted', { name: `${foodName(r)} · ${r.grams} ${t('unit.g')}` }),
@@ -70,9 +70,13 @@ ${missingNotice(missingValues(food() ?? row), { button: !!food() })}
 <div class="xs xb muted caps mt16">${t('food.moveTo')}</div>
 <div class="mt6">${seg(
         // 1.4.3 (part B): the meals in use (+ the row's own meal), short names so five fit
-        MEALS.map(([m]) => m)
-          .filter((m) => m === row.meal || m === meal || enabledMeals().includes(m))
-          .map((m) => ({ value: m, label: t(`mealShort.${m}`) })),
+        [
+          // 1.5.0: an unplanned meal's entry can go back to it after being moved
+          ...(isExtra(row.meal) ? [{ value: row.meal, label: mealName(row.meal, row.date) }] : []),
+          ...MEALS.map(([m]) => m)
+            .filter((m) => m === row.meal || m === meal || enabledMeals().includes(m))
+            .map((m) => ({ value: m, label: t(`mealShort.${m}`) })),
+        ],
         meal,
         'meal',
         'seg mealseg',
@@ -141,7 +145,7 @@ ${
         if (!res) return false;
         const { before, after } = res;
         const name = foodName(after),
-          to = t(`meal.${after.meal}`);
+          to = mealName(after.meal, after.date);
         if (moved?.ok && 'graded' in moved && moved.graded) return false;
         if (before.grams === after.grams && before.meal === after.meal) {
           if (moved?.ok) toast(t('food.timeChanged', { name, time: tm.hm }));

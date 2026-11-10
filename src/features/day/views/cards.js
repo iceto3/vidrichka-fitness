@@ -19,8 +19,8 @@ import { ic } from '../../../ui/icons.js';
 import { stepper, time24 } from '../../../ui/components.js';
 import { closeSheet, confirmDialog, openSheet, refreshSheet, snack, toast } from '../../../ui/sheet.js';
 import { FACES, scale } from '../../daily/views/checkin.js';
-import { MEAL_STYLE, mealsForDay, totals } from '../../food/logic.js';
-import { foodName, view as foodView } from '../../food/api.js';
+import { mealStyle, mealsWithExtras, newExtraId, totals } from '../../food/logic.js';
+import { foodName, mealName, view as foodView } from '../../food/api.js';
 import { mealTotalsLine } from '../../food/views/totals.js';
 import { DEFAULT_CREATINE_DOSE } from '../../food/creatine.js';
 import { checkNight } from '../../daily/sleeptimes.js';
@@ -388,14 +388,14 @@ export function mealsCard(date) {
   return html`<section class="card mt12 meals homemeals" aria-label="${head}"><div class="row between mhead"><h2 class="h3 xb">${head}</h2><span class="b num small">${fmtNum(tot?.kcal ?? 0)} ${t('unit.kcal')}</span></div>
 <div class="row gap12 small b muted dayfoodsum"><span class="${p > s.proteinGoal ? 'okc' : ''}">${t('food.protein')} <span class="num">${fmtNum(p)}/${s.proteinGoal} ${t('unit.g')}</span>${p >= s.proteinGoal ? ' ✓' : ''}</span>
 <span>${t('food.fiber')} <span class="num">${gramsOrDash(tot, tot?.fib)}</span></span><span>${t('food.salt')} <span class="num">${gramsOrDash(tot, tot?.salt)}</span></span></div>
-${mealsForDay(enabledMeals(), rows).map((m) => {
+${mealsWithExtras(enabledMeals(), rows, date).map((m) => {
   const items = rows.filter((r) => r.meal === m),
-    [emo, bg] = MEAL_STYLE[/** @type {keyof typeof MEAL_STYLE} */ (m)];
+    [emo, bg] = mealStyle(m);
   if (!items.length)
     return html`<button class="meal" data-act="dayAddFood" data-m="${m}"><span class="mic muted-bg">${ic('plus', 20, 2.4)}</span><span class="f1"><span class="b muted block">${t(`meal.${m}`)}</span><span class="muted xs b">${t('food.nothing')}</span></span></button>`;
-  return html`<button class="meal" data-act="dayMeal" data-m="${m}"><span class="mic" style="${raw(`background:${bg}`)}">${emo}</span><span class="f1 minw0"><span class="row gap8"><span class="b">${t(`meal.${m}`)}</span><span class="muted xs b">${items[0].time}</span></span>
+  return html`<button class="meal" data-act="dayMeal" data-m="${m}"><span class="mic" style="${raw(`background:${bg}`)}">${emo}</span><span class="f1 minw0"><span class="row gap8"><span class="b">${mealName(m, date)}</span><span class="muted xs b">${items[0].time}</span></span>
 <span class="muted small b ellip block">${items.map((r) => foodName(r)).join(', ')}</span>${mealTotalsLine(totals(items))}</span><span class="b num nowrap">${fmtNum(totals(items).kcal)} <span class="muted xs">${t('unit.kcal')}</span></span></button>`;
-})}</section>`;
+})}<button class="meal addmeal" data-act="dayAddFood" data-m="${newExtraId()}"><span class="mic muted-bg">${ic('plus', 20, 2.4)}</span><span class="f1"><span class="b block">${t('food.addMeal')}</span><span class="muted xs b">${t('food.addMealHint')}</span></span></button></section>`;
 }
 
 /** Workouts finished on the day (tap → the saved workout, where it can be edited). @param {string} date */

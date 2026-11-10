@@ -196,5 +196,48 @@ export async function v150(page, h) {
   await closeAll();
   console.log('  ✔ 1.5.0 2a/2b: clock in the picker (default now, ±5, no future, not before wake), one time per meal');
 
+  // ---- 2c: „Добави хранене“ (Начало + Храна) → an unplanned meal, named and placed by time
+  await page.clock.setSystemTime(new Date(T('15:10')));
+  await reopen();
+  await go('food');
+  assert.equal(await page.locator('.food .meals .addmeal').count(), 1, 'on Храна');
+  await go('home');
+  const am = page.locator('.homemeals .addmeal');
+  await am.evaluate((e) => e.scrollIntoView({ block: 'center' }));
+  assert.match(await am.innerText(), /Добави хранене/);
+  await page.waitForTimeout(300);
+  await shot('v150-add-meal-button');
+  await h.clickPast(am, page.locator('.mealclock .t24i'));
+  assert.match(page.url(), /#\/food\/add\/x_/);
+  assert.match(await page.locator('.topbar').innerText(), /Междинно следобедно/, 'now 15:10: between lunch and dinner');
+  const xc = page.locator('.mealclock .t24i');
+  await xc.fill('10:30');
+  await xc.press('Tab');
+  await settle();
+  assert.match(await page.locator('.topbar').innerText(), /Междинно сутрешно/, 'the name follows the clock');
+  await addOne(2);
+  await page.locator('[data-act="finish"]').first().click();
+  await settle();
+  await closeAll();
+  const extra = (await rows('food')).filter((/** @type {any} */ r) => r.date === D && /^x_/.test(r.meal));
+  assert.equal(extra.length, 1);
+  assert.equal(extra[0].time, '10:30');
+  await go('home');
+  const hm = page.locator('.homemeals');
+  const names = await hm.locator('.meal .b').allInnerTexts();
+  const iEx = names.findIndex((n) => /Междинно сутрешно/.test(n));
+  assert.ok(
+    iEx > names.findIndex((n) => /Закуска/.test(n)) && iEx < names.findIndex((n) => /Обяд/.test(n)),
+    names.join(' | '),
+  );
+  const xp = (await kvGet('xp')) ?? {};
+  assert.equal(Object.keys(xp).filter((k) => k.includes('x_')).length, 0, 'no XP for an unplanned meal');
+  await hm.locator('.meal', { hasText: 'Междинно сутрешно' }).evaluate((e) => e.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(300);
+  await shot('v150-extra-meal-logged');
+  console.log(
+    '  ✔ 1.5.0 2c: „Добави хранене“ on Начало + Храна, „Междинно сутрешно“ by time, placed among the meals, no XP',
+  );
+
   await page.setViewportSize(vp ?? { width: 390, height: 844 });
 }
