@@ -282,3 +282,40 @@ test('2c: the name follows the time; the day totals include unplanned meals', as
   assert.equal(food.mealName('lunch', P2), 'Обяд');
   assert.equal(totals(food.dayRows(P2)).kcal, 700);
 });
+
+test("1.5.0: version, What's new (bg + en), no English in Bulgarian", async () => {
+  const { readFileSync } = await import('node:fs');
+  const { NOTES } = await import('../../src/features/whatsnew/notes.js');
+  const bg = (await import('../../src/data/i18n/bg.js')).default;
+  const en = (await import('../../src/data/i18n/en.js')).default;
+  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.5.0');
+  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+  assert.equal(lock.version, '1.5.0');
+  assert.equal(lock.packages[''].version, '1.5.0');
+  const { APP_VERSION } = await import('../../src/core/version.js');
+  assert.equal(APP_VERSION, '1.5.0');
+  assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.5\.0\]/);
+  assert.equal(NOTES[0].v, '1.5.0');
+  assert.equal(NOTES[0].items.length, 4);
+  const keys = [
+    ...NOTES[0].items.map(([, k]) => k),
+    'meal.extraAm',
+    'meal.extraPm',
+    'meal.extra',
+    'food.addMeal',
+    'food.addMealHint',
+    'food.mealTime',
+    'food.timeMeal',
+    'steps.slider',
+    'steps.n',
+    'steps.minus',
+    'steps.plus',
+  ];
+  for (const k of keys) {
+    assert.ok(bg[k] && en[k], k);
+    assert.doesNotMatch(String(bg[k]).replace(/\{\w+\}|XP/g, ''), /[A-Za-z]/, `English in bg ${k}`);
+  }
+  assert.equal(bg['meal.extraAm'], 'Междинно сутрешно');
+  assert.equal(bg['meal.extraPm'], 'Междинно следобедно');
+  assert.equal(bg['meal.extra'], 'Допълнително хранене');
+});

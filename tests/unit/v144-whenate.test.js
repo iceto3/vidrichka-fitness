@@ -168,21 +168,17 @@ test('live preview text: Навреме ✓ · +15 XP / +N мин · +8 XP / +N 
 
 test("1.4.4: version, What's new (bg + en), no English in Bulgarian", async () => {
   const { readFileSync } = await import('node:fs');
-  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.4.4');
-  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-  assert.equal(lock.version, '1.4.4');
-  assert.equal(lock.packages[''].version, '1.4.4');
-  const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.4.4');
+  // the version itself is checked by the newest release's test (1.5.0: v150.test.js)
   assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.4\.4\]/);
-  assert.equal(NOTES[0].v, '1.4.4');
+  const n144 = NOTES.find((n) => n.v === '1.4.4');
+  assert.ok(n144);
   const keys = Object.keys(bg).filter((k) => /^(whenAte|custom)\.|144$|^food\.(fav|customFoods)/.test(k));
   assert.ok(keys.length >= 40, String(keys.length));
   for (const k of keys) {
     assert.ok(en[k], `en ${k}`);
     assert.doesNotMatch(String(bg[k]).replace(/\{\w+\}|XP/g, ''), /[A-Za-z]/, `English in bg ${k}`);
   }
-  for (const [, k] of NOTES[0].items) assert.ok(bg[k] && en[k], k);
+  for (const [, k] of n144.items) assert.ok(bg[k] && en[k], k);
   for (const k of Object.keys(bg).filter((k) => k.startsWith('whenAte.'))) assert.ok(en[k], k);
   assert.equal(t('whenAte.now', { time: '08:10' }), 'Сега (08:10)');
   assert.equal(t('whenAte.earlier'), 'По-рано');

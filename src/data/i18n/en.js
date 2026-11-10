@@ -1379,4 +1379,11 @@ export default {
   'meal.extra': 'Extra meal',
   'food.addMeal': 'Add a meal',
   'food.addMealHint': 'An unplanned meal – no XP, it only adds to the day’s calories and nutrients.',
+  // 1.5.0 What's new
+  'whatsNew.extra150':
+    '“Add a meal” on Home and Food – for an unplanned meal. It is named by its time (mid-morning, mid-afternoon, extra meal); no points, it only adds to the day’s calories.',
+  'whatsNew.clock150':
+    'A clock when adding food: the time applies to the whole meal. Change one food’s time and the whole meal moves with it.',
+  'whatsNew.steps150': 'Steps with a slider (every 500) and −100, −50, +50, +100 buttons.',
+  'whatsNew.kcal150': 'Calories update while you type the grams.',
 };

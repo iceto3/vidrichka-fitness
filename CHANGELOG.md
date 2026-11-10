@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] – 2026-11-10 (beta)
+
+### Added
+
+- **„Добави хранене“** (Начало › Хранения днес and Храна › Хранения): logs an unplanned meal. It gets its own meal id (`x_<base36 time>`, `food/logic.isExtra`), so several can exist in a day. The time comes from the add page's clock (default now; not in the future, not before the wake-up) and gives the name: between breakfast and lunch „Междинно сутрешно“, between lunch and dinner „Междинно следобедно“, before breakfast or after dinner „Допълнително хранене“ (the planned meals count at their logged time, else at their usual time 08:00 / 13:00 / 19:00 – `extraKind`). It is listed among the planned meals by time (`mealsWithExtras`). Unplanned meals give no XP and count for no daily goal (no meal quest, not in the protein-goal quest, not a food-streak day – `motivation/stats`); they add to the day's kcal / protein / nutrient totals and charts.
+- **A clock on the add-food page** (24 h, ±5 min, typed like „Кога яде?“): the time of the whole meal. Default: the meal's time when it already has food, else now (a past day: the usual time). Never in the future, never before the day's wake-up (− stops there). Applied when food is added and when the page is left.
+- **Steps:** a slider that snaps every 500 steps (range: twice the goal, more when the day has more) plus −100, −50, +50, +100. +1000 / +2000 are gone. Steps never go below 0 (`steps/logic.clampDelta`; `addSteps` takes negative changes).
+- What's new entry for 1.5.0 (bg + en). Unit tests `tests/unit/v150.test.js`; e2e flow `tests/e2e/v150.mjs` at 360 px (also alone with `--flow v150`).
+
+### Changed
+
+- **One time per meal** (breakfast, lunch, snacks, dinner, unplanned): a new entry takes the meal's time (`food/logic.mealTimeOf` – the earliest entry; older data with several times keeps them until a time is changed), an entry moved into another meal takes that meal's time, and „Час“ in the item editor moves every entry of the meal (`daily/api.setMealClock`). Today's graded protein breakfast still goes through the „Кога яде?“ save (re-graded, one result toast, no double XP).
+- **„Кога яде?“ and the clock:** a breakfast saved with an earlier time on the clock is graded by that time (like a time typed from the pill) and „Кога яде?“ is not asked; left at „now“ and late, „Кога яде?“ is asked as in 1.4.4.
+- **Current meal without breakfast:** from 04:00 until the first enabled meal starts, the current meal is the next one (e.g. lunch at 09:00), not the afternoon snack. The small hours (before 04:00) are unchanged.
+- **Live kcal:** the add and edit sheets update kcal and the macros while the amount is typed (not only on blur); the field keeps what is typed.
+
+### Fixed
+
+- **„Въведи“** (and „От снимка“) on the steps card never wrap their text at 360 px.
+
 ## [1.4.4] – 2026-11-10
 
 ### Added
