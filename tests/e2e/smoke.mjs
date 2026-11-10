@@ -2841,8 +2841,9 @@ async function v143r3(page, { go, settle, shot, layer, rows, clearCel }, name, c
   const lunch = async () => (await food()).filter((r) => r.date === today && r.meal === 'lunch').length;
   const n0 = await lunch();
   assert.ok(n0 >= 1, 'a lunch entry to delete');
-  await page.locator('.meal[data-m="lunch"]').click();
-  await layer.locator('.mealitems').waitFor();
+  const openLunch = () =>
+    clickPastPrompts(page, layer, settle, page.locator('#page .meal[data-m="lunch"]'), layer.locator('.mealitems'));
+  await openLunch();
   await layer.locator('.lrow [data-act="del"]').first().click();
   const pill = page.locator('.undopill');
   await pill.waitFor();
@@ -2854,10 +2855,8 @@ async function v143r3(page, { go, settle, shot, layer, rows, clearCel }, name, c
   assert.equal(await lunch(), n0, 'a finger tap that moved a little still undoes');
   assert.equal(await pill.count(), 0, 'the pill is gone');
   assert.match(await page.locator('#page .meal[data-m="lunch"]').innerText(), /Банан/, 'the page shows it again');
-  await closeAllSheets(page, layer, settle);
   // a real swipe still only dismisses
-  await page.locator('.meal[data-m="lunch"]').click();
-  await layer.locator('.mealitems').waitFor();
+  await openLunch();
   await layer.locator('.lrow [data-act="del"]').first().click();
   await pill.waitFor();
   {
@@ -2878,8 +2877,7 @@ async function v143r3(page, { go, settle, shot, layer, rows, clearCel }, name, c
   const s0 = await sleepOf();
   assert.notEqual(s0, '[null,null,null,null]', 'a sleep record to delete');
   await page.locator('.sleepcard').scrollIntoViewIfNeeded();
-  await page.locator('.sleepcard').click();
-  await layer.locator('.sleeptimes').waitFor();
+  await clickPastPrompts(page, layer, settle, page.locator('.sleepcard'), layer.locator('.sleeptimes'));
   await layer.locator('[data-act="clear"]').click();
   await layer.locator('[data-act="ok"]').click();
   await pill.waitFor();
@@ -2944,6 +2942,26 @@ async function closeAllSheets(page, layer, settle) {
     await page.keyboard.press('Escape');
     await settle();
   }
+}
+
+/**
+ * Click `target` and wait for `opened`. A check-in prompt (e.g. „Изяде ли своите 30 г
+ * протеин?“) can open by its timer at any moment – on the slower WebKit run in CI it landed
+ * right before the click. It is dismissed and the click retried, so a step never depends on
+ * when a prompt fires. @param {any} page @param {any} layer @param {() => Promise<any>} settle
+ * @param {any} target @param {any} opened
+ */
+async function clickPastPrompts(page, layer, settle, target, opened) {
+  for (let k = 0; k < 4; k++) {
+    await closeAllSheets(page, layer, settle);
+    const ok = await target
+      .click({ timeout: 3000 })
+      .then(() => opened.waitFor({ timeout: 3000 }))
+      .then(() => true)
+      .catch(() => false);
+    if (ok) return;
+  }
+  throw new Error('could not open the sheet past the prompts');
 }
 
 async function v140(page, { go, settle, shot, layer, rows }) {
