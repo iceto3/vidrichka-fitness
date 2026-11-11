@@ -78,8 +78,8 @@ test('exercise library: 36 exercises (1.6.0: + 16) with bilingual names, muscles
   }
 });
 
-test('exactly three example workouts, all using known exercises', () => {
-  assert.equal(PLANS.length, 3);
+test('three example workouts + (1.6.0) two home days, all using known exercises', () => {
+  assert.equal(PLANS.length, 5);
   const ids = new Set(EXERCISES.map((e) => e.id));
   for (const p of PLANS) for (const it of p.items) assert.ok(ids.has(it.exId), `${p.id}: ${it.exId}`);
 });

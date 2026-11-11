@@ -155,3 +155,63 @@ test('C: new exercises show the coach cues (bg/en) and a safe icon instead of a 
   assert.equal(CUES.kb_swing.video, undefined);
   assert.match(youtubeUrl('hip_thrust'), /results\?search_query=/);
 });
+
+test('D: two built-in home plans – Day 1 / Day 2 full body, items in the coach order, all resolve', async () => {
+  const { PLANS } = await import('../../src/data/workouts.js');
+  assert.deepEqual(
+    PLANS.map((p) => p.id),
+    ['plan_leg_day', 'plan_upper_body', 'plan_home_full', 'plan_home_day1', 'plan_home_day2'],
+  );
+  const d1 = PLANS.find((p) => p.id === 'plan_home_day1');
+  const d2 = PLANS.find((p) => p.id === 'plan_home_day2');
+  for (const p of [d1, d2]) {
+    assert.ok(p?.builtin && p.place === 'home', p?.id);
+    assert.equal(p?.items.length, 11);
+    assert.deepEqual(p?.sub, { en: 'At home', bg: 'В домашни условия' });
+    assert.doesNotMatch(JSON.stringify(p), /Ралица/);
+    for (const it of p?.items ?? []) {
+      assert.ok(byId(it.exId), `${p?.id}: ${it.exId}`);
+      assert.ok(it.rest >= 90, `${p?.id}: ${it.exId} rest`);
+      if (!logsKg(byId(it.exId))) assert.equal(it.weight, 0, `${p?.id}: ${it.exId} reps only`);
+    }
+  }
+  assert.deepEqual(d1?.name, { en: 'Day 1 Full Body', bg: 'Ден 1 цяло тяло' });
+  assert.deepEqual(d2?.name, { en: 'Day 2 Full Body', bg: 'Ден 2 цяло тяло' });
+  const row = (/** @type {any} */ i) => `${i.exId} ${i.sets}x${i.reps} ${i.weight}`;
+  assert.deepEqual(d1?.items.map(row), [
+    'back_squat 4x12 20',
+    'reverse_lunge 3x12 6',
+    'kb_swing 3x15 10',
+    'band_lateral_walk 3x10 0',
+    'knee_push_up 3x10 0',
+    'db_bent_over_row 3x10 6',
+    'one_arm_db_row 3x12 8',
+    'lying_db_french_press 3x12 4',
+    'lateral_raise 3x12 4',
+    'db_shoulder_press 3x12 5',
+    'cross_body_crunch 3x10 0',
+  ]);
+  assert.deepEqual(d2?.items.map(row), [
+    'bulgarian_split_squat 3x12 4',
+    'single_leg_hip_thrust 3x12 0',
+    'single_leg_rdl 3x12 0',
+    'band_glute_kickback 3x15 0',
+    'band_abductor_kick 3x15 0',
+    'barbell_row 3x12 15',
+    'lateral_raise 3x12 4',
+    'front_raise 3x15 4',
+    'overhead_triceps_extension 3x12 4',
+    'hammer_curl 3x15 4',
+    'kb_knee_tuck_situp 3x12 4',
+  ]);
+  // scheduled on free weekdays (Tue / Fri: no clash with the example plans, 24 h+ rest between)
+  const taken = PLANS.filter((p) => !p.id.startsWith('plan_home_day')).flatMap((p) => p.days);
+  for (const p of [d1, d2]) for (const d of p?.days ?? []) assert.ok(!taken.includes(d), `${p?.id} day ${d}`);
+  assert.deepEqual([d1?.days, d2?.days], [[1], [4]]);
+});
+
+test('D: existing installs get the two new plans once, deleted ones are not re-added', async () => {
+  const { readFileSync } = await import('node:fs');
+  const api = readFileSync('src/features/workouts/api.js', 'utf8');
+  assert.match(api, /PLANS\.filter\(\(p\) => !seeded\.includes\(p\.id\)\)/);
+});
