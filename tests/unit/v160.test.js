@@ -56,3 +56,102 @@ test('A: the kg column is shown for optional-weight exercises (active workout, p
   const editor = readFileSync('src/features/workouts/views/editor.js', 'utf8');
   assert.match(editor, /k !== 'weight' \|\| logsKg\(exById\(it\.exId\)\)/);
 });
+
+const NEW = [
+  'kb_swing',
+  'band_lateral_walk',
+  'knee_push_up',
+  'db_bent_over_row',
+  'one_arm_db_row',
+  'lying_db_french_press',
+  'cross_body_crunch',
+  'single_leg_hip_thrust',
+  'single_leg_rdl',
+  'band_glute_kickback',
+  'band_abductor_kick',
+  'barbell_row',
+  'front_raise',
+  'overhead_triceps_extension',
+  'hammer_curl',
+  'kb_knee_tuck_situp',
+];
+
+test('B+C: 16 new exercises with stable ids, complete data, kettlebell / band equipment', async () => {
+  const { MUSCLE_GROUPS } = await import('../../src/data/exercises.js');
+  const muscles = new Set(Object.values(MUSCLE_GROUPS).flat());
+  assert.equal(EXERCISES.length, 36);
+  assert.equal(new Set(EXERCISES.map((e) => e.id)).size, 36, 'unique ids');
+  for (const id of NEW) {
+    const e = byId(id);
+    assert.ok(e, id);
+    assert.ok(e.name.en && typeof e.name.bg === 'string' && !/[A-Za-z]/.test(e.name.bg), `${id} names`);
+    assert.ok(e.place.includes('home'), `${id} at home`);
+    assert.ok(e.primary.length && [...e.primary, ...e.secondary].every((m) => muscles.has(m)), `${id} muscles`);
+    assert.ok(e.rest > 0 && e.met > 0, `${id} rest/met`);
+    assert.ok(['reps', 'perLeg', 'perSide', undefined].includes(e.unit), `${id} unit`);
+  }
+  // distinct from the similar library exercises, no weighted variants
+  for (const [a, b] of [
+    ['single_leg_hip_thrust', 'hip_thrust'],
+    ['hammer_curl', 'biceps_curl'],
+    ['band_glute_kickback', 'cable_kickback'],
+  ])
+    assert.notEqual(byId(a)?.name.bg, byId(b)?.name.bg);
+  assert.equal(byId('kb_swing')?.equipment, 'kettlebell');
+  assert.equal(byId('kb_knee_tuck_situp')?.equipment, 'kettlebell');
+  for (const id of ['band_lateral_walk', 'band_glute_kickback', 'band_abductor_kick'])
+    assert.equal(byId(id)?.equipment, 'band');
+  for (const id of ['knee_push_up', 'single_leg_hip_thrust', 'single_leg_rdl']) {
+    assert.equal(byId(id)?.weighted, false);
+    assert.equal(logsKg(byId(id)), true, `${id} optional kg`);
+  }
+  assert.equal(byId('one_arm_db_row')?.unit, 'perSide');
+  assert.equal(byId('cross_body_crunch')?.unit, 'perSide');
+  assert.equal(byId('single_leg_rdl')?.unit, 'perLeg');
+});
+
+test('B: equipment labels (bg + en), filter list and icons', async () => {
+  const bg = (await import('../../src/data/i18n/bg.js')).default;
+  const en = (await import('../../src/data/i18n/en.js')).default;
+  const { EQUIPMENT } = await import('../../src/features/library/api.js');
+  const { PATHS } = await import('../../src/ui/icons.js');
+  for (const e of EXERCISES) assert.ok(EQUIPMENT.includes(e.equipment), `${e.id}: ${e.equipment}`);
+  for (const q of ['all', ...EQUIPMENT]) assert.ok(bg[`equip.${q}`] && en[`equip.${q}`], q);
+  assert.equal(bg['equip.kettlebell'], 'Пудовка');
+  assert.equal(bg['equip.band'], 'Ластик');
+  assert.equal(en['equip.kettlebell'], 'Kettlebell');
+  assert.ok(bg['unit.perSide'] && en['unit.perSide']);
+  assert.ok(PATHS.kettlebell && PATHS.band);
+});
+
+test('C: new exercises show the coach cues (bg/en) and a safe icon instead of a missing card / drawing', async () => {
+  const { CUES } = await import('../../src/data/cues.js');
+  const { TECHNIQUE } = await import('../../src/data/technique.js');
+  const { techniqueSections, figureBlock, loadFigure } = await import('../../src/features/library/figure.js');
+  const { exThumb } = await import('../../src/features/library/thumb.js');
+  const { youtubeUrl } = await import('../../src/features/library/api.js');
+  const { setLang } = await import('../../src/core/i18n.js');
+  for (const id of EXERCISES.map((e) => e.id)) {
+    if (Object.hasOwn(TECHNIQUE, id)) continue;
+    const c = CUES[id];
+    assert.ok(c && c.bg.length >= 2 && c.bg.length === c.en.length, `${id} cues`);
+    assert.equal(figureBlock(id), '', `${id}: no drawing block`);
+    assert.deepEqual(await loadFigure(id), [], `${id}: no figure import`);
+    assert.match(String(exThumb(id)), /^<svg class="exfb"/, `${id}: equipment icon`);
+    await setLang('bg');
+    assert.ok(String(techniqueSections(id)).includes(c.bg[0].slice(0, 12)), `${id} bg cues`);
+    await setLang('en');
+    assert.match(String(techniqueSections(id)), /Coach/);
+  }
+  await setLang('bg');
+  // videos: the coach's own, one per exercise; the wrong duplicate link of the abductor kicks is left out
+  const vids = Object.entries(CUES).filter(([, c]) => c.video);
+  for (const [id, c] of vids) {
+    assert.match(c.video ?? '', /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}$/, id);
+    assert.equal(youtubeUrl(id), c.video);
+  }
+  assert.equal(new Set(vids.map(([, c]) => c.video)).size, vids.length, 'no video used twice');
+  assert.equal(CUES.band_abductor_kick.video, undefined);
+  assert.equal(CUES.kb_swing.video, undefined);
+  assert.match(youtubeUrl('hip_thrust'), /results\?search_query=/);
+});

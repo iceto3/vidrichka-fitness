@@ -1408,4 +1408,12 @@ export default {
   // 1.5.1: What's new – one clock per meal
   'whatsNew.mealclock151':
     'Each meal has one clock – on the meal itself. The foods in it have no time of their own; change it and they all move together.',
+  // 1.6.0: kettlebell / band equipment, equipment filter, coach cues and videos, per-side reps
+  'equip.kettlebell': 'Kettlebell',
+  'equip.band': 'Resistance band',
+  'equip.all': 'All',
+  'library.equipment': 'Equipment',
+  'library.coachVideo': "Watch the coach's video",
+  'technique.cues': "Coach's cues",
+  'unit.perSide': 'Reps/side',
 };

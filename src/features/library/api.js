@@ -5,6 +5,7 @@
 import { EXERCISES, MUSCLE_GROUPS } from '../../data/exercises.js';
 import { L, t } from '../../core/i18n.js';
 import { html } from '../../ui/dom.js';
+import { cuesOf } from '../../data/cues.js';
 
 const byId = new Map(EXERCISES.map((e) => [e.id, e]));
 
@@ -30,6 +31,16 @@ export const muscleTags = (ex, max = 3) =>
 /** Reps label key for an exercise's unit. @param {string} id */
 export const repsLabel = (id) => t(`unit.${byId.get(id)?.unit ?? 'reps'}`);
 
-/** YouTube search link (never goes dead). @param {string} id */
+/**
+ * YouTube link: the coach's technique video when there is one (1.6.0, data/cues.js), else a
+ * search (never goes dead). @param {string} id
+ */
 export const youtubeUrl = (id) =>
+  cuesOf(id)?.video ??
   `https://www.youtube.com/results?search_query=${encodeURIComponent(`${byId.get(id)?.name.en ?? id} technique`)}`;
+
+/** Label of the YouTube button (1.6.0: "Watch the video" for the coach's video). @param {string} id */
+export const youtubeLabel = (id) => t(cuesOf(id)?.video ? 'library.coachVideo' : 'library.youtube');
+
+/** Equipment types in the library filter (1.6.0: + kettlebell, band). */
+export const EQUIPMENT = ['barbell', 'dumbbell', 'kettlebell', 'band', 'machine', 'cable', 'bodyweight'];

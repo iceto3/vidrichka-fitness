@@ -13,14 +13,21 @@ import en from '../../src/data/i18n/en.js';
 import bg from '../../src/data/i18n/bg.js';
 import { L, isGendered, setLang } from '../../src/core/i18n.js';
 
-const ids = EXERCISES.map((e) => e.id);
+// 1.6.0: the exercises added with the home programs have no verified card yet (they show the
+// coach's cues, data/cues.js – see v160.test.js); the 20 verified ones are checked here
+const ids = EXERCISES.map((e) => e.id).filter((id) => Object.hasOwn(TECHNIQUE, id));
 const figure = async (/** @type {string} */ id) => (await import(`../../src/data/figures/${id}.js`)).default;
 /** @param {any} v */
 const plain = (v) => (isGendered(v) ? `${v.f} ${v.m}` : v);
 const nonEmpty = (/** @type {any} */ v) => typeof plain(v) === 'string' && plain(v).trim().length > 3;
 
-test('all 20 exercises – and only they – have verified technique content (ids unchanged)', () => {
+test('all 20 library exercises – and only they – have verified technique content (ids unchanged)', () => {
   assert.equal(ids.length, 20);
+  for (const id of Object.keys(TECHNIQUE))
+    assert.ok(
+      EXERCISES.some((e) => e.id === id),
+      id,
+    );
   assert.deepEqual(Object.keys(TECHNIQUE).sort(), [...ids].sort());
   // the ids users' history refers to (never renamed)
   for (const id of ['hip_thrust', 'back_squat', 'romanian_deadlift', 'db_bench_press', 'plank', 'dead_bug'])

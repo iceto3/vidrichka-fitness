@@ -1446,4 +1446,12 @@ export default {
   // 1.5.1: What's new – one clock per meal
   'whatsNew.mealclock151':
     'Всяко хранене има един часовник – в самото хранене. Храните в него нямат свой час; смениш ли часа, всички се местят заедно.',
+  // 1.6.0: kettlebell / band equipment, equipment filter, coach cues and videos, per-side reps
+  'equip.kettlebell': 'Пудовка',
+  'equip.band': 'Ластик',
+  'equip.all': 'Всички',
+  'library.equipment': 'Уреди',
+  'library.coachVideo': 'Виж видеото на треньора',
+  'technique.cues': 'Съвети от треньора',
+  'unit.perSide': 'Повт./страна',
 };
