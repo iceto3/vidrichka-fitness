@@ -16,7 +16,7 @@ import { closeSheet, confirmDialog, openSheet, whenSettled } from '../../../ui/s
 import { deleteWithUndo } from '../../../ui/undo.js';
 import { MEASURE_FIELDS, checkMeasure } from '../../../data/measurements.js';
 import { measurements } from '../api.js';
-import { ALL_TILES, tileGroups } from '../fields.js';
+import { ALL_TILES, measureRow, tileGroups, tileOf } from '../fields.js';
 import { customTiles, resetToGender, showTile, visibleFields, visibleTiles } from '../fields-api.js';
 import { settings } from '../../../core/settings.js';
 import { latestAndBase } from '../trend.js';
@@ -59,15 +59,50 @@ ${customTiles() ? html`<p class="xs b muted mt10">${t('body.setCustom')}</p><but
 const fmt1 = (/** @type {number|undefined} */ v) =>
   v == null ? '–' : new Intl.NumberFormat(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v);
 
-/** Chart sheet for one field. @param {string} f */
-function openChart(f) {
-  const unit = unitText(MEASURE_FIELDS.find((x) => x.id === f)?.unit ?? '');
+/**
+ * 1.6.2 (tester: „Седалище“ opened a sheet with no field and no save – 1.6.1 tiles with no
+ * value yet had only an empty chart/list): every tile's sheet has a quick entry for its
+ * field(s) (both sides of a pair), today, with the where-to-measure cue and „Запази“.
+ * Pure render, unit tested. @param {string} f first field of the tile
+ * @param {{typed: Record<string, string>, bad: Record<string, {error?: string, range?: readonly [number, number]}>}} st
+ */
+export function chartHtml(f, st) {
+  const tile = tileOf(f) ?? { id: f, fields: [f], unit: 'cm' },
+    unit = unitText(tile.unit);
   // Two entries on one day → one point (the latest).
   const pts = mergeSameX(
     measurements()
       .filter((r) => r[f] != null)
       .map((r) => ({ x: fmtDate(parseDay(r.date), { day: 'numeric', month: 'numeric' }), y: Number(r[f]) })),
   );
+  const quick = tile.fields.map((id) => {
+    const mf = MEASURE_FIELDS.find((x) => x.id === id),
+      b = st.bad[id];
+    return html`<label class="field mt10"><span>${t(`measure.${id}`)} <small class="muted">(${unit})</small></span>
+<input class="input mqin${b ? ' bad' : ''}" id="q_${id}" inputmode="decimal" data-input="qv" data-k="${id}" value="${st.typed[id] ?? ''}" aria-describedby="qh_${id}" aria-invalid="${String(!!b)}">
+${
+  b
+    ? html`<small class="ferr" id="qh_${id}" role="alert">${t(String(b.error), { min: b.range?.[0] ?? '', max: b.range?.[1] ?? '', unit })}</small>`
+    : html`<small class="hint" id="qh_${id}">${mf ? L(mf.hint) : ''}</small>`
+}</label>`;
+  });
+  return html`<h2 class="h2">${t(`measure.${tile.id}`)}</h2><div class="mquick mt8">${quick}
+<button class="btn w100 mt12 mqsave" data-act="qsave">${ic('check', 18, 3)}${t('common.save')}</button></div>
+<div class="mt12">${pts.length ? lineChart(pts, { unit, color: f === 'weight' ? '#1FB46B' : undefined, label: t(`measure.${f}`) }) : ''}</div>
+<div class="list mt8">${measurements()
+    .filter((r) => tile.fields.some((x) => r[x] != null))
+    .reverse()
+    .map(
+      (
+        r,
+      ) => html`<div class="lrow"><span class="f1 b">${fmtDate(parseDay(r.date), { day: 'numeric', month: 'short', year: 'numeric' })}</span><span class="b num">${tile.fields.map((x) => fmt1(r[x])).join(' / ')} ${unit}</span>
+<button class="iconbtn flat sm" data-act="del" data-id="${r.id}" aria-label="${t('common.delete')}">${ic('trash', 18)}</button></div>`,
+    )}</div>`;
+}
+
+/** Chart sheet for one tile (by its first field) with the 1.6.2 quick entry. @param {string} f */
+function openChart(f) {
+  const pts = measurements().filter((r) => r[f] != null);
   if (!pts.length && f === 'weight')
     // 1.2.1: no data yet → a helpful empty state with an "Add weight" action (not a blank sheet)
     return void openSheet({
@@ -76,24 +111,28 @@ function openChart(f) {
 <button class="btn w100 mt14" data-act="addw">${ic('plus', 18, 2.8)}${t('body.addWeight')}</button></div>`,
       actions: { addw: () => (closeSheet(), whenSettled(() => openMeasureForm('weight')), false) },
     });
+  const tile = tileOf(f);
+  /** @type {{typed: Record<string, string>, bad: Record<string, any>}} */
+  const st = { typed: {}, bad: {} };
   openSheet({
-    render:
-      () => html`<h2 class="h2">${t(`measure.${f}`)}</h2><div class="mt12">${pts.length ? lineChart(pts, { unit, color: f === 'weight' ? '#1FB46B' : undefined, label: t(`measure.${f}`) }) : ''}</div>
-<div class="list mt8">${measurements()
-        .filter((r) => r[f] != null)
-        .reverse()
-        .map(
-          (
-            r,
-          ) => html`<div class="lrow"><span class="f1 b">${fmtDate(parseDay(r.date), { day: 'numeric', month: 'short', year: 'numeric' })}</span><span class="b num">${fmt1(r[f])} ${unit}</span>
-<button class="iconbtn flat sm" data-act="del" data-id="${r.id}" aria-label="${t('common.delete')}">${ic('trash', 18)}</button></div>`,
-        )}</div>`,
+    render: () => chartHtml(f, st),
     actions: {
+      qv: (el) => ((st.typed[el.dataset.k ?? ''] = /** @type {HTMLInputElement} */ (el).value), false),
+      qsave: () => {
+        const { row, bad } = measureRow(tile?.fields ?? [f], st.typed, dayKey(), Date.now());
+        st.bad = bad;
+        if (Object.keys(bad).length) return; // re-render with the inline errors
+        if (!row) return (emit('toast', { key: 'body.needValue' }), false);
+        put('measurements', /** @type {any} */ ({ id: uid('m'), ...row }));
+        st.typed = {};
+        emit('toast', { key: 'body.saved' });
+      },
       del: async (el) => {
         if (!(await confirmDialog({ title: t('body.deleteEntry'), ok: t('common.delete'), danger: true }))) return;
         const r = measurements().find((x) => x.id === el.dataset.id);
         if (!r) return;
-        const label = `${t(`measure.${f}`)} · ${fmt1(r[f])} ${unit}`;
+        const unit = unitText(tile?.unit ?? '');
+        const label = `${t(`measure.${tile?.id ?? f}`)} · ${(tile?.fields ?? [f]).map((x) => fmt1(r[x])).join(' / ')} ${unit}`;
         deleteWithUndo(
           'measurement',
           [{ store: 'measurements', row: r }],

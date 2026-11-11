@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
  * @param {any} h helpers from smoke.mjs run()
  */
 export async function v161(page, h) {
-  const { go, settle, shot, layer, rows, closeAll, dayField } = h;
+  const { go, settle, shot, layer, rows, closeAll, dayField, clearCel } = h;
   await page.setViewportSize({ width: 360, height: 780 });
   await go('profile');
   await page.locator('.lang [data-v="bg"]').click();
@@ -171,6 +171,42 @@ export async function v161(page, h) {
   for (const n of ['Подгръдна обиколка', 'Седалище', 'Горна част на бедрото']) assert.ok(tl.includes(n), `women: ${n}`);
   assert.ok(!tl.includes('Бицепс в сгъвка') && !tl.includes('Врат'), 'no men-only tiles');
   await shot('measure-women-360');
+  // 1.6.2 (tester): every tile opens a sheet with a working field + „Запази“ (Седалище first)
+  const tileBtn = (/** @type {string} */ n) =>
+    page.locator('.mgrid .m', { has: page.locator('.n', { hasText: n }) }).first();
+  await tileBtn('Седалище').click();
+  await layer.locator('#q_glutes').waitFor();
+  await layer.locator('#q_glutes').fill('98');
+  await layer.locator('[data-act="qsave"]').click();
+  await settle();
+  assert.match(await layer.locator('.list').innerText(), /98[,.]0/);
+  await closeAll();
+  await clearCel(); // the first measurement of the month celebrates
+  for (const [n, ids] of /** @type {[string, string[]][]} */ ([
+    ['Подгръдна обиколка', ['underbust']],
+    ['Горна част на бедрото', ['upperThigh']],
+    ['Мишници Л / Д', ['armL', 'armR']],
+  ])) {
+    await tileBtn(n).click();
+    for (const id of ids) await layer.locator(`#q_${id}`).waitFor();
+    assert.equal(await layer.locator('[data-act="qsave"]').count(), 1, `${n}: save`);
+    if (ids[0] === 'armL') (await page.waitForTimeout(500), await shot('measure-tile-sheet-360'));
+    await closeAll();
+  }
+  // the saved glutes value stays after switching gender (men: the tile stays, it has a value)
+  await gender('m');
+  await go('progress/body');
+  await settle();
+  await closeAll();
+  assert.match(await tileBtn('Седалище').innerText(), /98[,.]0/);
+  for (const n of ['Бицепс в сгъвка', 'Рамене', 'Врат', 'Предмишница']) {
+    await tileBtn(n).click();
+    await layer.locator('.mqin').first().waitFor();
+    assert.equal(await layer.locator('[data-act="qsave"]').count(), 1, `${n}: save`);
+    await closeAll();
+  }
+  await gender('f');
+  console.log('  ✔ 1.6.2 every measurement tile has a field + save; glutes kept after a gender change');
   console.log('  ✔ 1.6.1 measurements by gender: defaults, hide / add, kept after a gender change, reset');
   await go('profile');
   await page.locator('.lang [data-v="en"]').click();

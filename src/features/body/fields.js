@@ -9,7 +9,7 @@
  * shown plus every measurement that already has a value, so no history disappears.
  * @module features/body/fields
  */
-import { MEASURE_FIELDS, MEASURE_SETS } from '../../data/measurements.js';
+import { MEASURE_FIELDS, MEASURE_SETS, checkMeasure } from '../../data/measurements.js';
 
 /** @typedef {{custom?: boolean, shown?: string[]}} TilePref kv `measureTiles` */
 /** @typedef {{id: string, fields: string[], unit: string}} Tile */
@@ -74,4 +74,28 @@ export const fieldsOf = (tiles) => {
 export function tileGroups(gender) {
   const mine = defaultTiles(gender);
   return { mine, more: ALL_TILES.map((x) => x.id).filter((id) => !mine.includes(id)) };
+}
+
+/** The tile a field belongs to (a pair's L/R fields share one). @param {string} field */
+export const tileOf = (field) => ALL_TILES.find((x) => x.fields.includes(field));
+
+/**
+ * 1.6.2 One measurement entry from typed values (the quick entry in a tile's sheet and the
+ * full form): validated per field; `row` null while something is wrong or nothing typed.
+ * @param {string[]} fields @param {Record<string, string>} typed @param {string} date @param {number} now
+ * @returns {{row: Record<string, any>|null, bad: Record<string, {error?: string, range?: readonly [number, number]}>}}
+ */
+export function measureRow(fields, typed, date, now) {
+  /** @type {Record<string, any>} */
+  const row = { date, ts: now };
+  /** @type {Record<string, {error?: string, range?: readonly [number, number]}>} */
+  const bad = {};
+  for (const id of fields) {
+    const f = MEASURE_FIELDS.find((x) => x.id === id);
+    if (!f) continue;
+    const c = checkMeasure(f, typed[id] ?? '');
+    if (c.error) bad[id] = c;
+    else if (c.value != null) row[id] = c.value;
+  }
+  return { row: Object.keys(bad).length || Object.keys(row).length <= 2 ? null : row, bad };
 }
