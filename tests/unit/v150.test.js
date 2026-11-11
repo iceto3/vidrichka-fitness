@@ -317,7 +317,7 @@ test("1.5.0: version, What's new (bg + en), no English in Bulgarian", async () =
   const { NOTES } = await import('../../src/features/whatsnew/notes.js');
   const bg = (await import('../../src/data/i18n/bg.js')).default;
   const en = (await import('../../src/data/i18n/en.js')).default;
-  // the version itself is checked by the newest release's test (1.5.1: v151.test.js)
+  // the version itself is checked by the newest release's test (1.6.0: v160.test.js)
   assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.5\.0\]/);
   const rel = NOTES.find((r) => r.v === '1.5.0');
   assert.equal(rel?.items.length, 4);

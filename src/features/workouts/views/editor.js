@@ -13,6 +13,7 @@ import { confirmDialog } from '../../../ui/sheet.js';
 import { deleteWithUndo } from '../../../ui/undo.js';
 import { exById, exName } from '../../library/api.js';
 import { planName, plans } from '../api.js';
+import { logsKg } from '../logic.js';
 
 /** Editable numeric fields: [key, step, min, max, label key]. */
 const FIELDS = /** @type {const} */ ([
@@ -68,7 +69,7 @@ ${d.items.map(
 <button class="iconbtn flat sm" data-act="mv" data-i="${i}" data-d="-1" aria-label="${t('editor.up')}" ${i === 0 ? 'disabled' : ''}>${ic('chevup', 18)}</button>
 <button class="iconbtn flat sm" data-act="mv" data-i="${i}" data-d="1" aria-label="${t('editor.down')}" ${i === d.items.length - 1 ? 'disabled' : ''}>${ic('down', 18)}</button>
 <button class="iconbtn flat sm" data-act="rm" data-i="${i}" aria-label="${t('common.remove')}">${ic('trash', 18)}</button></span></div>
-<div class="egrid mt8">${FIELDS.filter(([k]) => k !== 'weight' || exById(it.exId)?.weighted !== false).map(
+<div class="egrid mt8">${FIELDS.filter(([k]) => k !== 'weight' || logsKg(exById(it.exId))).map(
     ([k, , , , lbl]) =>
       html`<div><div class="xs b muted">${t(lbl)}</div>${stepper({ act: 'f', value: k === 'weight' ? fmtNum(it[k], 2) : it[k], data: { i, k }, label: `${exName(it.exId)} ${t(lbl)}`, unit: k === 'weight' ? t('unit.kg') : k === 'rest' ? 's' : '' })}</div>`,
   )}</div></div>`,

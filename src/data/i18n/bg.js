@@ -1446,4 +1446,17 @@ export default {
   // 1.5.1: What's new – one clock per meal
   'whatsNew.mealclock151':
     'Всяко хранене има един часовник – в самото хранене. Храните в него нямат свой час; смениш ли часа, всички се местят заедно.',
+  // 1.6.0: kettlebell / band equipment, equipment filter, coach cues and videos, per-side reps
+  'equip.kettlebell': 'Пудовка',
+  'equip.band': 'Ластик',
+  'equip.all': 'Всички',
+  'library.equipment': 'Уреди',
+  'library.coachVideo': 'Виж видеото на треньора',
+  'technique.cues': 'Съвети от треньора',
+  'unit.perSide': 'Повт./страна',
+  // What's new 1.6.0
+  'whatsNew.addkg160':
+    'Допълнителна тежест: при клекове, напади, лицеви опори и мостове вече записваш и кг – 0 кг е собствено тегло.',
+  'whatsNew.ex160': '16 нови упражнения и уреди пудовка и ластик – с филтър по уред, съвети и видео от треньора.',
+  'whatsNew.plans160': 'Две готови програми „Ден 1 цяло тяло“ и „Ден 2 цяло тяло“ в домашни условия.',
 };

@@ -69,8 +69,8 @@ test('every literal t("key") used in the source exists in en', () => {
   assert.ok(used.size > 100);
 });
 
-test('exercise library: 15–20 exercises with bilingual names, muscles and rest (technique: v141 test)', () => {
-  assert.ok(EXERCISES.length >= 15 && EXERCISES.length <= 20, String(EXERCISES.length));
+test('exercise library: 36 exercises (1.6.0: + 16) with bilingual names, muscles and rest (technique: v141 test)', () => {
+  assert.equal(EXERCISES.length, 36);
   for (const e of EXERCISES) {
     assert.ok(e.name.en && e.name.bg, e.id);
     assert.ok(e.primary.length > 0, `${e.id} muscles`);
@@ -78,8 +78,8 @@ test('exercise library: 15–20 exercises with bilingual names, muscles and rest
   }
 });
 
-test('exactly three example workouts, all using known exercises', () => {
-  assert.equal(PLANS.length, 3);
+test('three example workouts + (1.6.0) two home days, all using known exercises', () => {
+  assert.equal(PLANS.length, 5);
   const ids = new Set(EXERCISES.map((e) => e.id));
   for (const p of PLANS) for (const it of p.items) assert.ok(ids.has(it.exId), `${p.id}: ${it.exId}`);
 });

@@ -17,15 +17,16 @@ import { exById, exName, muscleTags, repsLabel } from '../../library/api.js';
 import { exThumb } from '../../library/thumb.js';
 import { openTechnique } from '../../library/technique.js';
 import { activeWorkout, planName, sessions } from '../api.js';
-import { MAX_KG, activeSet, lastSets, suggest } from '../logic.js';
+import { MAX_KG, activeSet, byKg, lastSets, logsKg, suggest } from '../logic.js';
 import * as S from '../session.js';
 
 /** @typedef {import('../logic.js').WItem} WItem */
 
-/** "Last time" hint row for an exercise. @param {WItem} it @param {boolean} weighted */
-function lastHint(it, weighted) {
+/** "Last time" hint row for an exercise. @param {WItem} it @param {any} ex */
+function lastHint(it, ex) {
   const last = lastSets(sessions(), it.exId);
   if (!last.length) return '';
+  const weighted = byKg(ex, last); // 1.6.0: optional added weight – by kilos once some was used
   const tip = suggest(last, it.target.reps, weighted, settings().weightStep);
   const txt = weighted ? `${fmtKg(last[0].w)} × ${last.map((s) => s.r).join(', ')}` : last.map((s) => s.r).join(', ');
   return html`<div class="row gap8 mt12 small lasttime"><span class="muted b">${t('workout.lastTime')}</span><span class="b num">${txt}</span>
@@ -35,13 +36,13 @@ ${tip ? html`<span class="chip warm nudge">${tip.kind === 'weight' ? t('workout.
 /** One exercise card. @param {WItem} it @param {number} i @param {[number, number]|null} act */
 function exCard(it, i, act) {
   const ex = exById(it.exId),
-    weighted = ex?.weighted ?? true;
+    weighted = logsKg(ex); // 1.6.0: bodyweight exercises with an optional added weight show kg
   const cols = weighted ? '' : ' bw';
   return html`<section class="card ex mt12" aria-label="${exName(it.exId)}">
 <div class="row between top-al"><div class="row gap12"><div class="exicon">${exThumb(it.exId)}</div>
 <div><h2 class="h2">${exName(it.exId)}</h2><div class="row gap6 mt6 wrap">${ex ? muscleTags(ex, 2) : ''}</div></div></div>
 <button class="iconbtn flat" data-act="howTo" data-id="${it.exId}" aria-label="${t('workout.howTo')}">${ic('info', 20)}</button></div>
-${lastHint(it, weighted)}
+${lastHint(it, ex)}
 <div class="colh${cols}" aria-hidden="true"><div>${t('workout.set')}</div>${weighted ? html`<div>${t('workout.weight')}</div>` : ''}<div>${repsLabel(it.exId)}</div><div></div></div>
 ${it.sets.map((s, j) => {
   const on = act?.[0] === i && act?.[1] === j;

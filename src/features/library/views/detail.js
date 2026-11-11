@@ -8,7 +8,7 @@ import { html, raw } from '../../../ui/dom.js';
 import { t } from '../../../core/i18n.js';
 import { kv, setKv } from '../../../core/store.js';
 import { ic } from '../../../ui/icons.js';
-import { exById, exName, youtubeUrl } from '../api.js';
+import { exById, exName, youtubeLabel, youtubeUrl } from '../api.js';
 import { figureBlock, hydrateFigure, techniqueSections } from '../figure.js';
 import { bodyMap } from '../bodymap.js';
 
@@ -50,7 +50,7 @@ export default ({ id }) => {
    <div class="row gap8 mt12 restpill">${ic('timer', 18, 2.2, 'var(--accent-d)')}<span class="small b">${t('library.defaultRest')} <span class="acc">${e.rest} ${t('unit.s')}</span></span></div></div>
 </div>
 <div class="card mt12 tech">${techniqueSections(id)}</div>
-<a class="btn yt mt12" href="${youtubeUrl(id)}" target="_blank" rel="noopener"><svg width="26" height="18" viewBox="0 0 26 18" aria-hidden="true"><rect width="26" height="18" rx="5" fill="#fff"/><path d="M10.5 5v8l7-4z" fill="#E5484D"/></svg>${t('library.youtube')}</a>
+<a class="btn yt mt12" href="${youtubeUrl(id)}" target="_blank" rel="noopener"><svg width="26" height="18" viewBox="0 0 26 18" aria-hidden="true"><rect width="26" height="18" rx="5" fill="#fff"/><path d="M10.5 5v8l7-4z" fill="#E5484D"/></svg>${youtubeLabel(id)}</a>
 </div>`);
     },
     mount: (root) => void (e && hydrateFigure(root, id)),

@@ -1,5 +1,5 @@
 /**
- * Exercise library list with muscle-group and gym/home filters.
+ * Exercise library list with muscle-group, gym/home and (1.6.0) equipment filters.
  * Also used as a picker (plan editor) when `onPick` is given.
  * @module features/library/views/list
  */
@@ -7,16 +7,17 @@ import { html, raw } from '../../../ui/dom.js';
 import { t } from '../../../core/i18n.js';
 import { ic } from '../../../ui/icons.js';
 import { seg, topBar } from '../../../ui/components.js';
-import { EXERCISES, MUSCLE_GROUPS, exName, muscleTags } from '../api.js';
+import { EQUIPMENT, EXERCISES, MUSCLE_GROUPS, exName, muscleTags } from '../api.js';
 import { exThumb } from '../thumb.js';
 
-const f = { place: 'all', group: 'all' };
+const f = { place: 'all', group: 'all', equip: 'all' };
 
 /** Exercises matching the current filters. */
 export const filtered = () =>
   EXERCISES.filter(
     (e) =>
       (f.place === 'all' || e.place.includes(f.place)) &&
+      (f.equip === 'all' || e.equipment === f.equip) &&
       (f.group === 'all' ||
         [...e.primary, ...e.secondary.slice(0, 1)].some((m) =>
           MUSCLE_GROUPS[/** @type {keyof MUSCLE_GROUPS} */ (f.group)]?.includes(m),
@@ -35,6 +36,10 @@ export const filters = () => html`${seg(
 ].map(
   (g) =>
     html`<button class="chip fchip${f.group === g ? ' on' : ''}" data-act="group" data-v="${g}" aria-pressed="${String(f.group === g)}">${t(`group.${g}`)}</button>`,
+)}</div>
+<div class="hscroll mt8" role="group" aria-label="${t('library.equipment')}">${['all', ...EQUIPMENT].map(
+  (q) =>
+    html`<button class="chip fchip${f.equip === q ? ' on' : ''}" data-act="equip" data-v="${q}" aria-pressed="${String(f.equip === q)}">${t(`equip.${q}`)}</button>`,
 )}</div>`;
 
 /**
@@ -51,6 +56,7 @@ export const exRow = (e, attrs, right = ic('right', 18, 2.2, 'var(--muted)')) =>
 export const filterActions = {
   place: (/** @type {HTMLElement} */ el) => void (f.place = el.dataset.v ?? 'all'),
   group: (/** @type {HTMLElement} */ el) => void (f.group = el.dataset.v ?? 'all'),
+  equip: (/** @type {HTMLElement} */ el) => void (f.equip = el.dataset.v ?? 'all'), // 1.6.0
 };
 
 /** @returns {import('../../../core/registry.js').View} */

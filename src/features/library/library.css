@@ -277,3 +277,16 @@
   z-index: 1;
   box-shadow: 0 -10px 14px var(--card);
 }
+/* 1.6.0: equipment icon for an exercise without an illustration yet */
+.exthumb:has(svg.exfb),
+.exicon:has(svg.exfb) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-d);
+}
+.exthumb svg.exfb,
+.exicon svg.exfb {
+  width: 28px;
+  height: 28px;
+}

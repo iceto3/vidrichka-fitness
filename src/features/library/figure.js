@@ -13,6 +13,7 @@
 import { html, raw, esc } from '../../ui/dom.js';
 import { L, getLang, t } from '../../core/i18n.js';
 import { TECHNIQUE } from '../../data/technique.js';
+import { cuesOf } from '../../data/cues.js';
 import { ic } from '../../ui/icons.js';
 
 /** @typedef {import('../../data/technique.js').BgText} BgText */
@@ -92,12 +93,24 @@ const list = (/** @type {BgText[]} */ xs, ordered = false) => {
 };
 
 /**
+ * 1.6.0: an exercise without a verified card yet shows the coach's short cues
+ * (data/cues.js) in the current language – never an empty page or a missing drawing.
+ * @param {string} id
+ */
+export const cueSection = (id) => {
+  const c = cuesOf(id);
+  const xs = c ? (getLang() === 'bg' ? c.bg : c.en) : [];
+  if (!xs.length) return '';
+  return section(t('technique.cues'), html`<ul class="tlist">${xs.map((x) => html`<li>${x}</li>`)}</ul>`, 'cues');
+};
+
+/**
  * All technique sections of an exercise, in the order of the verified cards.
  * @param {string} id
  */
 export const techniqueSections = (id) => {
   const tq = techniqueOf(id);
-  if (!tq) return '';
+  if (!tq) return cueSection(id);
   return html`${getLang() === 'bg' ? '' : html`<p class="xs b muted mt12">${t('technique.bgOnly')}</p>`}
 ${section(t('technique.setup'), list(tq.setup), 'setup')}
 ${section(t('technique.steps'), list(tq.steps, true), 'exec')}
