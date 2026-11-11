@@ -26,7 +26,10 @@ export const MEASURE_FIELDS = [
   {
     id: 'hips',
     unit: 'cm',
-    hint: { en: 'Widest part of the glutes, feet together.', bg: 'Най-широката част на седалището, стъпала заедно.' },
+    hint: {
+      en: 'Widest part of the hips and glutes, feet together.',
+      bg: 'Най-широката част на ханша и седалището, стъпала заедно.',
+    },
   },
   {
     id: 'thighL',
@@ -73,6 +76,53 @@ export const MEASURE_FIELDS = [
     unit: 'cm',
     hint: { en: 'Widest part of the calf while standing.', bg: 'Най-широката част на прасеца, в изправено положение.' },
   },
+  // 1.6.1: measurements by gender (see MEASURE_SETS) – men add flexed biceps, shoulders, neck
+  // and forearm; women add the underbust (above), glutes and the upper thigh.
+  {
+    id: 'biceps',
+    unit: 'cm',
+    hint: {
+      en: 'Flexed arm at 90°, around the peak of the biceps.',
+      bg: 'Ръката свита на 90° и стегната, през най-високата точка на бицепса.',
+    },
+  },
+  {
+    id: 'shoulders',
+    unit: 'cm',
+    hint: {
+      en: 'Around both shoulders at the widest point, arms relaxed.',
+      bg: 'Около двете рамене през най-широката им част, ръцете отпуснати.',
+    },
+  },
+  {
+    id: 'neck',
+    unit: 'cm',
+    hint: { en: 'Just below the Adam’s apple, looking ahead.', bg: 'Точно под адамовата ябълка, погледът напред.' },
+  },
+  {
+    id: 'forearm',
+    unit: 'cm',
+    hint: {
+      en: 'Widest part of the forearm, arm straight, hand open.',
+      bg: 'Най-широката част на предмишницата, ръката изпъната, дланта отворена.',
+    },
+  },
+  {
+    id: 'glutes',
+    unit: 'cm',
+    hint: {
+      en: 'Fullest point of the glutes seen from the side, feet together.',
+      bg: 'Най-изпъкналата точка на седалището, погледнато отстрани, стъпала заедно.',
+    },
+  },
+  {
+    id: 'upperThigh',
+    unit: 'cm',
+    hint: {
+      en: 'Top of the thigh, just below the groin.',
+      bg: 'Най-горната част на бедрото, точно под слабините.',
+    },
+  },
   {
     id: 'bodyfat',
     unit: '%',
@@ -82,6 +132,16 @@ export const MEASURE_FIELDS = [
     },
   },
 ];
+
+/**
+ * 1.6.1 Default measurement sets by the profile's gender (tile ids: a field id or its `pair`).
+ * The rest stay available („Покажи още“); a user's own choice is kept when gender changes.
+ */
+export const MEASURE_SETS = /** @type {const} */ ({
+  common: ['weight', 'waist', 'hips', 'chest', 'thigh', 'calves', 'arm'],
+  m: ['biceps', 'shoulders', 'neck', 'forearm'],
+  f: ['underbust', 'glutes', 'upperThigh'],
+});
 
 /** Plausible range per unit: values outside are rejected with an inline error. */
 export const MEASURE_RANGES = /** @type {const} */ ({ kg: [20, 300], cm: [10, 250], '%': [1, 75] });

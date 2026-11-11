@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.6.2] – 2026-11-11
+
+### Fixed (beta tester round on 1.6.1-beta)
+
+- **Exercises header count follows the filters:** „40 от 62 упражнения“ with „Пудовка“ (was always the library total, 62); plural-aware `library.count`, new `library.countOf`.
+- **Supplement streak visible from day 1:** 1.6.1 showed „🔥 N дни подред“ only for N > 1 and only on today. Each row (creatine too) now has a streak line counted up to the shown day, „🔥 0 дни подред“ before the first tick.
+- **Every measurement tile opens a sheet with a field and „Запази“:** a tile tap only showed the chart and history, so a measurement with no value yet (e.g. the women's „Седалище“) opened an empty sheet. Every tile's sheet now has a quick entry for its field(s) (both sides of a pair), with the where-to-measure cue and inline errors (`body/fields.measureRow`, `body/views/body.chartHtml`). Saved values stay when the gender changes (a tile with a value stays visible).
+- **Added weight in 1 kg steps:** the kg ± always used the Profile step (2.5 kg) – in 1.6.0 the 4 kg came pre-filled from the home plan, so after a session ending at 0 kg „+“ gave 2.5 / 5. Bodyweight exercises with an optional added weight now step by 1 kg (active workout, plan editor, the „Опитай +кг“ hint; `workouts/logic.kgStep`); weighted exercises keep the Profile step; typing keeps 0.25 kg resolution.
+- What's new entry for 1.6.2 (bg + en). Unit tests `tests/unit/v162.test.js`; e2e checks in `tests/e2e/v160.mjs` / `v161.mjs`.
+
+## [1.6.1] – 2026-11-11
+
+### Added
+
+- **Every kettlebell exercise („Пудовка“)** – 26 new exercises (stable ids): `kb_one_arm_swing`, `kb_sumo_deadlift`, `kb_good_morning`, `kb_goblet_squat`, `kb_sumo_squat`, `walking_lunge`, `lateral_lunge`, `curtsy_lunge`, `step_up`, `calf_raise`, `kb_gorilla_row`, `kb_high_pull`, `kb_one_arm_press`, `kb_push_press`, `kb_floor_press`, `kb_floor_pullover`, `kb_halo`, `russian_twist`, `kb_windmill`, `kb_plank_pull_through`, `kb_suitcase_carry`, `kb_farmer_walk`, `kb_turkish_get_up`, `kb_clean`, `kb_thruster`, `kb_snatch` (62 in the library). Library exercises that work with a kettlebell got `alt: ['kettlebell']` instead of a duplicate (Romanian deadlift, single-leg RDL, glute bridge, hip thrust, reverse lunge, Bulgarian split squat, one-arm row, biceps curl, hammer curl, lying French press, lateral raise, dead bug – dead bug also gets the optional kg); the „Пудовка“ filter lists 40 and the exercise page shows „Дъмбели / Пудовка“. No illustrations yet (user decision): coach cues in bg + en, with sources (ExRx, ACE) only where a page was checked.
+- **„Хранителни добавки“ in Храна** (`src/data/supplements.js`, `features/food/supps*.js`, `food/views/supps.js`) replaces the 1.4.2 creatine card; creatine is its first row with the day's creatine total as before. Ready supplements with one tap: protein powder, vitamin D, omega-3, magnesium, vitamin C, iron, zinc, multivitamin; own supplements with a unit (г, мг, IU, капс.). Each remembers its last dose; one-tap „Взех“ ticks today with it (✎ for another dose, the day's removal with „Отмени“, a removal from the list keeps the history); a consecutive-day streak. Protein powder counts toward the day's protein (`suppP` on the day record: day totals, Храна's protein bar, the protein goal / quests) – protein only, no kcal. Optional daily reminder at a chosen time, planned by the existing on-phone reminder path (in-app, Notification Triggers, the service worker); local-only even with push on, so the push Worker is unchanged.
+- **Body measurements by gender** (`MEASURE_SETS`, `features/body/fields*.js`): the profile's gender sets the default set – common тегло, талия, ханш, гърди, бедро, прасец, мишница; men add бицепс в сгъвка, рамене, врат, предмишница; women add подгръдна обиколка, седалище, горна част на бедрото. „Избери“ in Прогрес › Тяло hides / shows / adds any measurement (also from the other set; kv `measureTiles`); the own choice is kept when the gender changes; „Върни по подразбиране“. Each measurement has a short Bulgarian where-to-measure cue (text, no pictures).
+- What's new entry for 1.6.1 (bg + en). Unit tests `tests/unit/v161.test.js`; e2e flow `tests/e2e/v161.mjs` at 360 px (also alone with `--flow v161`).
+
+### Changed
+
+- Creatine data is not moved: the day field `creatineG` and kv `creatineDose` stay the source, so history, totals and streaks continue. The creatine sheet's actions are now `suppG` / `suppSave` / `suppClear`.
+- Existing users keep every measurement that already has a value visible (belly, body fat …). Labels: „Мишници Л / Д“, „Подгръдна обиколка“; the hips cue says „ханша и седалището“. No stored values change.
+
 ## [1.6.0] – 2026-11-11
 
 ### Added

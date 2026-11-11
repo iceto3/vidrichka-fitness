@@ -29,6 +29,15 @@ export const logsKg = (ex) => (ex ? !!(ex.weighted || ex.optionalWeight) : true)
  */
 export const byKg = (ex, sets) => (ex ? !!ex.weighted || (!!ex.optionalWeight && sets.some((s) => s.w > 0)) : true);
 
+/**
+ * 1.6.2 (tester: the Bulgarian split squat's ± went 0 → 2.5 → 5 kg, so Ралица's 4 kg could
+ * only be typed): the kg ± step per exercise. Bodyweight exercises with an optional added
+ * weight step by 1 kg (light dumbbells / kettlebells: 2, 4, 6 …); weighted ones keep the
+ * Profile step (2.5 kg by default). Typed values keep 0.25 kg resolution (clampKg).
+ * @param {{weighted?: boolean, optionalWeight?: boolean}|undefined|null} ex @param {number} setting
+ */
+export const kgStep = (ex, setting) => (ex && !ex.weighted && ex.optionalWeight ? 1 : Number(setting) || 2.5);
+
 /** Default MET for strength training when exercises have none. */
 export const DEFAULT_MET = 5;
 

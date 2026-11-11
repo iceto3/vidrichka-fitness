@@ -40,7 +40,7 @@ export default ({ id }) => {
 <div class="row between"><button class="iconbtn" data-back="library" aria-label="${t('common.back')}">${ic('back', 22)}</button>
 <div class="h3 muted">${t('library.title')}</div>
 <button class="iconbtn${fav ? ' fav' : ''}" data-act="fav" aria-pressed="${String(fav)}" aria-label="${t('library.favourite')}">${ic('star', 20)}</button></div>
-<div class="mt12"><h1 class="h1">${exName(id)}</h1><div class="muted b small mt6">${t(`equip.${e.equipment}`)} · ${t('library.strength')} · ${t(`area.${area}`)}</div></div>
+<div class="mt12"><h1 class="h1">${exName(id)}</h1><div class="muted b small mt6">${[e.equipment, ...(e.alt ?? [])].map((q) => t(`equip.${q}`)).join(' / ')} · ${t('library.strength')} · ${t(`area.${area}`)}</div></div>
 <div class="mt12">${figureBlock(id)}</div>
 <div class="card mt12 row gap12 musc">
   <div class="silh">${raw(bodyMap(e.primary, e.secondary))}</div>

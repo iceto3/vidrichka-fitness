@@ -10,19 +10,18 @@
  */
 import { html, raw } from '../../../ui/dom.js';
 import { L, fmtDate, fmtDuration, fmtNum, t } from '../../../core/i18n.js';
-import { get, kv, setKv } from '../../../core/store.js';
+import { get } from '../../../core/store.js';
 import { resumeButton } from '../../workouts/api.js';
 import { dayKey, durationMin, hhmm, hmComplete, parseDay, parseHM, stepHM } from '../../../core/dates.js';
 import { enabledMeals, settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
-import { stepper, time24 } from '../../../ui/components.js';
+import { time24 } from '../../../ui/components.js';
 import { closeSheet, confirmDialog, openSheet, refreshSheet, snack, toast } from '../../../ui/sheet.js';
 import { FACES, scale } from '../../daily/views/checkin.js';
 import { mealHM, mealStyle, mealsWithExtras, newExtraId, totals } from '../../food/logic.js';
 import { foodName, mealName, view as foodView } from '../../food/api.js';
 import { mealTotalsLine } from '../../food/views/totals.js';
-import { DEFAULT_CREATINE_DOSE } from '../../food/creatine.js';
 import { checkNight } from '../../daily/sleeptimes.js';
 import { FINE_STEPS, SLIDER_STEP, sliderMax, snapSteps } from '../../steps/api.js';
 import {
@@ -30,13 +29,10 @@ import {
   MAX_GLASSES,
   addDaySteps,
   clearDaySleep,
-  MAX_CREATINE_G,
   MAX_SLEEP_H,
   rateDayField,
   readDay,
-  removeDayCreatine,
   restoreDaySleep,
-  setDayCreatine,
   setDaySleep,
   setDaySleepTimes,
   sleepEditorTimes,
@@ -275,59 +271,7 @@ ${n.moved ? html`<p class="small b mt8 sleepnote" role="status">${ic('info', 14,
   });
 }
 
-/**
- * 1.4.2 Creatine card (Food day view): the day's total in grams – built-in meat and fish
- * with data + the supplement – and the "Добавка креатин" quick log. @param {string} date
- */
-export function creatineCard(date) {
-  const c = readDay(date).creatine,
-    parts = [
-      c.rows ? `${t('creatine.fromFood')} ${fmtNum(c.foodG, 1)} ${t('unit.g')}` : '',
-      c.suppG ? `${t('creatine.supp')} ${fmtNum(c.suppG, 1)} ${t('unit.g')}` : '',
-    ].filter(Boolean);
-  return html`<div class="card mt12 row gap10 creatinecard"><div class="mic sm creaic" aria-hidden="true">⚡</div>
-<div class="f1 minw0"><div class="b nowrap crtitle">${t('creatine.title')} <span class="num crtotal">${fmtNum(c.totalG, 1)} ${t('unit.g')}</span></div><div class="muted xs b">${parts.length ? parts.join(' · ') : t('creatine.none')}</div></div>
-<button class="chip accent chip-sm creaadd" data-act="creaSheet">${c.suppG ? ic('edit', 13, 2.4) : ic('plus', 13, 2.6)}${t('creatine.add')}</button></div>`;
-}
-
-/** Supplement sheet: grams (default 3 g or the last dose), ½ g steps; Save / Remove. @param {string} date */
-export function openCreatineSheet(date) {
-  const had = readDay(date).creatine.suppG;
-  let g = had || Number(kv('creatineDose', DEFAULT_CREATINE_DOSE)) || DEFAULT_CREATINE_DOSE;
-  openSheet({
-    render: () =>
-      html`<h2 class="h2">${t('creatine.add')}</h2><p class="muted small b mt4">${t('creatine.hint')}</p>
-<div class="row between mt12"><span class="b">${t('creatine.dose')}</span>${stepper({ act: 'creaG', value: fmtNum(g, 1), unit: t('unit.g'), label: t('creatine.dose'), wide: true })}</div>
-<div class="row gap10 mt16">${had ? html`<button class="btn sec f1" data-act="creaClear">${ic('trash', 16, 2.2)}${t('common.remove')}</button>` : ''}<button class="btn f1" data-act="creaSave">${t('common.save')}</button></div>`,
-    actions: {
-      creaG: (el, ev) => {
-        const typed = Number(String(/** @type {HTMLInputElement} */ (el).value ?? '').replace(',', '.'));
-        const v = ev.type === 'change' ? (Number.isFinite(typed) ? typed : g) : g + Number(el.dataset.d) * 0.5;
-        g = Math.round(Math.min(MAX_CREATINE_G, Math.max(0.5, v)) * 10) / 10;
-      },
-      creaSave: () => {
-        safely(() => setDayCreatine(date, g));
-        setKv('creatineDose', g);
-        closeSheet();
-        toast(t('creatine.saved', { g: fmtNum(g, 1) }));
-        emit('ui:refresh');
-        return false;
-      },
-      creaClear: () => {
-        // 1.4.2 tester round: removing is one tap, with „Отмени“ like every other deletion
-        const was = removeDayCreatine(date);
-        closeSheet();
-        emit('ui:refresh');
-        if (was)
-          snack(t('creatine.removed'), () => {
-            safely(() => setDayCreatine(date, was));
-            emit('ui:refresh');
-          });
-        return false;
-      },
-    },
-  });
-}
+// 1.6.1: the 1.4.2 creatine card and its sheet moved into „Хранителни добавки“ (food/views/supps.js).
 
 /** Mood & energy card (1–5 each). @param {string} date */
 export function moodCard(date) {
@@ -431,7 +375,6 @@ export const CARD_ACTS = /** @type {const} */ ([
   'sleepShot',
   'moodSheet',
   'water',
-  'creaSheet',
   'dayMeal',
   'dayAddFood',
 ]);
@@ -466,7 +409,6 @@ export function cardActions(dateOf) {
       safely(() => setDayWater(date, n));
       if (n < before) toast(t('food.waterRemoved', { n }));
     },
-    creaSheet: () => (openCreatineSheet(dateOf()), false),
     dayMeal: async (el) => {
       const { openMeal } = await import('../../food/views/diary.js');
       openMeal(el.dataset.m ?? 'snack', dateOf());

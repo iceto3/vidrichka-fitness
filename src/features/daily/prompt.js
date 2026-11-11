@@ -68,6 +68,14 @@ export function prompt(s) {
   pump();
 }
 
+/** 1.6.1: „Взех“ on a supplement reminder – ticks it for today with the last dose. @param {string} id */
+async function takeFromReminder(id) {
+  const m = await import('../food/supps-api.js');
+  const sp = m.supplements().find((x) => x.id === id);
+  if (sp && !m.taken(sp, dayKey())) m.setTaken(sp, dayKey(), sp.dose);
+  emit('ui:refresh');
+}
+
 function pump() {
   clearTimeout(timer);
   if (!waiting.length) return;
@@ -80,17 +88,20 @@ function pump() {
       ? { label: t('notif.protein.yes'), run: () => emit('nav', { path: BREAKFAST_LOGGER }) }
       : s.group === 'water'
         ? { label: t('notif.water.add'), run: () => setWater(dayKey(), water(dayKey()) + 1) }
-        : { label: t(`prompt.${s.group}`), run: () => emit('nav', { path: s.route }) };
+        : s.group.startsWith('supp_')
+          ? { label: t('supp.take'), run: () => takeFromReminder(s.group.slice(5)) } // 1.6.1
+          : { label: t(`prompt.${s.group}`), run: () => emit('nav', { path: s.route }) };
   openSheet({
     kind: 'dialog',
     render:
       () => html`<div class="center dprompt"><div class="sq acc mauto">${ic(s.group === 'bed' ? 'moon' : s.group === 'water' ? 'drop' : s.group === 'morning' ? 'sun' : s.group === 'photos' ? 'camera' : 'bell', 22, 2.3)}</div>
 <h2 class="h2 mt8">${x.title}</h2><p class="muted b small mt6">${x.body}</p>
 <div class="row gap10 mt16"><button class="btn sec f1" data-close>${t('prompt.later')}</button><button class="btn f1" data-act="go">${primary.label}</button></div>
-${s.group === 'water' ? html`<button class="linkbtn w100 mt8" data-act="open">${t('prompt.openWater')}</button>` : ''}</div>`,
+${s.group === 'water' ? html`<button class="linkbtn w100 mt8" data-act="open">${t('prompt.openWater')}</button>` : ''}${s.group.startsWith('supp_') ? html`<button class="linkbtn w100 mt8" data-act="openSupps">${t('prompt.openSupps')}</button>` : ''}</div>`,
     actions: {
       go: () => (closeSheet(), primary.run(), false),
       open: () => (emit('nav', { path: 'food?water' }), false),
+      openSupps: () => (emit('nav', { path: 'food?supps' }), false),
     },
     onClose: () => setTimeout(pump, 400),
   });

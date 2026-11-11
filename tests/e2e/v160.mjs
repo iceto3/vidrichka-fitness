@@ -25,7 +25,7 @@ export async function v160(page, h) {
   await go('workouts');
   await settle();
   await closeAll();
-  assert.match(await page.locator('.libcard').innerText(), /36 упражнения/);
+  assert.match(await page.locator('.libcard').innerText(), /62 упражнения/);
   await go('library');
   await settle();
   await closeAll();
@@ -35,16 +35,28 @@ export async function v160(page, h) {
   assert.equal((await chip('band').innerText()).trim(), 'Ластик');
   await chip('kettlebell').click();
   await settle();
+  // 1.6.2 (tester): the header count follows the filter
+  assert.equal((await page.locator('.libcount').innerText()).trim(), '40 от 62 упражнения');
   const names = async () => (await page.locator('.exrow .exname').allInnerTexts()).map((x) => x.trim());
-  assert.deepEqual(await names(), ['Суинг с пудовка', 'Коремна преса със сгъване на коленете']);
-  assert.equal(await page.locator('.exrow .exthumb svg.exfb').count(), 2, 'equipment icon as thumbnail');
+  // 1.6.1: the whole kettlebell list (40, with the library exercises that can use one)
+  const kb = await names();
+  for (const n of [
+    'Суинг с пудовка',
+    'Коремна преса със сгъване на коленете',
+    'Гоблет клек',
+    'Турско ставане',
+    'Български клек',
+  ])
+    assert.ok(kb.includes(n), n);
+  assert.equal(kb.length, 40);
+  assert.ok((await page.locator('.exrow .exthumb svg.exfb').count()) >= 2, 'equipment icon as thumbnail');
   await shot('v160-library-kettlebell-360');
   await chip('band').click();
   await settle();
   assert.equal((await names()).length, 3);
   await chip('all').click();
   await settle();
-  assert.equal(await page.locator('.exrow').count(), 36);
+  assert.equal(await page.locator('.exrow').count(), 62);
 
   await go('exercise/kb_swing');
   await settle();
@@ -99,6 +111,18 @@ export async function v160(page, h) {
   await page.locator('.restbar [data-act="skip"]').click();
   await settle();
   assert.equal(await w(1).inputValue(), '0', 'the change carries to the next sets (as for any exercise)');
+  // 1.6.2 (tester): + steps by 1 kg for an optional added weight, so 4 kg is 4 taps (was 2.5)
+  const plus = ex0.locator('button[data-act="w"][data-j="1"][data-d="1"]');
+  await plus.click();
+  await settle();
+  assert.equal(await w(1).inputValue(), '1', '+1 kg');
+  for (let k = 0; k < 3; k++) (await plus.click(), await settle());
+  assert.equal(await w(1).inputValue(), '4');
+  // typing works too
+  await w(1).fill('4,5');
+  await w(1).dispatchEvent('change');
+  await settle();
+  assert.equal(await w(1).inputValue(), '4,5');
   await w(1).fill('4');
   await w(1).dispatchEvent('change');
   await settle();

@@ -14,7 +14,10 @@ import { closeSheet, openSheet, refreshSheet, toast } from '../../../ui/sheet.js
 import { checkFoodTime, foodTimeFloor, setMealClock } from '../../daily/api.js';
 import { trashList } from '../../../core/trash.js';
 import { currentMeal, dayRows, foodName, mealName, view } from '../api.js';
-import { cardActions, creatineCard, waterCard } from '../../day/views/cards.js';
+import { cardActions, waterCard } from '../../day/views/cards.js';
+import { suppActions, suppsCard } from './supps.js';
+import { get } from '../../../core/store.js';
+import { withSuppProtein } from '../../day/logic.js';
 import { mealHM, mealStyle, mealsWithExtras, newExtraId, totals } from '../logic.js';
 import { enabledMeals } from '../../../core/settings.js';
 import { creatineMg } from '../creatine.js';
@@ -157,18 +160,25 @@ ${changed() && !err ? html`<button class="btn sm w100 mt8 mclksave" data-act="mc
 /** @returns {import('../../../core/registry.js').View} */
 export default () => ({
   tab: 'food',
-  // Opened from a water reminder (#/food?water): jump to today's water tracker.
+  // Opened from a water reminder (#/food?water): jump to today's water tracker
+  // (1.6.1: #/food?supps from a supplement reminder – to „Хранителни добавки“).
   mount: () => {
-    if (!/[?&]water/.test(location.hash)) return;
+    const m = /[?&](water|supps)/.exec(location.hash);
+    if (!m) return;
     if (view.date !== dayKey()) ((view.date = dayKey()), emit('ui:refresh'));
-    const card = document.querySelector('.food .water');
+    const card = document.querySelector(m[1] === 'water' ? '.food .water' : '.food .supps');
     card?.scrollIntoView({ block: 'center' });
     card?.classList.add('flash');
   },
   render: () => {
     const s = settings(),
       rows = dayRows(view.date),
-      tot = totals(rows),
+      // 1.6.1: protein powder ticked in „Хранителни добавки“ counts for the protein goal
+      food = totals(rows),
+      tot = {
+        ...food,
+        p: withSuppProtein(/** @type {any} */ (food), Number(get('days', view.date)?.suppP) || 0)?.p ?? food.p,
+      },
       today = dayKey();
     const isToday = view.date === today,
       d = parseDay(view.date);
@@ -201,7 +211,7 @@ ${macros.map(([k, v, g, c], i) => {
 })}
 <div class="row wrap gap12 mt10 small b fibsalt"><span>${t('food.fiber')} <span class="num muted">${tot.fibN ? `${fmtNum(tot.fib, 1)} ${t('unit.g')}` : '—'}</span></span><span>${t('food.salt')} <span class="num muted">${tot.saltN ? `${fmtNum(tot.salt, 1)} ${t('unit.g')}` : '—'}</span></span><span class="satsum">${t('food.satFat')} <span class="num muted">${tot.satN ? `${fmtNum(tot.sat, 1)} ${t('unit.g')}` : '—'}</span></span><span class="sugsum">${t('food.sugar')} <span class="num muted">${tot.sugN ? `${fmtNum(tot.sug, 1)} ${t('unit.g')}` : '—'}</span></span></div></div></div>
 ${waterCard(view.date)}
-${creatineCard(view.date)}
+${suppsCard(view.date)}
 <div class="section-title"><h2 class="h3">${t('food.meals')}</h2><button class="link" data-go="food/meals">${t('food.regularMeals')}</button></div>
 <div class="card meals">${mealsWithExtras(enabledMeals(), rows, view.date).map((m) => {
       const items = rows.filter((r) => r.meal === m),
@@ -220,7 +230,7 @@ ${creatineCard(view.date)}
     pick: (el) =>
       void (/** @type {HTMLInputElement} */ (el).value && (view.date = /** @type {HTMLInputElement} */ (el).value)),
     water: cardActions(() => view.date).water, // 1.4.0: shared water card (− / glasses / +)
-    creaSheet: cardActions(() => view.date).creaSheet, // 1.4.2: creatine supplement
+    ...suppActions(() => view.date), // 1.6.1: „Хранителни добавки“ (creatine since 1.4.2)
     meal: (el) => (openMeal(el.dataset.m ?? 'snack'), false),
     // 1.5.0: an unplanned meal – its own id; the time (and so its name) is set on the add page
     addExtra: () => (emit('nav', { path: `food/add/${newExtraId()}` }), false),

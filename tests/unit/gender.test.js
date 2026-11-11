@@ -21,6 +21,8 @@ const GENDERED = [
   'cel.photoSetSub',
   // 1.3 voice
   'whatsNew.voice',
+  'whatsNew.streak162',
+  'whatsNew.measure161',
   // 1.3.4 steps, insights, what's new
   'cel.stepsSub',
   'insight.sleepEnergyUp',
@@ -33,6 +35,10 @@ const GENDERED = [
   'home.otter5',
   // 1.4.3 tester round: Графики / What's new „кога си яла“, „Въведи … сама“, the otter's „щом и ти си [готова]“
   'mealChart.empty',
+  'body.setupHint',
+  'body.setMine',
+  'notif.supp.body',
+  'supp.allAdded',
   'whatsNew.timing143',
   'food.noReliable',
   'food.enterSelf',

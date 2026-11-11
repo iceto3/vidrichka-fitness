@@ -244,7 +244,8 @@ export function sleepStreak(rows, now) {
  * @property {string} id      `<day>:<kind>`
  * @property {string} day     Day key of the record it belongs to.
  * @property {string} kind    wake | loud | p10 | p20 | p30 | water0…3 | checkinAm | checkinPm | bed | photos
- * @property {string} group   morning | protein | water | checkinAm | checkinPm | bed | photos (one shown per group)
+ * @property {string} group   morning | protein | water | checkinAm | checkinPm | bed | photos | supp_<id> (one shown per group)
+ * @property {string} [label]  1.6.1: the supplement's name (supp_<id> slots)
  * @property {number} at      When it becomes due.
  * @property {number} until   After this it is stale and never shown.
  * @property {string} route   Where a tap leads (`morning`, `food?water`, …).
@@ -262,6 +263,7 @@ export function sleepStreak(rows, now) {
  * @property {{time: string, on: boolean}} checkinAm @property {{time: string, on: boolean}} checkinPm
  * @property {{time: string, on: boolean}} bedtime
  * @property {{time: string, on: boolean}} [photos] Monthly photo set reminder (1st of the month).
+ * @property {{id: string, time: string, field: string, name: string}[]} [supps] 1.6.1 supplement reminders (food/supps `reminders`)
  */
 
 /**
@@ -368,6 +370,20 @@ export function planDay(day, cfg, rec = {}) {
       skipIf: ['photoSet'],
     });
   }
+  // 1.6.1 „Хранителни добавки“: a daily reminder at the chosen time, until it is ticked
+  // („Взех“ sets the supplement's day field) or the day ends.
+  (cfg.supps ?? []).forEach((r) => {
+    const t = at(day, r.time);
+    add({
+      kind: `supp_${r.id}`,
+      group: `supp_${r.id}`,
+      at: t,
+      until: Math.max(t + HOUR, at(day, '23:59')),
+      route: 'food?supps',
+      label: r.name,
+      skipIf: [r.field],
+    });
+  });
   return out;
 }
 
