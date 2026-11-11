@@ -53,6 +53,17 @@ export function mealTimeOf(rows, date, meal) {
 }
 
 /**
+ * 1.5.1: the time of a meal on a day („HH:MM“ – its earliest entry, see mealTimeOf), or ''.
+ * Pure. @param {any[]} rows @param {string} date @param {string} meal
+ */
+export const mealHM = (rows, date, meal) => {
+  const at = mealTimeOf(rows, date, meal);
+  if (at == null) return '';
+  const d = new Date(at);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+/**
  * 1.5.0: an unplanned meal („Добави хранене“) is its own meal id `x_<base36 time>` – old
  * data has none and older versions simply don't list it. It gives no XP, counts for no daily
  * goal; its entries only add to the day's totals and charts. @param {any} m

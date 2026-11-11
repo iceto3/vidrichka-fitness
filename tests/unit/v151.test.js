@@ -210,7 +210,7 @@ test("1.5.1: version, What's new (bg + en), no English in Bulgarian", async () =
   assert.equal(APP_VERSION, '1.5.1');
   assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.5\.1\]/);
   assert.equal(NOTES[0].v, '1.5.1');
-  assert.equal(NOTES[0].items.length, 3);
+  assert.equal(NOTES[0].items.length, 4);
   const keys = [
     ...NOTES[0].items.map(([, k]) => k),
     'food.satFat',
@@ -226,4 +226,70 @@ test("1.5.1: version, What's new (bg + en), no English in Bulgarian", async () =
     assert.ok(/** @type {any} */ (bg)[k] && /** @type {any} */ (en)[k], k);
     assert.doesNotMatch(String(/** @type {any} */ (bg)[k]).replace(/\{\w+\}/g, ''), /[A-Za-z]/, `English in bg ${k}`);
   }
+});
+
+test('meal clock (user decision): one clock per meal moves every food in it, unplanned meals too', async () => {
+  globalThis.addEventListener ??= () => {};
+  const { dayKey } = await import('../../src/core/dates.js');
+  const { all, get, put, remove } = await import('../../src/core/store.js');
+  const { at } = await import('../../src/features/daily/logic.js');
+  await import('../../src/features/daily/index.js');
+  const { setMealClock } = await import('../../src/features/daily/api.js');
+  const { editRow, logFood } = await import('../../src/features/food/api.js');
+  const { FOODS } = await import('../../src/data/foods.js');
+  const { mealHM } = await import('../../src/features/food/logic.js');
+  for (const st of ['food', 'days']) all(st).forEach((r) => remove(st, r.id));
+  const D = dayKey();
+  const realNow = Date.now;
+  Date.now = () => at(D, '09:00');
+  try {
+    put('days', { id: D, wake: at(D, '07:00'), ack: at(D, '07:00') });
+    const row = (/** @type {string} */ id, /** @type {string} */ meal, /** @type {string} */ hm) =>
+      put('food', { id, date: D, meal, ts: at(D, hm), time: hm, name: id, grams: 100, kcal: 100, p: 10, c: 1, f: 5 });
+    // the tester's case: egg and chicken in lunch at 08:49, the lunch clock to 08:29
+    row('egg', 'lunch', '08:49');
+    row('chicken', 'lunch', '08:49');
+    assert.equal(setMealClock(D, 'lunch', '08:29').ok, true);
+    for (const id of ['egg', 'chicken']) assert.equal(get('food', id)?.time, '08:29', `${id} moved with the meal`);
+    // a new food takes the meal's time
+    const banana = FOODS.find((f) => f.id === 'banana') ?? FOODS[0];
+    const added = logFood(banana, 120, 'lunch', D);
+    assert.equal(added.time, '08:29');
+    // old data with mixed times: the clock shows the earliest, nothing is rewritten until changed
+    row('o1', 'dinner', '08:40');
+    row('o2', 'dinner', '08:35');
+    assert.equal(mealHM(all('food'), D, 'dinner'), '08:35');
+    assert.equal(get('food', 'o1')?.time, '08:40', 'left as it was');
+    setMealClock(D, 'dinner', '08:45');
+    assert.deepEqual([get('food', 'o1')?.time, get('food', 'o2')?.time], ['08:45', '08:45']);
+    // an unplanned meal has one clock too
+    row('x1', 'x_abc', '08:10');
+    row('x2', 'x_abc', '08:10');
+    setMealClock(D, 'x_abc', '08:20');
+    assert.deepEqual([get('food', 'x1')?.time, get('food', 'x2')?.time], ['08:20', '08:20']);
+    // moved to another meal: it takes that meal's time
+    editRow('x1', { meal: 'lunch' });
+    assert.equal(get('food', 'x1')?.time, '08:29');
+    // the rules stay: not before the wake-up, not in the future
+    assert.deepEqual(setMealClock(D, 'lunch', '06:30'), { ok: false, err: 'early' });
+    assert.equal(setMealClock(D, 'lunch', '09:30').ok, false);
+    assert.equal(get('food', 'egg')?.time, '08:29');
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test('meal clock UI: the meal sheet has the one clock, food rows and the item editor have none', async () => {
+  const { readFileSync } = await import('node:fs');
+  const item = readFileSync('src/features/food/views/item.js', 'utf8');
+  assert.doesNotMatch(item, /time24|itemtime|setFoodTime|data-act="hm/, 'no time control on an item');
+  const diary = readFileSync('src/features/food/views/diary.js', 'utf8');
+  const sheet = diary.slice(diary.indexOf('export function openMeal'), diary.indexOf('/** @returns'));
+  assert.match(sheet, /class="row gap10 mt8 mealclk"/);
+  assert.match(sheet, /time24\(\{ value: clk\.typed \?\? clk\.hm, act: 'mclk', step: 'mclkstep', mins: 5/);
+  assert.match(sheet, /setMealClock\(day, meal, clk\.hm\)/);
+  assert.match(sheet, /onClose: \(\) => void applyClock\(\)/, 'kept when the sheet is left');
+  assert.doesNotMatch(sheet, /\$\{r\.time\}/, 'a food row shows no time');
+  for (const k of ['food.mealTimeChanged', 'food.saveMealTime'])
+    assert.ok(/** @type {any} */ (bg)[k] && /** @type {any} */ (en)[k], k);
 });

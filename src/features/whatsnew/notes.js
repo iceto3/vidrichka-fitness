@@ -18,6 +18,7 @@ export const NOTES = [
       ['food', 'whatsNew.satsug151'],
       ['heart', 'whatsNew.home151'],
       ['moon', 'whatsNew.sleep151'],
+      ['clock', 'whatsNew.mealclock151'],
     ],
   },
   {
