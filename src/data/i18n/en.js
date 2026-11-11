@@ -1501,4 +1501,9 @@ export default {
   'whatsNew.measure161': 'Measurements follow your profile’s gender, and you choose which ones to track.',
   // 1.6.2 supplement streak from day 1
   'supp.streak0': '🔥 0 days in a row',
+  // 1.6.2 What's new (tester fixes)
+  'whatsNew.count162': 'The exercise count at the top follows the filter – e.g. “40 of 62” with “Kettlebell”.',
+  'whatsNew.streak162': 'Each supplement shows its day streak from the very first day.',
+  'whatsNew.measure162': 'Every measurement opens with a field and “Save” – glutes, underbust, biceps and the rest.',
+  'whatsNew.kg162': 'Added weight on bodyweight exercises steps by 1 kg – 4 kg is easy now.',
 };

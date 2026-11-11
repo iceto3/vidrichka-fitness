@@ -177,3 +177,28 @@ test('1.6.2 fix 4: Bulgarian split squat – log 0 kg then 4 kg (± by 1 kg, or 
   assert.match(active, /kgStep\(exById\(activeWorkout\(\)\.items\[i\]\.exId\), settings\(\)\.weightStep\)/);
   assert.match(readFileSync('src/features/workouts/views/editor.js', 'utf8'), /kgStep\(exById\(it\.exId\), st\)/);
 });
+
+test("1.6.2: version, What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
+  const en = (await import('../../src/data/i18n/en.js')).default;
+  const { NOTES } = await import('../../src/features/whatsnew/notes.js');
+  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.6.2');
+  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+  assert.equal(lock.version, '1.6.2');
+  assert.equal(lock.packages[''].version, '1.6.2');
+  const { APP_VERSION } = await import('../../src/core/version.js');
+  assert.equal(APP_VERSION, '1.6.2');
+  assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.6\.2\] – 2026-11-11 \(beta\)/);
+  assert.equal(NOTES[0].v, '1.6.2');
+  assert.deepEqual(
+    NOTES[0].items.map(([, k]) => k),
+    ['whatsNew.count162', 'whatsNew.streak162', 'whatsNew.measure162', 'whatsNew.kg162'],
+  );
+  for (const k of [...NOTES[0].items.map(([, k]) => k), 'library.countOf', 'supp.streak0']) {
+    assert.ok(/** @type {any} */ (bg)[k] && /** @type {any} */ (en)[k], k);
+    assert.doesNotMatch(
+      JSON.stringify(/** @type {any} */ (bg)[k]).replace(/\{\w+\}|"[fm]":/g, ''),
+      /[A-Za-z]/,
+      `English in bg ${k}`,
+    );
+  }
+});

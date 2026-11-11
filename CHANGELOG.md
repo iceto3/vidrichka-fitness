@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.6.2] – 2026-11-11 (beta)
+
+### Fixed (beta tester round on 1.6.1-beta)
+
+- **Exercises header count follows the filters:** „40 от 62 упражнения“ with „Пудовка“ (was always the library total, 62); plural-aware `library.count`, new `library.countOf`.
+- **Supplement streak visible from day 1:** 1.6.1 showed „🔥 N дни подред“ only for N > 1 and only on today. Each row (creatine too) now has a streak line counted up to the shown day, „🔥 0 дни подред“ before the first tick.
+- **Every measurement tile opens a sheet with a field and „Запази“:** a tile tap only showed the chart and history, so a measurement with no value yet (e.g. the women's „Седалище“) opened an empty sheet. Every tile's sheet now has a quick entry for its field(s) (both sides of a pair), with the where-to-measure cue and inline errors (`body/fields.measureRow`, `body/views/body.chartHtml`). Saved values stay when the gender changes (a tile with a value stays visible).
+- **Added weight in 1 kg steps:** the kg ± always used the Profile step (2.5 kg) – in 1.6.0 the 4 kg came pre-filled from the home plan, so after a session ending at 0 kg „+“ gave 2.5 / 5. Bodyweight exercises with an optional added weight now step by 1 kg (active workout, plan editor, the „Опитай +кг“ hint; `workouts/logic.kgStep`); weighted exercises keep the Profile step; typing keeps 0.25 kg resolution.
+- What's new entry for 1.6.2 (bg + en). Unit tests `tests/unit/v162.test.js`; e2e checks in `tests/e2e/v160.mjs` / `v161.mjs`.
+
 ## [1.6.1] – 2026-11-11 (beta)
 
 ### Added

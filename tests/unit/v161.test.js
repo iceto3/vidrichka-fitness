@@ -498,22 +498,17 @@ test('1.6.1 measurements: stored per user in kv, the Body view and form use the 
   assert.match(body, /data-act="mset"/);
 });
 
-test("1.6.1: version, What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
+test("1.6.1: What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
+  // 1.6.2: the version moved on (asserted in v162.test.js); the 1.6.1 entry stays
   const { NOTES } = await import('../../src/features/whatsnew/notes.js');
-  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.6.1');
-  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-  assert.equal(lock.version, '1.6.1');
-  assert.equal(lock.packages[''].version, '1.6.1');
-  const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.6.1');
   assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.6\.1\] – 2026-11-11/);
-  assert.equal(NOTES[0].v, '1.6.1');
+  const n161 = /** @type {any} */ (NOTES.find((n) => n.v === '1.6.1'));
   assert.deepEqual(
-    NOTES[0].items.map(([, k]) => k),
+    n161.items.map((/** @type {any} */ [, k]) => k),
     ['whatsNew.kb161', 'whatsNew.supps161', 'whatsNew.measure161'],
   );
   const keys = [
-    ...NOTES[0].items.map(([, k]) => k),
+    ...n161.items.map((/** @type {any} */ [, k]) => k),
     'supp.title',
     'supp.add',
     'supp.take',

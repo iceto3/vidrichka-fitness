@@ -21,6 +21,7 @@ const GENDERED = [
   'cel.photoSetSub',
   // 1.3 voice
   'whatsNew.voice',
+  'whatsNew.streak162',
   'whatsNew.measure161',
   // 1.3.4 steps, insights, what's new
   'cel.stepsSub',
