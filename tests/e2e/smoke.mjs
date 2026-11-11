@@ -3580,9 +3580,9 @@ async function v142(page, { go, settle, shot, layer, dayField }) {
   assert.match(await card.innerText(), /Креатин/);
   const before = Number((await card.locator('.crtotal').innerText()).replace(/[^\d,]/g, '').replace(',', '.'));
   await card.locator('.creaadd').click();
-  await layer.locator('[data-act="creaSave"]').waitFor();
-  assert.equal(await layer.locator('[data-change="creaG"]').inputValue(), '3', 'default 3 g');
-  await layer.locator('[data-act="creaSave"]').click();
+  await layer.locator('[data-act="suppSave"]').waitFor();
+  assert.equal(await layer.locator('[data-change="suppG"]').inputValue(), '3', 'default 3 g');
+  await layer.locator('[data-act="suppSave"]').click();
   await settle();
   assert.equal(await dayField('creatineG'), 3);
   const txt = await card.innerText();
@@ -3593,7 +3593,7 @@ async function v142(page, { go, settle, shot, layer, dayField }) {
   await shot('creatine-card');
   // 1.4.2 tester round: removing the supplement has „Отмени“
   await card.locator('.creaadd').click();
-  await layer.locator('[data-act="creaClear"]').click();
+  await layer.locator('[data-act="suppClear"]').click();
   await settle();
   assert.equal(await dayField('creatineG'), null, 'removed');
   assert.doesNotMatch(await card.innerText(), /добавка 3 г/);

@@ -379,20 +379,45 @@
   padding: 12px;
 }
 
-/* 1.4.2 creatine card (Food day view) and its supplement quick log */
-.creatinecard {
-  padding: 12px 14px;
+/* 1.6.1 „Хранителни добавки“ (creatine since 1.4.2 is its first row) */
+.supps {
+  /* the extra bottom space leaves the undo pill a free gap on the right (sheet.js placePill) */
+  padding: 12px 14px 18px;
 }
-.creatinecard .creaic {
+.supps .supprow {
+  padding: 8px 0;
+  border-top: 1px solid var(--line, rgba(0, 0, 0, 0.06));
+}
+.supps .supprow:first-child {
+  border-top: 0;
+}
+.supps .creaic {
   background: var(--violet-soft, #efeaff);
   color: var(--violet);
   font-size: 20px;
+  flex: none;
 }
-.creatinecard .crtotal {
+.supps .crtotal {
   margin-left: 4px;
 }
-.creatinecard .creaadd {
+.supps .suppedit,
+.supps .supptake,
+.supps .suppnew {
   flex: none;
+}
+.supps .supptake {
+  min-width: 64px;
+  justify-content: center;
+}
+.supppick {
+  padding: 8px 0;
+  border-top: 1px solid var(--line, rgba(0, 0, 0, 0.06));
+}
+.supppick:first-child {
+  border-top: 0;
+}
+.t24.off .t24i {
+  opacity: 0.55;
 }
 
 /* 1.4.2 "Снимай етикета" in the new-food form */
@@ -460,16 +485,6 @@
   .water .glasses .glass {
     flex: 1 1 0;
     max-width: 26px;
-  }
-  .creatinecard {
-    flex-wrap: wrap;
-    row-gap: 8px;
-  }
-  .creatinecard .f1 {
-    flex-basis: 200px;
-  }
-  .creatinecard .creaadd {
-    margin-left: 50px;
   }
 }
 

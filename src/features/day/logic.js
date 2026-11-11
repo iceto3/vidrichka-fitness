@@ -42,6 +42,8 @@ export function dayError(date, today) {
  * @property {any[]} food                  diary rows (water excluded), by time
  * @property {DayTotals|null} totals       null when no food was logged
  * @property {{foodG: number, suppG: number, totalG: number, rows: number}} creatine  1.4.2, grams
+ * @property {number} suppP              1.6.1: g of protein from protein powder (in `totals.p` too)
+ * @property {number} supps              1.6.1: supplements ticked (besides creatine)
  * @property {DayWorkout[]} workouts       oldest first (partial ones included, flagged)
  */
 
@@ -90,6 +92,17 @@ export function foodTotals(rows) {
   };
 }
 
+/**
+ * 1.6.1: protein powder („Хранителни добавки“) counts for the day's protein – and makes a
+ * day with only a shake have totals. @param {DayTotals|null} tot @param {number} p
+ * @returns {DayTotals|null}
+ */
+export function withSuppProtein(tot, p) {
+  if (!(p > 0)) return tot;
+  const base = tot ?? { kcal: 0, p: 0, c: 0, f: 0, fib: null, salt: null, sat: null, sug: null };
+  return { ...base, p: Math.round((base.p + p) * 10) / 10 };
+}
+
 /** @param {any} s @returns {DayWorkout} */
 const workoutOf = (s) => ({
   id: s.id,
@@ -126,7 +139,9 @@ export function dayFromIndex(ix, date) {
     energy: r.energy ?? null,
     water: ix.water.has(date) ? /** @type {number} */ (ix.water.get(date)) : null,
     food,
-    totals: foodTotals(food),
+    totals: withSuppProtein(foodTotals(food), Number(r.suppP) || 0),
+    suppP: Number(r.suppP) || 0,
+    supps: Object.keys(r).filter((k) => k.startsWith('sp_') && Number(r[k]) > 0).length,
     creatine: dayCreatine(food, r.creatineG),
     workouts: (ix.sessions.get(date) ?? []).map(workoutOf),
   };
@@ -148,6 +163,8 @@ export const hasData = (d) =>
   (d.water ?? 0) > 0 ||
   d.food.length > 0 ||
   d.creatine.suppG > 0 ||
+  d.supps > 0 ||
+  d.suppP > 0 ||
   d.workouts.length > 0;
 
 /**

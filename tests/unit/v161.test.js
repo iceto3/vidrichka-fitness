@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { EXERCISES, MUSCLE_GROUPS } from '../../src/data/exercises.js';
 import { CUES } from '../../src/data/cues.js';
 import { TECHNIQUE } from '../../src/data/technique.js';
+import { readFileSync } from 'node:fs';
 import { logsKg } from '../../src/features/workouts/logic.js';
 
 const byId = (/** @type {string} */ id) => EXERCISES.find((e) => e.id === id);
@@ -127,4 +128,242 @@ test('1.6.1 kettlebell: the equipment filter and the exercise page include alt e
   const { readFileSync } = await import('node:fs');
   assert.match(readFileSync('src/features/library/views/list.js', 'utf8'), /e\.alt\?\.includes\(f\.equip\)/);
   assert.match(readFileSync('src/features/library/views/detail.js', 'utf8'), /\.\.\.\(e\.alt \?\? \[\]\)/);
+});
+
+// ——— „Хранителни добавки“ ———
+import { get, put, setKv, kv } from '../../src/core/store.js';
+import { addDays, dayKey, parseDay } from '../../src/core/dates.js';
+import { setLang, t } from '../../src/core/i18n.js';
+import { SUPP_KINDS } from '../../src/data/supplements.js';
+import {
+  clampDose,
+  dayProtein,
+  fieldOf,
+  normalizeList,
+  proteinOf,
+  reminders,
+  suppStreak,
+} from '../../src/features/food/supps.js';
+import { buildDay, withSuppProtein } from '../../src/features/day/logic.js';
+import { planDay } from '../../src/features/daily/logic.js';
+import bg from '../../src/data/i18n/bg.js';
+import en from '../../src/data/i18n/en.js';
+
+globalThis.addEventListener ??= () => {};
+globalThis.removeEventListener ??= () => {};
+const sa = await import('../../src/features/food/supps-api.js');
+const { readDay } = await import('../../src/features/day/api.js');
+const today = dayKey();
+const back = (/** @type {number} */ n) => dayKey(addDays(parseDay(today), -n));
+const clearSupps = () => {
+  setKv('supplements', undefined);
+  setKv('creatineDose', undefined);
+};
+
+test('1.6.1 supplements: the ready list, units, names in BG and EN', async () => {
+  assert.deepEqual(Object.keys(SUPP_KINDS), [
+    'creatine',
+    'protein',
+    'vitd',
+    'omega3',
+    'magnesium',
+    'vitc',
+    'iron',
+    'zinc',
+    'multi',
+  ]);
+  for (const [k, s] of Object.entries(SUPP_KINDS)) {
+    assert.ok(['g', 'mg', 'IU', 'caps'].includes(s.unit), k);
+    assert.ok(s.dose > 0 && s.dose <= s.max && s.step > 0, k);
+    assert.ok(bg[`supp.${k}`] && en[`supp.${k}`], k);
+  }
+  await setLang('bg');
+  assert.equal(t('supp.title'), 'Хранителни добавки');
+  assert.equal(t('supp.protein'), 'Протеин на прах');
+  assert.equal(t('supp.unit.caps'), 'капс.');
+  for (const u of ['g', 'mg', 'IU', 'caps']) assert.ok(bg[`supp.unit.${u}`] && en[`supp.unit.${u}`]);
+});
+
+test('1.6.1 creatine migration: always on the list, its 1.4.2 dose and day field kept', () => {
+  // before 1.6.1: no list, the last dose in kv `creatineDose`
+  const l = normalizeList(undefined, 4.5);
+  assert.equal(l.length, 1);
+  assert.deepEqual(l[0], { id: 'creatine', kind: 'creatine', unit: 'g', dose: 4.5 });
+  assert.equal(fieldOf(l[0]), 'creatineG', 'history stays in the 1.4.2 field');
+  assert.equal(normalizeList(undefined, undefined)[0].dose, 3, 'never dosed → 3 g');
+  // a stored list without creatine gets it back first; broken rows dropped
+  const l2 = normalizeList(
+    [
+      { id: 'vitd', kind: 'vitd', unit: 'IU', dose: 1000 },
+      { id: 'x', kind: 'nope' },
+      null,
+      { id: 'c_1', kind: 'custom', name: '  ' },
+    ],
+    undefined,
+  );
+  assert.deepEqual(
+    l2.map((s) => s.id),
+    ['creatine', 'vitd'],
+  );
+  // the app: an existing creatine history keeps counting – streak and day totals
+  clearSupps();
+  setKv('creatineDose', 5);
+  for (const n of [1, 2, 3]) put('days', { id: back(n), creatineG: 5 });
+  const cr = sa.supplements()[0];
+  assert.equal(cr.dose, 5);
+  assert.equal(sa.streak(cr, today), 3, 'streak from the 1.4.2 entries (today still open)');
+  sa.setTaken(cr, today, cr.dose);
+  assert.equal(get('days', today).creatineG, 5);
+  assert.equal(readDay(today).creatine.suppG, 5, 'day creatine total as in 1.4.2');
+  assert.equal(sa.streak(cr, today), 4);
+  sa.setTaken(cr, today, null);
+  assert.equal(get('days', today).creatineG, null);
+  assert.equal(sa.removeSupp('creatine'), null, 'creatine stays on the list');
+});
+
+test('1.6.1 supplements: one-tap add, own supplement, dose memory, remove keeps history', () => {
+  clearSupps();
+  assert.ok(sa.readyToAdd().includes('vitd') && !sa.readyToAdd().includes('creatine'));
+  const d = sa.addReady('vitd');
+  assert.deepEqual(d, { id: 'vitd', kind: 'vitd', unit: 'IU', dose: 2000 });
+  assert.equal(sa.addReady('vitd'), null, 'only once');
+  assert.ok(!sa.readyToAdd().includes('vitd'));
+  // dose memory: the last dose taken is offered next time
+  sa.setTaken(d, today, 1000);
+  assert.equal(get('days', today)[fieldOf(d)], 1000);
+  assert.equal(sa.supplements().find((s) => s.id === 'vitd')?.dose, 1000);
+  assert.equal(sa.taken(d, today), 1000);
+  // creatine dose memory stays in its 1.4.2 key too
+  sa.setTaken(sa.supplements()[0], today, 6);
+  assert.equal(kv('creatineDose'), 6);
+  assert.equal(sa.supplements()[0].dose, 6);
+  sa.setTaken(sa.supplements()[0], today, null);
+  // own supplement with a unit
+  assert.equal(sa.addCustom('  ', 'mg', 5), null);
+  assert.equal(sa.addCustom('Колаген', 'kg', 5), null);
+  const c = /** @type {any} */ (sa.addCustom('Колаген', 'g', 10));
+  assert.equal(c.kind, 'custom');
+  assert.equal(sa.suppName(c), 'Колаген');
+  assert.ok(c.id.startsWith('c_'));
+  sa.setTaken(c, today, 12);
+  assert.equal(sa.supplements().find((s) => s.id === c.id)?.dose, 12);
+  // removing from the list keeps the ticked days (adding back brings the history back)
+  const at = sa.supplements().findIndex((s) => s.id === 'vitd');
+  const gone = /** @type {any} */ (sa.removeSupp('vitd'));
+  assert.ok(!sa.supplements().some((s) => s.id === 'vitd'));
+  assert.equal(get('days', today).sp_vitd, 1000);
+  sa.restoreSupp(gone, at);
+  assert.equal(sa.supplements()[at].id, 'vitd');
+  // doses are clamped to the kind's range and precision
+  assert.equal(clampDose(d, 1e9), 20000);
+  assert.equal(clampDose(sa.supplements()[0], 3.04), 3);
+  assert.equal(clampDose(d, -1), 0);
+  sa.setTaken(d, today, null);
+  sa.setTaken(c, today, null);
+});
+
+test('1.6.1 supplements: streak of consecutive days', () => {
+  const s = { id: 'zinc', kind: 'zinc', unit: /** @type {const} */ ('mg'), dose: 10 };
+  const recs = { [today]: { sp_zinc: 10 }, [back(1)]: { sp_zinc: 10 }, [back(2)]: {}, [back(3)]: { sp_zinc: 10 } };
+  assert.equal(suppStreak(s, recs, today), 2);
+  assert.equal(suppStreak(s, { [back(1)]: { sp_zinc: 10 }, [back(2)]: { sp_zinc: 5 } }, today), 2, 'today still open');
+  assert.equal(suppStreak(s, { [back(2)]: { sp_zinc: 5 } }, today), 0, 'yesterday missed → 0');
+});
+
+test('1.6.1 protein powder counts toward the day’s protein (not kcal)', async () => {
+  clearSupps();
+  const p = /** @type {any} */ (sa.addReady('protein'));
+  assert.equal(p.proteinPct, 75);
+  assert.equal(proteinOf(p, 30), 22.5);
+  assert.equal(proteinOf({ ...p, proteinPct: 80 }, 25), 20);
+  assert.equal(proteinOf({ id: 'vitd', kind: 'vitd', unit: 'IU', dose: 1 }, 2000), 0);
+  assert.equal(dayProtein([p], { sp_protein: 40 }), 30);
+  // the day record gets `suppP`; day totals, stats and the diary add it
+  const day = back(5);
+  put('days', { id: day });
+  sa.setTaken(p, day, 40);
+  assert.equal(get('days', day).suppP, 30);
+  const d = readDay(day);
+  assert.equal(d.suppP, 30);
+  assert.equal(d.totals?.p, 30, 'a day with only a shake has protein');
+  assert.equal(d.totals?.kcal, 0);
+  sa.updateSupp('protein', { proteinPct: 80 });
+  sa.setTaken(/** @type {any} */ (sa.supplements().find((s) => s.id === 'protein')), day, 30);
+  assert.equal(get('days', day).suppP, 24, 'recomputed with the edited %');
+  sa.setTaken(p, day, null);
+  assert.equal(get('days', day).suppP, null);
+  assert.deepEqual(
+    withSuppProtein({ kcal: 500, p: 20.25, c: 0, f: 0, fib: null, salt: null, sat: null, sug: null }, 22.5)?.p,
+    42.8,
+  );
+  assert.equal(withSuppProtein(null, 0), null);
+  const built = buildDay(
+    { days: [{ id: today, suppP: 22.5 }], food: [{ id: 'f', date: today, kcal: 300, p: 20 }], sessions: [] },
+    today,
+  );
+  assert.equal(built.totals?.p, 42.5);
+  assert.equal(built.totals?.kcal, 300);
+  const { computeStats } = await import('../../src/features/motivation/stats.js');
+  const st = computeStats({
+    sessions: [],
+    food: [{ id: 'f', date: today, kcal: 300, p: 20 }],
+    days: [{ id: today, suppP: 22.5 }],
+    measurements: [],
+    photos: [],
+    goalAt: () => 3,
+    waterGoal: 8,
+  });
+  assert.equal(st.todayProtein, 43);
+});
+
+test('1.6.1 supplement reminders: planned on the phone (no Worker change), skipped once taken', async () => {
+  const list = normalizeList(
+    [
+      { id: 'creatine', kind: 'creatine', unit: 'g', dose: 3, remind: '08:30' },
+      { id: 'vitd', kind: 'vitd', unit: 'IU', dose: 2000, remind: '25:00' },
+      { id: 'omega3', kind: 'omega3', unit: 'caps', dose: 1, remind: '20:00' },
+    ],
+    undefined,
+  );
+  const r = reminders(list, (s) => s.id);
+  assert.deepEqual(r, [
+    { id: 'creatine', time: '08:30', field: 'creatineG', name: 'creatine' },
+    { id: 'omega3', time: '20:00', field: 'sp_omega3', name: 'omega3' },
+  ]);
+  const cfg = /** @type {any} */ ({
+    morning: false,
+    protein: false,
+    water: [],
+    checkinAm: { on: false },
+    checkinPm: { on: false },
+    bedtime: { on: false },
+    supps: r,
+  });
+  const slots = planDay(today, cfg, {});
+  assert.deepEqual(
+    slots.map((s) => [s.kind, s.group, s.route, s.skipIf?.[0], s.label]),
+    [
+      ['supp_creatine', 'supp_creatine', 'food?supps', 'creatineG', 'creatine'],
+      ['supp_omega3', 'supp_omega3', 'food?supps', 'sp_omega3', 'omega3'],
+    ],
+  );
+  const { plannedLocally, LOCAL_ONLY } = await import('../../src/features/daily/notify.js');
+  assert.deepEqual(LOCAL_ONLY, ['photos']);
+  assert.ok(plannedLocally('supp_omega3', true), 'with push on too – the Worker is not changed');
+  assert.ok(!plannedLocally('water', true));
+  assert.ok(plannedLocally('water', false));
+  // the push Worker's kinds are untouched
+  const pf = readFileSync('src/features/daily/push-format.js', 'utf8');
+  assert.doesNotMatch(pf, /supp/);
+  // texts: BG gendered, EN neutral
+  assert.ok(bg['notif.supp.title'].includes('{supp}'));
+  assert.ok(/** @type {any} */ (bg['notif.supp.body']).f && /** @type {any} */ (bg['notif.supp.body']).m);
+});
+
+test('1.6.1 Food: „Хранителни добавки“ card replaces the creatine card', () => {
+  const diary = readFileSync('src/features/food/views/diary.js', 'utf8');
+  assert.match(diary, /suppsCard\(view\.date\)/);
+  assert.doesNotMatch(diary, /creatineCard/);
+  const cards = readFileSync('src/features/day/views/cards.js', 'utf8');
+  assert.doesNotMatch(cards, /export function creatineCard/);
 });

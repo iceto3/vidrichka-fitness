@@ -22,12 +22,23 @@ import { isIOS } from '../profile/install.js';
 import { day, patchDay } from './api.js';
 import { dueSlots, planRange } from './logic.js';
 import { pushOn } from './push.js';
+import { suppReminders } from '../food/supps-api.js';
 
 /** Is any daily reminder switched on? (Regardless of who sends it: push server or this device.) */
 export function dailyEnabled() {
   const c = dailySettings();
-  return c.morning || c.water.some((w) => w.on) || c.checkinAm.on || c.checkinPm.on || c.bedtime.on;
+  return (
+    c.morning ||
+    c.water.some((w) => w.on) ||
+    c.checkinAm.on ||
+    c.checkinPm.on ||
+    c.bedtime.on ||
+    suppReminders().length > 0
+  );
 }
+
+/** Planner settings: the daily-rhythm ones + 1.6.1 supplement reminders. */
+const plannerCfg = () => ({ ...dailySettings(), supps: suppReminders() });
 
 const granted = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
 
@@ -41,6 +52,13 @@ const records = () => Object.fromEntries(all('days').map((r) => [r.id, r]));
 export const LOCAL_ONLY = ['photos'];
 
 /**
+ * Planned on the phone? Everything when push is off; with push on only LOCAL_ONLY groups and
+ * 1.6.1 supplement reminders (`supp_<id>` – the push Worker has no schedule for them, and
+ * they are kept on the phone so no Worker change is needed). @param {string} group @param {boolean} push
+ */
+export const plannedLocally = (group, push) => !push || LOCAL_ONLY.includes(group) || group.startsWith('supp_');
+
+/**
  * Localized title/body/action labels for a slot. iPhone gets no action buttons (iOS web
  * push has none), so its texts say "tap to …" instead.
  * @param {import('./logic.js').Slot} s
@@ -49,12 +67,14 @@ export function slotText(s) {
   const ios = isIOS(),
     name = settings().userName || '',
     otter = otterName();
-  const g = s.group === 'water' ? 'water' : s.group === 'protein' ? 'protein' : s.kind;
-  const body = t(`notif.${g}.body${ios && s.actions?.length ? 'Ios' : ''}`, { name, otter });
+  const g =
+    s.group === 'water' ? 'water' : s.group === 'protein' ? 'protein' : s.group.startsWith('supp_') ? 'supp' : s.kind;
+  const supp = s.label ?? '';
+  const body = t(`notif.${g}.body${ios && s.actions?.length ? 'Ios' : ''}`, { name, otter, supp });
   const labels = { 'protein-yes': t('notif.protein.yes'), 'water-add': t('notif.water.add') };
   return {
     ...s,
-    title: t(`notif.${g}.title`, { name, otter }),
+    title: t(`notif.${g}.title`, { name, otter, supp }),
     body,
     actions: ios ? [] : (s.actions ?? []).map((a) => ({ action: a, title: labels[/** @type {'protein-yes'} */ (a)] })),
   };
@@ -69,8 +89,8 @@ export async function syncDaily() {
   const now = Date.now(),
     push = pushOn(); // push on: the server sends them, plan only what it does not (photos)
   const slots = dailyEnabled()
-    ? planRange(now, 7, dailySettings(), records())
-        .filter((s) => !push || LOCAL_ONLY.includes(s.group))
+    ? planRange(now, 7, plannerCfg(), records())
+        .filter((s) => plannedLocally(s.group, push))
         .map(slotText)
     : [];
   reg.active?.postMessage({
@@ -82,6 +102,10 @@ export async function syncDaily() {
   const groups = ['morning', 'protein', 'water', 'checkinAm', 'checkinPm', 'bed', 'photos'];
   for (const tag of groups.map((g) => `vf-${g}`))
     (await reg.getNotifications(/** @type {any} */ ({ tag, includeTriggered: false }))).forEach((n) => n.close());
+  // 1.6.1: every scheduled supplement reminder (also of ones since removed or switched off)
+  (await reg.getNotifications(/** @type {any} */ ({ includeTriggered: false })))
+    .filter((n) => n.tag.startsWith('vf-supp_'))
+    .forEach((n) => n.close());
   const recs = records();
   for (const s of slots.filter((x) => x.at > now && x.at < now + 48 * 3600e3)) {
     const r = recs[s.day] ?? {};
@@ -110,7 +134,7 @@ export async function syncDaily() {
 export function checkDaily(now = Date.now()) {
   if (!dailyEnabled() || !settings().onboarded) return [];
   const push = pushOn();
-  const plan = planRange(now, 1, dailySettings(), records()).filter((s) => !push || LOCAL_ONLY.includes(s.group));
+  const plan = planRange(now, 1, plannerCfg(), records()).filter((s) => plannedLocally(s.group, push));
   const { show, seen } = dueSlots(plan, now, records());
   seen.forEach((s) => patchDay(s.day, { shown: { ...day(s.day).shown, [s.kind]: now } }));
   if (!show.length) return [];

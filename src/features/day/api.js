@@ -141,6 +141,22 @@ export function setDayCreatine(date, g) {
 }
 
 /**
+ * 1.6.1: a supplement ticked on the day („Хранителни добавки“): its field (`creatineG` or
+ * `sp_<id>`, see food/supps `fieldOf`) gets the dose (0 / null clears) and `suppP` the day's
+ * protein from protein powder. @param {string} date @param {string} field
+ * @param {number|null} dose @param {(rec: any) => number} proteinOf the day's supplement protein for a record
+ */
+export function setDaySupp(date, field, dose, proteinOf) {
+  if (field !== 'creatineG' && !/^sp_[\w-]+$/.test(field)) throw new DayEditError('range');
+  const v = dose == null ? 0 : Number(dose);
+  if (!Number.isFinite(v) || v < 0) throw new DayEditError('range');
+  const rec = { ...(get('days', assertEditable(date)) ?? { id: date }), [field]: v > 0 ? v : null };
+  const p = proteinOf(rec);
+  patchDay(date, { [field]: v > 0 ? v : null, suppP: p > 0 ? p : null });
+  return v;
+}
+
+/**
  * Remove the day's creatine supplement; returns the grams it had (0 = nothing removed), so
  * the „Отмени“ pill can put them back with {@link setDayCreatine}. @param {string} date
  */

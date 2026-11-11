@@ -94,7 +94,11 @@ export function computeStats(i) {
     /** 1.4.3 (part B): the monthly measurements goal. */
     measuredThisMonth: i.measurements.some((m) => String(m.date).slice(0, 7) === month),
     /** 1.4.3 (part B): today's protein from the food diary (g, rounded) and the day's goal. */
-    todayProtein: Math.round(eaten.filter((f) => f.date === today).reduce((a, f) => a + (Number(f.p) || 0), 0)),
+    // 1.6.1: + protein powder ticked in „Хранителни добавки“ (the day's `suppP`)
+    todayProtein: Math.round(
+      eaten.filter((f) => f.date === today).reduce((a, f) => a + (Number(f.p) || 0), 0) +
+        (Number((i.days ?? []).find((d) => d.id === today)?.suppP) || 0),
+    ),
     proteinGoal: i.proteinGoal ?? 0,
     daysSinceMeasure: lastMeasure ? daysBetween(parseDay(lastMeasure.date), now) : null,
     photos: i.photos.length,

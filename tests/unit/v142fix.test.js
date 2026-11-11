@@ -126,7 +126,8 @@ test('finding 6: removing the creatine supplement returns the grams for „От�
   assert.equal(readDay(day).creatine.suppG, 5);
   setDayCreatine(day, null);
   assert.equal(removeDayCreatine(day), 0); // nothing to remove → no pill
-  const js = readFileSync('src/features/day/views/cards.js', 'utf8');
-  assert.match(js, /snack\(t\('creatine\.removed'\)/);
+  // 1.6.1: the creatine sheet moved into „Хранителни добавки“ – same „Отмени“ text
+  const js = readFileSync('src/features/food/views/supps.js', 'utf8');
+  assert.match(js, /t\('creatine\.removed'\)/);
   assert.ok(bg['creatine.removed'] && en['creatine.removed']);
 });
