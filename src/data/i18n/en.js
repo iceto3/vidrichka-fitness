@@ -1493,4 +1493,9 @@ export default {
   'body.setCustom': 'Your choice is kept even if you change the gender in your profile.',
   'body.setReset': 'Back to defaults',
   'body.where': 'Where to measure',
+  // 1.6.1 What's new
+  'whatsNew.kb161': 'Every kettlebell exercise – 26 new, with the “Kettlebell” filter and coach cues.',
+  'whatsNew.supps161':
+    '“Supplements” in Food: creatine lives there, plus protein, vitamins and your own – with “Took it”, a day streak and a reminder.',
+  'whatsNew.measure161': 'Measurements follow your profile’s gender, and you choose which ones to track.',
 };

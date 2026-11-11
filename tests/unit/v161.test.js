@@ -497,3 +497,40 @@ test('1.6.1 measurements: stored per user in kv, the Body view and form use the 
   assert.match(body, /visibleFields\(\)/);
   assert.match(body, /data-act="mset"/);
 });
+
+test("1.6.1: version, What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
+  const { NOTES } = await import('../../src/features/whatsnew/notes.js');
+  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.6.1');
+  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+  assert.equal(lock.version, '1.6.1');
+  assert.equal(lock.packages[''].version, '1.6.1');
+  const { APP_VERSION } = await import('../../src/core/version.js');
+  assert.equal(APP_VERSION, '1.6.1');
+  assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.6\.1\] – 2026-11-11/);
+  assert.equal(NOTES[0].v, '1.6.1');
+  assert.deepEqual(
+    NOTES[0].items.map(([, k]) => k),
+    ['whatsNew.kb161', 'whatsNew.supps161', 'whatsNew.measure161'],
+  );
+  const keys = [
+    ...NOTES[0].items.map(([, k]) => k),
+    'supp.title',
+    'supp.add',
+    'supp.take',
+    'supp.remind',
+    'supp.custom',
+    'body.setup',
+    'body.setupTitle',
+    'body.setupHint',
+    'body.setMore',
+    'body.setReset',
+  ];
+  for (const k of keys) {
+    assert.ok(/** @type {any} */ (bg)[k] && /** @type {any} */ (en)[k], k);
+    assert.doesNotMatch(
+      JSON.stringify(/** @type {any} */ (bg)[k]).replace(/\{\w+\}|"[fm]":/g, ''),
+      /[A-Za-z]/,
+      `English in bg ${k}`,
+    );
+  }
+});

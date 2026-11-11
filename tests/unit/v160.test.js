@@ -216,22 +216,17 @@ test('D: existing installs get the two new plans once, deleted ones are not re-a
   assert.match(api, /PLANS\.filter\(\(p\) => !seeded\.includes\(p\.id\)\)/);
 });
 
-test("1.6.0: version, What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
+test("1.6.0: What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
   const { readFileSync } = await import('node:fs');
   const { NOTES } = await import('../../src/features/whatsnew/notes.js');
   const bg = (await import('../../src/data/i18n/bg.js')).default;
   const en = (await import('../../src/data/i18n/en.js')).default;
-  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.6.0');
-  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-  assert.equal(lock.version, '1.6.0');
-  assert.equal(lock.packages[''].version, '1.6.0');
-  const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.6.0');
+  // 1.6.1: the version moved on (asserted in v161.test.js); the 1.6.0 entry stays
   assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.6\.0\] – 2026-11-11/);
-  assert.equal(NOTES[0].v, '1.6.0');
-  assert.equal(NOTES[0].items.length, 3);
+  const n160 = /** @type {any} */ (NOTES.find((n) => n.v === '1.6.0'));
+  assert.equal(n160.items.length, 3);
   const keys = [
-    ...NOTES[0].items.map(([, k]) => k),
+    ...n160.items.map((/** @type {any} */ [, k]) => k),
     'equip.kettlebell',
     'equip.band',
     'equip.all',
