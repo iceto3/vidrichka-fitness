@@ -1416,4 +1416,9 @@ export default {
   'library.coachVideo': "Watch the coach's video",
   'technique.cues': "Coach's cues",
   'unit.perSide': 'Reps/side',
+  // What's new 1.6.0
+  'whatsNew.addkg160': 'Added weight: squats, lunges, push-ups and bridges now log kg too – 0 kg means bodyweight.',
+  'whatsNew.ex160':
+    "16 new exercises plus kettlebell and band equipment – with an equipment filter and the coach's cues and videos.",
+  'whatsNew.plans160': 'Two ready home programs: “Day 1 Full Body” and “Day 2 Full Body”.',
 };

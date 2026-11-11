@@ -27,6 +27,7 @@ import { chromium, webkit, devices } from 'playwright-core';
 import { v144 } from './v144.mjs';
 import { v150 } from './v150.mjs';
 import { v151 } from './v151.mjs';
+import { v160 } from './v160.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
@@ -203,6 +204,11 @@ async function run(name, browser, P) {
     clickPast: (/** @type {any} */ target, /** @type {any} */ opened) =>
       clickPastPrompts(page, layer, settle, target, opened),
   };
+  if (FLOW === 'v160') {
+    await v160(page, h);
+    assert.deepEqual(errors, [], 'no page errors');
+    return void (await ctx.close());
+  }
   if (FLOW === 'v151') {
     await v151(page, h);
     assert.deepEqual(errors, [], 'no page errors');
@@ -388,6 +394,7 @@ async function run(name, browser, P) {
   await v144(page, h);
   await v150(page, h);
   await v151(page, h);
+  await v160(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -1615,7 +1622,8 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.5\.1/);
+  assert.match(txt, /Какво ново в 1\.6\.0/);
+  assert.match(txt, /Две готови програми/, 'the 1.6.0 items');
   assert.match(txt, /Наситени мазнини и захар/, 'the 1.5.1 items');
   assert.match(txt, /един часовник/, 'the 1.5.1 meal clock item');
   assert.match(txt, /Добави хранене/, 'the 1.5.0 items');
@@ -1631,7 +1639,7 @@ async function v132(page, { go, settle, clearCel, layer }) {
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    45, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4; 1.5.1: +4
+    48, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4; 1.5.1: +4; 1.6.0: +3
     'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -1937,7 +1945,8 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.5\.1/);
+  assert.match(txt, /Какво ново в 1\.6\.0/);
+  assert.match(txt, /Две готови програми/, 'the 1.6.0 items');
   assert.match(txt, /Наситени мазнини и захар/, 'the 1.5.1 items');
   assert.match(txt, /един часовник/, 'the 1.5.1 meal clock item');
   assert.match(txt, /Добави хранене/, 'the 1.5.0 items');
@@ -1950,7 +1959,7 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   assert.match(txt, /Обичайният ти обяд/);
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    42, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4; 1.5.1: +4
+    45, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4; 1.5.1: +4; 1.6.0: +3
     'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -2054,7 +2063,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.5\.1/);
+  assert.match(txt, /Какво ново в 1\.6\.0/);
+  assert.match(txt, /Две готови програми/, 'the 1.6.0 items');
   assert.match(txt, /Наситени мазнини и захар/, 'the 1.5.1 items');
   assert.match(txt, /един часовник/, 'the 1.5.1 meal clock item');
   assert.match(txt, /Добави хранене/, 'the 1.5.0 items');
@@ -2068,8 +2078,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    40,
-    'four 1.5.1, four 1.5.0, six 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
+    43,
+    'three 1.6.0, four 1.5.1, four 1.5.0, six 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
   );
   await page.waitForTimeout(700);
   await shot('whats-new-134');
@@ -3433,7 +3443,7 @@ async function v141tester(page, { go, settle, shot }, name, ctx) {
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
   // build id: 1.4.1-<hash> / 1.4.1-beta-<hash> from a build, the plain version from the sources
-  const idRe = DIR === '.' ? /^Билд: 1\.5\.1$/ : /^Билд: 1\.5\.1(-beta)?-[0-9a-f]{7,}$/;
+  const idRe = DIR === '.' ? /^Билд: 1\.6\.0$/ : /^Билд: 1\.6\.0(-beta)?-[0-9a-f]{7,}$/;
   const meta = await page.evaluate(
     () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.5.1',
   );

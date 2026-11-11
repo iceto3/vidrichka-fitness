@@ -202,17 +202,12 @@ test('4b: an empty past night is filled in from its bar; same rules – 16 h cap
 test("1.5.1: version, What's new (bg + en), no English in Bulgarian", async () => {
   const { readFileSync } = await import('node:fs');
   const { NOTES } = await import('../../src/features/whatsnew/notes.js');
-  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.5.1');
-  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-  assert.equal(lock.version, '1.5.1');
-  assert.equal(lock.packages[''].version, '1.5.1');
-  const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.5.1');
+  // the version itself is checked by the newest release's test (1.6.0: v160.test.js)
   assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.5\.1\]/);
-  assert.equal(NOTES[0].v, '1.5.1');
-  assert.equal(NOTES[0].items.length, 4);
+  const rel = NOTES.find((r) => r.v === '1.5.1');
+  assert.equal(rel?.items.length, 4);
   const keys = [
-    ...NOTES[0].items.map(([, k]) => k),
+    ...(rel?.items ?? []).map(([, k]) => k),
     'food.satFat',
     'food.sugar',
     'nutr.sat',

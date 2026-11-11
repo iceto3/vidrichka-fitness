@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] – 2026-11-11 (beta)
+
+### Added
+
+- **Optional added weight** on bodyweight exercises (`optionalWeight` in `src/data/exercises.js`): Bulgarian split squat, reverse lunge, push-up, glute bridge, bodyweight squat and the new knee push-up, single-leg hip thrust and single-leg Romanian deadlift show the kg stepper in the workout and the weight field in the plan editor. 0 kg = bodyweight; no separate weighted variants (e.g. Bulgarian split squat: set 1 at 0 kg, sets 2–3 at 4 kg). The added kilos count for the volume and the records (kilos first, then reps – 4 kg beats bodyweight); the "last time" hint, the history and the Progress chart show kilos once some weight was used, else reps as before (`workouts/logic.logsKg`, `byKg`). Already weighted exercises are unchanged; plank and dead bug stay reps / seconds only.
+- **Equipment `kettlebell` (Пудовка) and `band` (Ластик)** with labels (bg + en), icons, and an equipment filter row in the exercise library (all / barbell / dumbbells / kettlebell / band / machine / cable / bodyweight). New reps unit `perSide` („Повт./страна“) for one-arm / one-side work.
+- **16 new exercises** (stable ids): `kb_swing`, `band_lateral_walk`, `knee_push_up`, `db_bent_over_row`, `one_arm_db_row`, `lying_db_french_press`, `cross_body_crunch`, `single_leg_hip_thrust`, `single_leg_rdl`, `band_glute_kickback`, `band_abductor_kick`, `barbell_row`, `front_raise`, `overhead_triceps_extension`, `hammer_curl`, `kb_knee_tuck_situp` (36 in the library). They have no verified technique card / illustration yet: the exercise page and the in-workout technique sheet show the coach's short cues instead (`src/data/cues.js`, bg + en, „Съвети от треньора“) and the list / workout show the equipment icon as thumbnail – a missing card or drawing never breaks a view. Where the coach's program links a video, „Виж видеото на треньора“ opens it instead of the YouTube search (each link checked against its video title; the abductor-kick link in the program pointed to the single-leg RDL video and was left out; the kettlebell swing has none). The coach's videos are also linked for back squat, reverse lunge, lateral raise, shoulder press and Bulgarian split squat. Back squat can be done at home too.
+- **Two built-in home plans** „Ден 1 цяло тяло“ / „Day 1 Full Body“ and „Ден 2 цяло тяло“ / „Day 2 Full Body“ („В домашни условия“), 11 exercises each in the coach's order with the starting weights from the program; rest 90 s (back squat 120 s). Scheduled on Tuesday and Friday – free days next to the example plans, with more than 24 h of rest between them. Existing installs get them once (a deleted one is not re-added); the three example plans stay.
+- What's new entry for 1.6.0 (bg + en). Unit tests `tests/unit/v160.test.js`; e2e flow `tests/e2e/v160.mjs` at 360 px (also alone with `--flow v160`).
+
 ## [1.5.1] – 2026-11-11
 
 ### Added
