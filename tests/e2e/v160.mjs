@@ -25,7 +25,7 @@ export async function v160(page, h) {
   await go('workouts');
   await settle();
   await closeAll();
-  assert.match(await page.locator('.libcard').innerText(), /36 упражнения/);
+  assert.match(await page.locator('.libcard').innerText(), /62 упражнения/);
   await go('library');
   await settle();
   await closeAll();
@@ -36,15 +36,25 @@ export async function v160(page, h) {
   await chip('kettlebell').click();
   await settle();
   const names = async () => (await page.locator('.exrow .exname').allInnerTexts()).map((x) => x.trim());
-  assert.deepEqual(await names(), ['Суинг с пудовка', 'Коремна преса със сгъване на коленете']);
-  assert.equal(await page.locator('.exrow .exthumb svg.exfb').count(), 2, 'equipment icon as thumbnail');
+  // 1.6.1: the whole kettlebell list (40, with the library exercises that can use one)
+  const kb = await names();
+  for (const n of [
+    'Суинг с пудовка',
+    'Коремна преса със сгъване на коленете',
+    'Гоблет клек',
+    'Турско ставане',
+    'Български клек',
+  ])
+    assert.ok(kb.includes(n), n);
+  assert.equal(kb.length, 40);
+  assert.ok((await page.locator('.exrow .exthumb svg.exfb').count()) >= 2, 'equipment icon as thumbnail');
   await shot('v160-library-kettlebell-360');
   await chip('band').click();
   await settle();
   assert.equal((await names()).length, 3);
   await chip('all').click();
   await settle();
-  assert.equal(await page.locator('.exrow').count(), 36);
+  assert.equal(await page.locator('.exrow').count(), 62);
 
   await go('exercise/kb_swing');
   await settle();

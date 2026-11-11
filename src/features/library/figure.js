@@ -101,7 +101,15 @@ export const cueSection = (id) => {
   const c = cuesOf(id);
   const xs = c ? (getLang() === 'bg' ? c.bg : c.en) : [];
   if (!xs.length) return '';
-  return section(t('technique.cues'), html`<ul class="tlist">${xs.map((x) => html`<li>${x}</li>`)}</ul>`, 'cues');
+  const src = c?.sources ?? [];
+  return html`${section(t('technique.cues'), html`<ul class="tlist">${xs.map((x) => html`<li>${x}</li>`)}</ul>`, 'cues')}
+${
+  src.length
+    ? html`<section class="tsec tsrc"><h3 class="xs xb muted caps">${t('technique.sources')}</h3><ul>${src.map(
+        (s) => html`<li><a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.text}</a></li>`,
+      )}</ul></section>`
+    : ''
+}`;
 };
 
 /**

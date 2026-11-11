@@ -79,8 +79,8 @@ const NEW = [
 test('B+C: 16 new exercises with stable ids, complete data, kettlebell / band equipment', async () => {
   const { MUSCLE_GROUPS } = await import('../../src/data/exercises.js');
   const muscles = new Set(Object.values(MUSCLE_GROUPS).flat());
-  assert.equal(EXERCISES.length, 36);
-  assert.equal(new Set(EXERCISES.map((e) => e.id)).size, 36, 'unique ids');
+  assert.ok(EXERCISES.length >= 36); // 1.6.1: + the kettlebell list (v161.test.js)
+  assert.equal(new Set(EXERCISES.map((e) => e.id)).size, EXERCISES.length, 'unique ids');
   for (const id of NEW) {
     const e = byId(id);
     assert.ok(e, id);

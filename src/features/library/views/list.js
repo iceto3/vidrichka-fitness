@@ -17,7 +17,7 @@ export const filtered = () =>
   EXERCISES.filter(
     (e) =>
       (f.place === 'all' || e.place.includes(f.place)) &&
-      (f.equip === 'all' || e.equipment === f.equip) &&
+      (f.equip === 'all' || e.equipment === f.equip || !!e.alt?.includes(f.equip)) && // 1.6.1: + alt
       (f.group === 'all' ||
         [...e.primary, ...e.secondary.slice(0, 1)].some((m) =>
           MUSCLE_GROUPS[/** @type {keyof MUSCLE_GROUPS} */ (f.group)]?.includes(m),

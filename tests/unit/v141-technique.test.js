@@ -106,6 +106,7 @@ test('no leftover of the old unverified steps, tips and stick figures', () => {
     'rest',
     'met',
     'optionalWeight',
+    'alt', // 1.6.1
   ];
   for (const e of EXERCISES)
     assert.deepEqual(
