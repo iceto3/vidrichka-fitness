@@ -1315,7 +1315,15 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   await page.locator('[data-act="manual"]').first().click();
   await layer.locator('#mname').fill('Баница');
   const labels = await layer.locator('.grid2 .field > span').allInnerTexts();
-  assert.deepEqual(labels.slice(3, 6), ['Мазнини / 100 г', 'Фибри / 100 г', 'Сол / 100 г']);
+  // 1.5.1: sugar after carbs and saturated fat after fat; fiber and salt follow
+  assert.deepEqual(labels.slice(2, 8), [
+    'Въглехидрати / 100 г',
+    'Захар / 100 г',
+    'Мазнини / 100 г',
+    'Наситени мазнини / 100 г',
+    'Фибри / 100 г',
+    'Сол / 100 г',
+  ]);
   assert.equal(await layer.locator('#msalt').getAttribute('placeholder'), 'по желание');
   await layer.locator('#mkcal').fill('300');
   await layer.locator('#mp').fill('8');
