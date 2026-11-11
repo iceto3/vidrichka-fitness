@@ -194,11 +194,13 @@ test('nutrient abbreviations: пр · вх · мз · кр · фб · сл', () 
     nutrientCells({ p: 1, c: 2, f: 3, fib: 0, salt: 0 }, 2000).map(([k]) => k),
     ['nutr.p', 'nutr.c', 'nutr.f', 'nutr.cr', 'nutr.fib', 'nutr.salt'],
   );
-  assert.equal(NUTRIENTS.length, 6);
+  assert.equal(NUTRIENTS.length, 8); // 1.5.1: + sugar, saturated fat
   assert.deepEqual(nutrientLegend(), [
     ['пр', 'Протеин'],
     ['вх', 'Въглехидрати'],
+    ['зх', 'Захар'],
     ['мз', 'Мазнини'],
+    ['нм', 'Наситени мазнини'],
     ['кр', 'Креатин'],
     ['фб', 'Фибри'],
     ['сл', 'Сол'],

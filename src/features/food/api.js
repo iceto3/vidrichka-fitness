@@ -103,6 +103,8 @@ export function rowFromFood(row, food) {
   const out = { ...row, name: food.name, ...portion(food, row.grams) };
   if (!known(food.fib)) delete out.fib;
   if (!known(food.salt)) delete out.salt;
+  if (!known(food.sat)) delete out.sat;
+  if (!known(food.sug)) delete out.sug;
   if (food.missing?.length) out.missing = food.missing;
   else delete out.missing;
   return out;
@@ -203,7 +205,7 @@ export const saveMeal = (name, rows) =>
     id: uid('meal'),
     name,
     uses: 0,
-    items: rows.map(({ foodId, name: n, emoji, grams, kcal, p, c, f, fib, salt }) => ({
+    items: rows.map(({ foodId, name: n, emoji, grams, kcal, p, c, f, fib, salt, sat, sug }) => ({
       foodId,
       name: n,
       emoji,
@@ -214,6 +216,8 @@ export const saveMeal = (name, rows) =>
       f,
       ...(known(fib) ? { fib } : {}),
       ...(known(salt) ? { salt } : {}),
+      ...(known(sat) ? { sat } : {}),
+      ...(known(sug) ? { sug } : {}),
     })),
   });
 

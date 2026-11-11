@@ -2,6 +2,7 @@
 // later than a logged breakfast, „Кога яде?“ starts at the wake-up – and the time of a diary
 // entry is edited in the item editor („Час“), re-grading today's protein breakfast.
 import { test } from 'node:test';
+import { addDays, dayKey } from '../../src/core/dates.js';
 import assert from 'node:assert/strict';
 import { all, get, kv, put, remove, setKv } from '../../src/core/store.js';
 import { setSettings } from '../../src/core/settings.js';
@@ -21,7 +22,9 @@ const api = await import('../../src/features/daily/api.js');
 await import('../../src/features/daily/index.js');
 const { setDaySleepTimes } = await import('../../src/features/day/api.js');
 
-const D = '2026-11-10';
+// 1.5.1: real today (rewards only grade today; a fixed date broke the test the next day)
+const D = dayKey();
+const PREV = dayKey(addDays(new Date(), -1));
 const realNow = Date.now;
 /** @template T @param {string} hm @param {(now: number) => T} fn @returns {T} */
 const atClock = (hm, fn) => {
@@ -63,14 +66,14 @@ test('wakeAfterBreakfast / mealFloor / checkMealTime (pure)', () => {
   // the floor: the wake-up of that day, else the countdown start
   assert.equal(mealFloor({ wake: at(D, '07:00') + 30_000 }, D), at(D, '07:00'));
   assert.equal(mealFloor({ sleepWake: at(D, '06:40') }, D), at(D, '06:40'));
-  assert.equal(mealFloor({ wake: at('2026-11-09', '07:00'), proteinStart: at(D, '07:05') }, D), at(D, '07:05'));
+  assert.equal(mealFloor({ wake: at(PREV, '07:00'), proteinStart: at(D, '07:05') }, D), at(D, '07:05'));
   assert.equal(mealFloor({}, D), null);
   const rec = { wake: at(D, '07:00') };
   const now = at(D, '09:00');
   assert.deepEqual(checkAteAt(rec, '06:55', now), { ok: false, err: 'early' }, '„Кога яде?“ floor = wake-up');
   assert.deepEqual(checkAteAt(rec, '07:00', now), { ok: true, at: at(D, '07:00') });
   assert.deepEqual(checkMealTime(rec, D, '09:05', now), { ok: false, err: 'future' });
-  assert.deepEqual(checkMealTime({}, '2026-11-09', '23:55', now), { ok: true, at: at('2026-11-09', '23:55') });
+  assert.deepEqual(checkMealTime({}, PREV, '23:55', now), { ok: true, at: at(PREV, '23:55') });
   assert.equal(t('mealTime.err.early'), 'Храненето не може да е преди ставането – избери по-късен час.');
 });
 
@@ -110,7 +113,7 @@ test('a wake-up later than the logged breakfast is refused (sleep editor and mor
 test('older data with a breakfast before the stored wake-up: other sleep fields stay editable', () => {
   clear();
   row('06:50');
-  put('days', { id: D, sleepWake: at(D, '07:00'), sleepBed: at('2026-11-09', '23:30') });
+  put('days', { id: D, sleepWake: at(D, '07:00'), sleepBed: at(PREV, '23:30') });
   // same wake-up, another bedtime: not refused; the breakfast counts as on time (clamped)
   atClock('08:00', () => setDaySleepTimes(D, { bed: '23:00', wake: '07:00' }));
   const r = get('days', D);
@@ -186,7 +189,7 @@ test('item editor time: refused in the future / before the wake-up; (1.5.0) othe
 
 test('item editor time: a past day’s breakfast moves as one meal, no protein re-grade', () => {
   clear();
-  const P = '2026-11-09';
+  const P = PREV;
   put('days', { id: P, sleepWake: at(P, '07:30') });
   row('09:00', 'breakfast', 'p1', P);
   row('09:10', 'breakfast', 'p2', P);

@@ -191,21 +191,20 @@ export async function v150(page, h) {
   await tap(page.locator('[data-act="finish"]').first());
   await settle();
   await closeAll();
-  // 2a: the item editor's „Час“ on one entry moves the whole meal
+  // 2a (1.5.1: the meal's one clock, in the meal sheet): it moves the whole meal
   await go('food');
   await h.clickPast(page.locator('.meal[data-m="lunch"]'), layer.locator('.mealitems'));
-  await layer.locator('.mealitems .itembtn').nth(1).click();
-  const it = layer.locator('.itemedit .itemtime input.t24i');
+  const it = layer.locator('.mealclk input.t24i');
   await it.waitFor();
-  assert.match(await layer.locator('.itemedit').innerText(), /важи за цялото хранене/);
+  assert.match(await layer.innerText(), /важи за цялото хранене/);
   await it.fill('12:45');
   await it.press('Tab');
   await settle();
-  await layer.locator('.itemedit [data-act="save"]').click();
+  await layer.locator('.mclksave').click();
   await settle();
   assert.deepEqual(await lunch(), ['12:45', '12:45'], 'the whole meal moved');
-  await h.clickPast(page.locator('.meal[data-m="lunch"]'), layer.locator('.mealitems'));
-  assert.equal((await layer.locator('.mealitems').innerText()).match(/12:45/g)?.length, 2);
+  assert.equal(await layer.locator('.mealclk input.t24i').inputValue(), '12:45');
+  assert.doesNotMatch(await layer.locator('.mealitems').innerText(), /\d\d:\d\d/, 'no time on a food row');
   await page.waitForTimeout(400);
   await shot('v150-meal-time-moved');
   await closeAll();

@@ -31,7 +31,7 @@ export function dayError(date, today) {
 /**
  * @typedef {{id: string, name: any, planId?: string, endedAt: number, durationSec: number, volume: number,
  *   setsDone: number, exercises: number, partial: boolean, prs: number}} DayWorkout
- * @typedef {{kcal: number, p: number, c: number, f: number, fib: number|null, salt: number|null}} DayTotals
+ * @typedef {{kcal: number, p: number, c: number, f: number, fib: number|null, salt: number|null, sat: number|null, sug: number|null}} DayTotals
  * @typedef {object} DayData
  * @property {string} date
  * @property {number|null} steps            null = nothing entered
@@ -85,6 +85,8 @@ export function foodTotals(rows) {
     f: sum(rows, 'f') ?? 0,
     fib: sum(rows, 'fib'),
     salt: sum(rows, 'salt'),
+    sat: sum(rows, 'sat'), // 1.5.1 (null: nothing logged lists it)
+    sug: sum(rows, 'sug'),
   };
 }
 

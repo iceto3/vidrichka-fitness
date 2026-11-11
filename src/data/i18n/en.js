@@ -1361,7 +1361,7 @@ export default {
   // 1.4.4 (time): meal time in the item editor, no meal before the wake-up
   'day.err.wakeAfterBreakfast': 'Breakfast is logged at {time} – the wake-up has to be before that',
   'food.time': 'Time',
-  'whatsNew.time144': 'Change a food’s time in its editor (the “Time” field). A meal can’t be before you woke up.',
+  'whatsNew.time144': 'Change a meal’s time (the “Time” field). A meal can’t be before you woke up.',
   // 1.4.4 (time): toast after a changed time
   'food.timeChanged': '{name} – time {time}',
   // 1.5.0 1d: steps slider + fine-tune
@@ -1383,8 +1383,29 @@ export default {
   // 1.5.0 What's new
   'whatsNew.extra150':
     '“Add a meal” on Home and Food – for an unplanned meal. It is named by its time (mid-morning, mid-afternoon, extra meal); no points of its own, but its calories and protein count in the day’s totals and the protein goal.',
-  'whatsNew.clock150':
-    'A clock when adding food: the time applies to the whole meal. Change one food’s time and the whole meal moves with it.',
+  'whatsNew.clock150': 'A clock when adding food: the time applies to the whole meal.',
   'whatsNew.steps150': 'Steps with a slider (every 500) and −100, −50, +50, +100 buttons.',
   'whatsNew.kcal150': 'Calories update while you type the grams.',
+  // 1.5.1: saturated fat and sugar
+  'food.satFat': 'Saturated fat',
+  'food.sugar': 'Sugar',
+  'nutr.sat': 'sf',
+  'nutr.sug': 'sg',
+  'manual.sat': 'Saturated fat / 100 g',
+  'manual.sug': 'Sugar / 100 g',
+  'manual.errSat': 'Cannot be more than the fat.',
+  'manual.errSug': 'Cannot be more than the carbs.',
+  // 1.5.1: tap a sleep bar
+  'sleep.tapBar': 'tap a bar to add or fix that night',
+  'sleep.editNight': 'Sleep: {day} – edit',
+  // 1.5.1: What's new
+  'whatsNew.satsug151': 'Saturated fat and sugar: add them to your own foods and see the totals in Food.',
+  'whatsNew.home151': 'Home now shows mood, energy and water too – the whole day in one place.',
+  'whatsNew.sleep151': 'Progress › Sleep: tap a bar in “Hours slept” to add or fix that night.',
+  // 1.5.1: one clock per meal
+  'food.mealTimeChanged': '{meal} – time {time}',
+  'food.saveMealTime': 'Save the time',
+  // 1.5.1: What's new – one clock per meal
+  'whatsNew.mealclock151':
+    'Each meal has one clock – on the meal itself. The foods in it have no time of their own; change it and they all move together.',
 };

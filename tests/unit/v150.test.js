@@ -317,17 +317,12 @@ test("1.5.0: version, What's new (bg + en), no English in Bulgarian", async () =
   const { NOTES } = await import('../../src/features/whatsnew/notes.js');
   const bg = (await import('../../src/data/i18n/bg.js')).default;
   const en = (await import('../../src/data/i18n/en.js')).default;
-  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.5.0');
-  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-  assert.equal(lock.version, '1.5.0');
-  assert.equal(lock.packages[''].version, '1.5.0');
-  const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.5.0');
+  // the version itself is checked by the newest release's test (1.5.1: v151.test.js)
   assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.5\.0\]/);
-  assert.equal(NOTES[0].v, '1.5.0');
-  assert.equal(NOTES[0].items.length, 4);
+  const rel = NOTES.find((r) => r.v === '1.5.0');
+  assert.equal(rel?.items.length, 4);
   const keys = [
-    ...NOTES[0].items.map(([, k]) => k),
+    ...(rel?.items ?? []).map(([, k]) => k),
     'meal.extraAm',
     'meal.extraPm',
     'meal.extra',

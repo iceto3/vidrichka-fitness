@@ -9,7 +9,7 @@
  * values for the cooked food. Never reuse or rename an id: diary rows and stats refer to it.
  */
 
-/** @typedef {{id: string, cat: string, name: {en: string, bg: string}, kcal: number, p: number, c: number, f: number, fib: number, salt: number, portion: number, emoji: string}} Food */
+/** @typedef {{id: string, cat: string, name: {en: string, bg: string}, kcal: number, p: number, c: number, f: number, fib: number, salt: number, sat?: number, sug?: number, portion: number, emoji: string}} Food */
 
 /** Category tiles shown on the Add food screen (order = display order). */
 export const FOOD_CATEGORIES = [
@@ -423,6 +423,15 @@ const ROWS = {
 };
 
 /** All built-in foods. @type {Food[]} */
+/**
+ * 1.5.1: saturated fat and sugar (g / 100 g) of built-in foods, only where sourced – every
+ * other food leaves them unknown (never 0). [saturated fat, sugar].
+ * @type {Record<string, [number, number]>}
+ */
+export const SAT_SUGAR = {
+  herring: [2, 0], // USDA SR 15039 (FDC 175116): saturated 2.04 g, sugars 0 g – the row's source
+};
+
 export const FOODS = Object.entries(ROWS).flatMap(([cat, rows]) =>
   rows.map(([id, en, bg, kcal, p, c, f, fib, salt, portion, emoji]) => ({
     id: String(id),
@@ -436,6 +445,7 @@ export const FOODS = Object.entries(ROWS).flatMap(([cat, rows]) =>
     salt: Number(salt),
     portion: Number(portion),
     emoji: String(emoji),
+    ...(SAT_SUGAR[String(id)] ? { sat: SAT_SUGAR[String(id)][0], sug: SAT_SUGAR[String(id)][1] } : {}),
   })),
 );
 

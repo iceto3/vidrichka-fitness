@@ -1,6 +1,7 @@
 /**
  * Progress › Sleep: last 14 nights — hours slept (bars), averages of sleep, mood and
- * energy, and a night-by-night list (estimated bedtimes are marked).
+ * energy, and a night-by-night list (estimated bedtimes are marked). 1.5.1: tapping a bar opens
+ * that night's sleep editor.
  * @module features/daily/views/sleep
  */
 import { html, raw } from '../../../ui/dom.js';
@@ -43,15 +44,16 @@ export default () => ({
 <div class="stat"><div class="l">🙂 ${t('sleep.mood')}</div><div class="v">${face(avg(week.map((n) => n.mood)))}</div></div>
 <div class="stat"><div class="l">⚡ ${t('sleep.energy')}</div><div class="v">${face(avg(week.map((n) => n.energy)))}</div></div></div>
 <div class="card mt12 pad16"><div class="row between"><h2 class="h3 xb">${t('sleep.hours')}</h2><span class="chip chip-sm">🌙 ${t('goodnight.streak', { n: sleepRun() })}</span></div>
-<div class="sbars mt12" role="img" aria-label="${t('sleep.hours')}">${[...list].reverse().map(
-      (n) =>
-        // 1.4.0: the weekday letter and the day of the month under each bar (+ the range below)
-        html`<div class="sb${n.bedEst ? ' est' : ''}" title="${fmtDate(parseDay(n.day), { weekday: 'long', day: 'numeric', month: 'long' })}${n.hours == null ? '' : ` · ${fmtDuration(n.hours)}`}"><i style="${raw(`height:${((n.hours ?? 0) / max) * 100}%`)}"></i><span>${fmtDate(parseDay(n.day), { weekday: 'narrow' })}</span><b class="num">${parseDay(n.day).getDate()}</b></div>`,
-    )}</div>${
+<div class="sbars mt12" role="group" aria-label="${t('sleep.hours')}">${[...list].reverse().map((n) => {
+      // 1.4.0: the weekday letter and the day of the month under each bar (+ the range below)
+      // 1.5.1: a bar is a button – it opens that night's sleep editor (fill in or correct it)
+      const name = `${fmtDate(parseDay(n.day), { weekday: 'long', day: 'numeric', month: 'long' })}${n.hours == null ? '' : ` · ${fmtDuration(n.hours)}`}`;
+      return html`<button type="button" class="sb${n.bedEst ? ' est' : ''}${n.hours == null ? ' nil' : ''}" data-act="sleepDay" data-d="${n.day}" title="${name}" aria-label="${t('sleep.editNight', { day: name })}"><i style="${raw(`height:${((n.hours ?? 0) / max) * 100}%`)}"></i><span>${fmtDate(parseDay(n.day), { weekday: 'narrow' })}</span><b class="num">${parseDay(n.day).getDate()}</b></button>`;
+    })}</div>${
       list.length
         ? html`<div class="row between muted xs b mt6 num sbrange"><span>${fmtDate(parseDay(list[list.length - 1].day), { day: 'numeric', month: 'short' })}</span><span>${fmtDate(parseDay(list[0].day), { day: 'numeric', month: 'short' })}</span></div>`
         : ''
-    }<div class="muted xs b mt8">${t('sleep.legend')}</div></div>
+    }<div class="muted xs b mt8">${t('sleep.legend')} · ${t('sleep.tapBar')}</div></div>
 <div class="section-title"><h2 class="h3">${t('sleep.nights')}</h2></div>
 ${
   known.length
@@ -64,5 +66,15 @@ ${bedWake(n)}</span>
       )}</div>`
     : empty('moon', t('sleep.none'))
 }`;
+  },
+  actions: {
+    // 1.5.1: the night's sleep editor (same sheet and rules as the day view: 16 h cap, wake-up
+    // never after a logged breakfast)
+    sleepDay: async (el) => {
+      const d = el.dataset.d ?? '';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+      (await import('../../day/views/cards.js')).openSleepSheet(d);
+      return false;
+    },
   },
 });

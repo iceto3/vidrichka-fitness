@@ -30,7 +30,7 @@ import { day, goodnight, isEvening, morningPending, proteinBar, tuckedIn } from 
 import { mealAte, mealSkip, withLate } from '../../daily/views/mealsheet.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 import { dayRows } from '../../food/api.js';
-import { cardActions, mealsCard, sleepCard, stepsCard } from '../../day/views/cards.js';
+import { cardActions, mealsCard, moodCard, sleepCard, stepsCard, waterCard } from '../../day/views/cards.js';
 import { openSheet } from '../../../ui/sheet.js';
 import { otterLine } from '../otter.js';
 
@@ -242,6 +242,11 @@ ${a ? html`<button class="card resume row gap12" data-go="workout"><span class="
 ${workoutCard()}
 ${stepsCard(dayKey())}
 ${sleepCard(dayKey())}
+${
+  // 1.5.1: everything tracked except body measurements – mood / energy and water as in the day view
+  moodCard(dayKey())
+}
+${waterCard(dayKey())}
 ${mealsCard(dayKey())}
 ${QUEST_SECTIONS.map((sec) => questSection(sec, lv))}
 <button class="card mt12 challenge" data-go="progress/lifts"><div class="row between"><span class="row gap8"><span class="sq gold">${ic('target', 18, 2.4)}</span><span class="b">${t('home.challenge', { month: fmtDate(now, { month: 'long' }) })}</span></span><span class="xs b muted num">${s.monthWorkouts}/${s.monthTarget}</span></div>
@@ -277,7 +282,7 @@ ${
         });
         return false;
       },
-      ...cardActions(() => dayKey()), // 1.4.0: the shared day cards (steps, sleep, meals) for today
+      ...cardActions(() => dayKey()), // 1.4.0: the shared day cards (steps, sleep, meals; 1.5.1 mood, water) for today
       start: (el) => {
         startWorkout(el.dataset.id ?? '');
         emit('nav', { path: 'workout' });

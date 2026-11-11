@@ -26,6 +26,7 @@ import assert from 'node:assert/strict';
 import { chromium, webkit, devices } from 'playwright-core';
 import { v144 } from './v144.mjs';
 import { v150 } from './v150.mjs';
+import { v151 } from './v151.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
@@ -202,6 +203,11 @@ async function run(name, browser, P) {
     clickPast: (/** @type {any} */ target, /** @type {any} */ opened) =>
       clickPastPrompts(page, layer, settle, target, opened),
   };
+  if (FLOW === 'v151') {
+    await v151(page, h);
+    assert.deepEqual(errors, [], 'no page errors');
+    return void (await ctx.close());
+  }
   if (FLOW === 'v150') {
     await v150(page, h);
     assert.deepEqual(errors, [], 'no page errors');
@@ -381,6 +387,7 @@ async function run(name, browser, P) {
   await v143b(page, h);
   await v144(page, h);
   await v150(page, h);
+  await v151(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -1308,7 +1315,15 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   await page.locator('[data-act="manual"]').first().click();
   await layer.locator('#mname').fill('Баница');
   const labels = await layer.locator('.grid2 .field > span').allInnerTexts();
-  assert.deepEqual(labels.slice(3, 6), ['Мазнини / 100 г', 'Фибри / 100 г', 'Сол / 100 г']);
+  // 1.5.1: sugar after carbs and saturated fat after fat; fiber and salt follow
+  assert.deepEqual(labels.slice(2, 8), [
+    'Въглехидрати / 100 г',
+    'Захар / 100 г',
+    'Мазнини / 100 г',
+    'Наситени мазнини / 100 г',
+    'Фибри / 100 г',
+    'Сол / 100 г',
+  ]);
   assert.equal(await layer.locator('#msalt').getAttribute('placeholder'), 'по желание');
   await layer.locator('#mkcal').fill('300');
   await layer.locator('#mp').fill('8');
@@ -1600,7 +1615,9 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.5\.0/);
+  assert.match(txt, /Какво ново в 1\.5\.1/);
+  assert.match(txt, /Наситени мазнини и захар/, 'the 1.5.1 items');
+  assert.match(txt, /един часовник/, 'the 1.5.1 meal clock item');
   assert.match(txt, /Добави хранене/, 'the 1.5.0 items');
   assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
   assert.match(txt, /поле „Час“/, 'the 1.4.4 time item');
@@ -1614,7 +1631,7 @@ async function v132(page, { go, settle, clearCel, layer }) {
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    41, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4
+    45, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4; 1.5.1: +4
     'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -1920,7 +1937,9 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.5\.0/);
+  assert.match(txt, /Какво ново в 1\.5\.1/);
+  assert.match(txt, /Наситени мазнини и захар/, 'the 1.5.1 items');
+  assert.match(txt, /един часовник/, 'the 1.5.1 meal clock item');
   assert.match(txt, /Добави хранене/, 'the 1.5.0 items');
   assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
   assert.match(txt, /поле „Час“/, 'the 1.4.4 time item');
@@ -1931,7 +1950,7 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   assert.match(txt, /Обичайният ти обяд/);
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    38, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4
+    42, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4; 1.5.1: +4
     'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -2035,7 +2054,9 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.5\.0/);
+  assert.match(txt, /Какво ново в 1\.5\.1/);
+  assert.match(txt, /Наситени мазнини и захар/, 'the 1.5.1 items');
+  assert.match(txt, /един часовник/, 'the 1.5.1 meal clock item');
   assert.match(txt, /Добави хранене/, 'the 1.5.0 items');
   assert.match(txt, /„Кога яде\?“ пита/, 'the 1.4.4 items');
   assert.match(txt, /поле „Час“/, 'the 1.4.4 time item');
@@ -2047,8 +2068,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    36,
-    'four 1.5.0, six 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
+    40,
+    'four 1.5.1, four 1.5.0, six 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
   );
   await page.waitForTimeout(700);
   await shot('whats-new-134');
@@ -3412,9 +3433,9 @@ async function v141tester(page, { go, settle, shot }, name, ctx) {
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
   // build id: 1.4.1-<hash> / 1.4.1-beta-<hash> from a build, the plain version from the sources
-  const idRe = DIR === '.' ? /^Билд: 1\.5\.0$/ : /^Билд: 1\.5\.0(-beta)?-[0-9a-f]{7,}$/;
+  const idRe = DIR === '.' ? /^Билд: 1\.5\.1$/ : /^Билд: 1\.5\.1(-beta)?-[0-9a-f]{7,}$/;
   const meta = await page.evaluate(
-    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.5.0',
+    () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.5.1',
   );
   const foot = page.locator('#pbuild');
   await foot.scrollIntoViewIfNeeded();
@@ -3907,7 +3928,8 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
   await go('food');
   await page.locator('.meal[data-m="breakfast"]').click();
   await layer.locator('.mealitems').waitFor();
-  assert.match(await layer.locator('.mealitems').innerText(), /07:40 · /, 'the meal sheet shows 07:40');
+  // 1.5.1: the meal's one clock (the foods have none)
+  assert.equal(await layer.locator('.mealclk input.t24i').inputValue(), '07:40', 'the meal sheet shows 07:40');
   await closeAllSheets(page, layer, settle);
   await go('progress');
   await page.waitForTimeout(1200);
@@ -3935,14 +3957,18 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
     await hs.evaluate((e) => e.remove());
   });
 
-  // the meal list: line 1 time + grams, line 2 the abbreviated nutrients; ⓘ → legend
+  // the meal list: line 1 grams (1.5.1: the time is the meal clock), line 2 the abbreviated nutrients; ⓘ → legend
   await go('food');
   await page.locator('.meal[data-m="breakfast"]').click();
   const items = layer.locator('.mealitems');
   await items.waitFor();
   const line = (await items.locator('.nutrline').last().innerText()).trim();
   assert.match(line, /^пр [\d,]+ · вх [\d,]+ · мз [\d,]+ · кр [\d,<]+ · фб [\d,–<]+ · сл [\d,–<]+$/, line);
-  assert.match(await items.locator('.itembtn').last().innerText(), /\d\d:\d\d · \d+ г/);
+  assert.match(
+    await items.locator('.itembtn').last().innerText(),
+    /^\d+ г$/m,
+    '1.5.1: grams only (the meal has the clock)',
+  );
   await page.waitForTimeout(250);
   await shot('meal-nutrients');
   await layer.locator('.nutrinfo').click();
