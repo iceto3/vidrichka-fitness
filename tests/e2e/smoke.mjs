@@ -3957,14 +3957,18 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
     await hs.evaluate((e) => e.remove());
   });
 
-  // the meal list: line 1 time + grams, line 2 the abbreviated nutrients; ⓘ → legend
+  // the meal list: line 1 grams (1.5.1: the time is the meal clock), line 2 the abbreviated nutrients; ⓘ → legend
   await go('food');
   await page.locator('.meal[data-m="breakfast"]').click();
   const items = layer.locator('.mealitems');
   await items.waitFor();
   const line = (await items.locator('.nutrline').last().innerText()).trim();
   assert.match(line, /^пр [\d,]+ · вх [\d,]+ · мз [\d,]+ · кр [\d,<]+ · фб [\d,–<]+ · сл [\d,–<]+$/, line);
-  assert.match(await items.locator('.itembtn').last().innerText(), /\d\d:\d\d · \d+ г/);
+  assert.match(
+    await items.locator('.itembtn').last().innerText(),
+    /^\d+ г$/m,
+    '1.5.1: grams only (the meal has the clock)',
+  );
   await page.waitForTimeout(250);
   await shot('meal-nutrients');
   await layer.locator('.nutrinfo').click();
