@@ -24,6 +24,21 @@ export const filtered = () =>
         )),
   );
 
+/** Is any filter on? (1.6.2) */
+export const filtering = () => f.place !== 'all' || f.group !== 'all' || f.equip !== 'all';
+
+/**
+ * 1.6.2 (tester): the header count follows the filters – „40 от 62 упражнения“ with the
+ * „Пудовка“ filter, „62 упражнения“ without any.
+ */
+export const countLabel = () => {
+  const n = filtered().length;
+  return filtering() ? t('library.countOf', { n, total: EXERCISES.length }) : t('library.count', { n });
+};
+
+/** Reset the filters (tests). */
+export const resetFilters = () => Object.assign(f, { place: 'all', group: 'all', equip: 'all' });
+
 /** Filter controls. */
 export const filters = () => html`${seg(
   ['all', 'gym', 'home'].map((v) => ({ value: v, label: t(`place.${v}`) })),
@@ -63,7 +78,7 @@ export const filterActions = {
 export default () => ({
   tab: 'workouts',
   render: () =>
-    String(html`<div class="content">${topBar(t('library.title'), t('library.count', { n: EXERCISES.length }))}
+    String(html`<div class="content">${topBar(t('library.title'), html`<span class="libcount" aria-live="polite">${countLabel()}</span>`)}
 <div class="mt12">${filters()}</div>
 <div class="card list mt12">${filtered().map((e) => exRow(e, `data-go="exercise/${e.id}"`))}</div></div>`),
   actions: filterActions,

@@ -35,6 +35,8 @@ export async function v160(page, h) {
   assert.equal((await chip('band').innerText()).trim(), 'Ластик');
   await chip('kettlebell').click();
   await settle();
+  // 1.6.2 (tester): the header count follows the filter
+  assert.equal((await page.locator('.libcount').innerText()).trim(), '40 от 62 упражнения');
   const names = async () => (await page.locator('.exrow .exname').allInnerTexts()).map((x) => x.trim());
   // 1.6.1: the whole kettlebell list (40, with the library exercises that can use one)
   const kb = await names();

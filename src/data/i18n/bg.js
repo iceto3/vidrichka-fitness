@@ -178,7 +178,8 @@ export default {
   'editor.rest': 'Почивка',
   // library
   'library.title': 'Упражнения',
-  'library.count': '{n} упражнения',
+  'library.count': { one: '{n} упражнение', other: '{n} упражнения' },
+  'library.countOf': '{n} от {total} упражнения',
   'library.muscles': 'Мускули',
   'library.musclesWorked': 'Натоварени мускули',
   'library.primary': 'Основни',

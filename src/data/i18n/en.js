@@ -176,7 +176,8 @@ export default {
   'editor.rest': 'Rest',
   // library
   'library.title': 'Exercise library',
-  'library.count': '{n} exercises',
+  'library.count': { one: '{n} exercise', other: '{n} exercises' },
+  'library.countOf': '{n} of {total} exercises',
   'library.muscles': 'Muscles',
   'library.musclesWorked': 'Muscles worked',
   'library.primary': 'Primary',
