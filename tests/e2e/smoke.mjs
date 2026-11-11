@@ -2510,7 +2510,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.deepEqual(Object.keys(fb).sort(), ['images', 'lang', 'text', 'version']);
   assert.match(fb.text, /пулса/);
   assert.equal(fb.lang, 'bg');
-  assert.match(fb.version, /^1\.(3\.4|4\.\d|5\.\d)/);
+  assert.match(fb.version, /^1\.(3\.4|[4-6]\.\d)/);
   assert.equal(fb.images.length, 1);
   assert.equal(fb.images[0].mime, 'image/jpeg');
   const bytes = Buffer.from(fb.images[0].data, 'base64');
