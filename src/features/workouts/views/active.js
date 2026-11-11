@@ -17,7 +17,7 @@ import { exById, exName, muscleTags, repsLabel } from '../../library/api.js';
 import { exThumb } from '../../library/thumb.js';
 import { openTechnique } from '../../library/technique.js';
 import { activeWorkout, planName, sessions } from '../api.js';
-import { MAX_KG, activeSet, byKg, lastSets, logsKg, suggest } from '../logic.js';
+import { MAX_KG, activeSet, byKg, kgStep, lastSets, logsKg, suggest } from '../logic.js';
 import * as S from '../session.js';
 
 /** @typedef {import('../logic.js').WItem} WItem */
@@ -27,7 +27,7 @@ function lastHint(it, ex) {
   const last = lastSets(sessions(), it.exId);
   if (!last.length) return '';
   const weighted = byKg(ex, last); // 1.6.0: optional added weight – by kilos once some was used
-  const tip = suggest(last, it.target.reps, weighted, settings().weightStep);
+  const tip = suggest(last, it.target.reps, weighted, kgStep(ex, settings().weightStep));
   const txt = weighted ? `${fmtKg(last[0].w)} × ${last.map((s) => s.r).join(', ')}` : last.map((s) => s.r).join(', ');
   return html`<div class="row gap8 mt12 small lasttime"><span class="muted b">${t('workout.lastTime')}</span><span class="b num">${txt}</span>
 ${tip ? html`<span class="chip warm nudge">${tip.kind === 'weight' ? t('workout.tryKg', { n: fmtNum(tip.value, 2) }) : t('workout.tryReps', { n: tip.value })}</span>` : ''}</div>`;
@@ -70,7 +70,7 @@ ${ring(46, 4, left / r.total, { color: '#2BB8BE', track: 'rgba(255,255,255,.15)'
 export default () => {
   /** @type {any} */
   let timer = 0;
-  const step = () => settings().weightStep;
+  const step = (/** @type {number} */ i) => kgStep(exById(activeWorkout().items[i].exId), settings().weightStep);
 
   const restDone = () => {
     S.skipRest();
@@ -138,7 +138,7 @@ ${w.rest ? restBar(w.rest) : ''}`;
         const v =
           ev.type === 'change'
             ? parseFloat(/** @type {HTMLInputElement} */ (el).value.replace(/\s/g, '').replace(',', '.')) || 0
-            : cur + num(el, 'd') * step();
+            : cur + num(el, 'd') * step(i);
         if (v > MAX_KG) toast(t('workout.maxKg', { n: MAX_KG }));
         S.setWeight(i, j, v);
       },

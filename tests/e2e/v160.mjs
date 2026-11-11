@@ -111,6 +111,18 @@ export async function v160(page, h) {
   await page.locator('.restbar [data-act="skip"]').click();
   await settle();
   assert.equal(await w(1).inputValue(), '0', 'the change carries to the next sets (as for any exercise)');
+  // 1.6.2 (tester): + steps by 1 kg for an optional added weight, so 4 kg is 4 taps (was 2.5)
+  const plus = ex0.locator('button[data-act="w"][data-j="1"][data-d="1"]');
+  await plus.click();
+  await settle();
+  assert.equal(await w(1).inputValue(), '1', '+1 kg');
+  for (let k = 0; k < 3; k++) (await plus.click(), await settle());
+  assert.equal(await w(1).inputValue(), '4');
+  // typing works too
+  await w(1).fill('4,5');
+  await w(1).dispatchEvent('change');
+  await settle();
+  assert.equal(await w(1).inputValue(), '4,5');
   await w(1).fill('4');
   await w(1).dispatchEvent('change');
   await settle();

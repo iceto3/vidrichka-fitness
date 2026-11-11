@@ -13,7 +13,7 @@ import { confirmDialog } from '../../../ui/sheet.js';
 import { deleteWithUndo } from '../../../ui/undo.js';
 import { exById, exName } from '../../library/api.js';
 import { planName, plans } from '../api.js';
-import { logsKg } from '../logic.js';
+import { kgStep, logsKg } from '../logic.js';
 
 /** Editable numeric fields: [key, step, min, max, label key]. */
 const FIELDS = /** @type {const} */ ([
@@ -94,7 +94,8 @@ ${src ? html`<div class="row gap10 mt20"><button class="btn sec f1" data-act="du
             ? parseFloat(
                 /** @type {HTMLInputElement} */ (el).value.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'),
               ) || 0
-            : it[k] + num(el, 'd') * st;
+            : // 1.6.2: kg ± per exercise (1 kg for an optional added weight)
+              it[k] + num(el, 'd') * (k === 'weight' ? kgStep(exById(it.exId), st) : st);
         it[k] = Math.min(max, Math.max(min, Math.round(v * 4) / 4));
       },
       mv: (el) => {

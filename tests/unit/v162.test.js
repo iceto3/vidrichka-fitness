@@ -109,3 +109,71 @@ test('1.6.2 fix 3: every measurement tile (both gender sets) opens a sheet with 
   assert.equal(all('measurements').find((r) => r.id === 'm_glutes162')?.glutes, 98);
   assert.match(String(chartHtml('glutes', { typed: {}, bad: {} })), /98[,.]0 см/);
 });
+
+test('1.6.2 fix 4: Bulgarian split squat – log 0 kg then 4 kg (± by 1 kg, or typed)', async () => {
+  const { put } = await import('../../src/core/store.js');
+  const { EXERCISES } = await import('../../src/data/exercises.js');
+  const { clampKg, kgStep, logsKg } = await import('../../src/features/workouts/logic.js');
+  const { activeWorkout, startWorkout } = await import('../../src/features/workouts/api.js');
+  const S = await import('../../src/features/workouts/session.js');
+  const bss = /** @type {any} */ (EXERCISES.find((e) => e.id === 'bulgarian_split_squat'));
+  assert.ok(logsKg(bss));
+  assert.equal(kgStep(bss, 2.5), 1, 'optional added weight: 1 kg steps');
+  assert.equal(
+    kgStep(
+      EXERCISES.find((e) => e.id === 'back_squat'),
+      2.5,
+    ),
+    2.5,
+    'weighted: the Profile step',
+  );
+  assert.equal(
+    kgStep(
+      EXERCISES.find((e) => e.id === 'back_squat'),
+      5,
+    ),
+    5,
+  );
+  assert.equal(
+    kgStep(
+      EXERCISES.find((e) => e.id === 'plank'),
+      2.5,
+    ),
+    2.5,
+  );
+  for (const e of EXERCISES.filter((x) => x.optionalWeight && !x.weighted)) assert.equal(kgStep(e, 2.5), 1, e.id);
+  assert.equal(clampKg('4'), 4);
+  assert.equal(clampKg(4.5), 4.5, '0.5 kg resolution when typed');
+  // a workout: set 1 at 0 kg (bodyweight), set 2 at 4 kg reached with + (as the stepper does)
+  S.discard();
+  put('plans', {
+    id: 'plan_t162',
+    name: 'T',
+    days: [],
+    place: 'home',
+    items: [{ exId: 'bulgarian_split_squat', sets: 2, reps: 10, weight: 0, rest: 60 }],
+  });
+  startWorkout('plan_t162');
+  S.setWeight(0, 0, 0);
+  assert.deepEqual(
+    activeWorkout().items[0].sets.map((/** @type {any} */ s) => s.w),
+    [0, 0],
+  );
+  S.toggleDone(0, 0);
+  for (let k = 0; k < 4; k++) {
+    const cur = activeWorkout().items[0].sets[1].w;
+    S.setWeight(0, 1, cur + 1 * kgStep(bss, 2.5)); // the „+“ button
+  }
+  assert.deepEqual(
+    activeWorkout().items[0].sets.map((/** @type {any} */ s) => s.w),
+    [0, 4],
+  );
+  S.setWeight(0, 1, 0);
+  S.setWeight(0, 1, clampKg('4')); // typed „4“
+  assert.equal(activeWorkout().items[0].sets[1].w, 4);
+  S.discard();
+  // the active workout and the plan editor use the per-exercise step
+  const active = readFileSync('src/features/workouts/views/active.js', 'utf8');
+  assert.match(active, /kgStep\(exById\(activeWorkout\(\)\.items\[i\]\.exId\), settings\(\)\.weightStep\)/);
+  assert.match(readFileSync('src/features/workouts/views/editor.js', 'utf8'), /kgStep\(exById\(it\.exId\), st\)/);
+});
