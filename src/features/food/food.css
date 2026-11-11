@@ -572,3 +572,12 @@
 .mealclock .t24 {
   flex: none;
 }
+
+/* 1.6.2 the supplement streak line (visible from day 1) */
+.supps .suppstreak {
+  margin-top: 2px;
+  color: var(--muted);
+}
+.supps .suppstreak.on {
+  color: var(--warm, #e8793a);
+}

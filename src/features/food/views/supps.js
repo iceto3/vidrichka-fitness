@@ -8,7 +8,7 @@
 import { emit } from '../../../core/bus.js';
 import { html, raw } from '../../../ui/dom.js';
 import { fmtNum, t } from '../../../core/i18n.js';
-import { dayKey, hmComplete, parseHM, stepHM } from '../../../core/dates.js';
+import { hmComplete, parseHM, stepHM } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { stepper, time24 } from '../../../ui/components.js';
 import { closeSheet, openSheet, refreshSheet, snack, toast } from '../../../ui/sheet.js';
@@ -39,14 +39,11 @@ const byId = (/** @type {string|undefined} */ id) => supplements().find((s) => s
 
 /** Second line of a row. @param {Supp} s @param {string} date */
 function subLine(s, date) {
-  const n = streak(s, dayKey()),
-    run = n > 1 && date === dayKey() ? t('supp.streak', { n }) : '';
   if (s.kind === 'creatine') {
     const c = readDay(date).creatine,
       parts = [
         c.rows ? `${t('creatine.fromFood')} ${fmtNum(c.foodG, 1)} ${t('unit.g')}` : '',
         c.suppG ? `${t('creatine.supp')} ${fmtNum(c.suppG, 1)} ${t('unit.g')}` : '',
-        run,
       ].filter(Boolean);
     return parts.length ? parts.join(' · ') : t('creatine.none');
   }
@@ -56,7 +53,6 @@ function subLine(s, date) {
     `${t('supp.dose')} ${amount(s, v || s.dose)}`,
     p ? t('supp.proteinPart', { g: fmtNum(p, 1) }) : '',
     s.remind ? `🔔 ${s.remind}` : '',
-    run,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -65,6 +61,16 @@ function subLine(s, date) {
 /** „Отмени“ text after unticking (creatine keeps its 1.4.2 text). @param {Supp} s */
 const removedText = (s) =>
   s.kind === 'creatine' ? t('creatine.removed') : t('supp.removedDay', { name: suppName(s) });
+
+/**
+ * 1.6.2 (tester: no streak was visible – 1.6.1 showed it only from 2 days and only on today):
+ * days in a row up to the shown day, from day 1 („🔥 1 ден подред“); before the first tick
+ * „🔥 0 дни подред“. @param {Supp} s @param {string} date
+ */
+function streakLine(s, date) {
+  const n = streak(s, date);
+  return html`<div class="xs b suppstreak${n ? ' on' : ''}" data-n="${n}">${n ? t('supp.streak', { n }) : t('supp.streak0')}</div>`;
+}
 
 /** One supplement row. @param {Supp} s @param {string} date */
 function row(s, date) {
@@ -75,7 +81,7 @@ function row(s, date) {
     ? html`${t('creatine.title')} <span class="num crtotal">${fmtNum(readDay(date).creatine.totalG, 1)} ${t('unit.g')}</span>`
     : name;
   return html`<div class="row gap10 supprow${cr ? ' creatinecard' : ''}" data-supp="${s.id}"><div class="mic sm creaic" aria-hidden="true">${kindOf(s).emoji}</div>
-<div class="f1 minw0"><div class="b ellip crtitle">${title}</div><div class="muted xs b suppsub">${subLine(s, date)}</div></div>
+<div class="f1 minw0"><div class="b ellip crtitle">${title}</div><div class="muted xs b suppsub">${subLine(s, date)}</div>${streakLine(s, date)}</div>
 <button class="iconbtn sm flat suppedit${cr ? ' creaadd' : ''}" data-act="suppSheet" data-id="${s.id}" aria-label="${t('supp.edit', { name })}">${ic('edit', 16, 2.4)}</button>
 <button class="chip chip-sm supptake${v ? ' on ok' : ' accent'}" data-act="suppTake" data-id="${s.id}" aria-pressed="${v ? 'true' : 'false'}" aria-label="${t(v ? 'supp.untakeA' : 'supp.takeA', { name, dose: amount(s, s.dose) })}">${v ? ic('check', 13, 3) : ''}${t(v ? 'supp.took' : 'supp.take')}</button></div>`;
 }

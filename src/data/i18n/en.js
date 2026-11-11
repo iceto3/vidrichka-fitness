@@ -1499,4 +1499,6 @@ export default {
   'whatsNew.supps161':
     '“Supplements” in Food: creatine lives there, plus protein, vitamins and your own – with “Took it”, a day streak and a reminder.',
   'whatsNew.measure161': 'Measurements follow your profile’s gender, and you choose which ones to track.',
+  // 1.6.2 supplement streak from day 1
+  'supp.streak0': '🔥 0 days in a row',
 };

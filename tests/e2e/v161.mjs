@@ -52,6 +52,9 @@ export async function v161(page, h) {
   assert.equal(await dayField('sp_protein'), 30);
   assert.equal(await dayField('suppP'), 22.5);
   assert.equal(await row('protein').locator('.supptake').getAttribute('aria-pressed'), 'true');
+  // 1.6.2 (tester): the streak is visible from day 1
+  assert.equal((await row('protein').locator('.suppstreak').innerText()).trim(), '🔥 1 ден подред');
+  assert.match(await row('vitd').locator('.suppstreak').innerText(), /0 дни подред/);
   const p1 = await protein();
   assert.ok(Math.abs(p1 - p0 - 22.5) <= 1, `protein bar ${p0} → ${p1}`);
   // untick → „Отмени“ puts it back
