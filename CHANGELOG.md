@@ -14,8 +14,13 @@ All notable changes to this project are documented here. The format follows
 - **Прогрес › Сън „Часове сън“ (last 14 nights):** every bar is a button that opens that night's sleep editor (`openSleepSheet`), so a bedtime / wake-up can be entered or corrected and empty nights filled in. Same rules as the day view: the 16 h cap, and on any day a wake-up after a logged breakfast is refused („Закуската е записана в … – ставането трябва да е преди това“).
 - What's new entry for 1.5.1 (bg + en). Unit tests `tests/unit/v151.test.js`; e2e flow `tests/e2e/v151.mjs` at 360 px (also alone with `--flow v151`).
 
+### Changed (beta tester round – user decision)
+
+- **One clock per meal.** Each meal (breakfast, lunch, snacks, dinner and unplanned meals) has one clock, in its meal sheet (Храна / Начало › tap the meal): typed 24 h or ±5 min, checked like „Кога яде?“ (not in the future, not before the wake-up). A change is saved with „Запази часа“ or when the sheet is closed (not on every ±5 tap) and moves every food of the meal (`daily/api.setMealClock`; today's graded protein breakfast re-grades as before). The foods have no time of their own: the „Час“ field is gone from the item editor and the food rows show no time. The meal rows show the meal's time (`food/logic.mealHM` – the earliest entry; older data with mixed times is left as it is until the clock is changed). A new food takes the meal's time and an item moved to another meal takes that meal's time, as in 1.5.0. What's new 1.5.1 +1 item; the 1.4.4 / 1.5.0 notes no longer mention a food's own time.
+
 ### Fixed
 
+- **Tester (1.5.1-beta-3adc2268e9):** changing one lunch item's time left the other item showing its old time – the item editor closed without re-rendering the meal sheet under it. Gone with the per-item time; the meal sheet now re-renders after every item change.
 - Two 1.4.4 unit tests used a fixed date and failed from the next day on; they now use today.
 
 ## [1.5.0] – 2026-11-10 (beta)

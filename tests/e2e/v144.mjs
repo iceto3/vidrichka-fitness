@@ -370,12 +370,11 @@ export async function v144(page, h) {
   console.log(
     '  ✔ 1.4.4 C3: „Кога яде?“ – Сега / По-рано, limits, live preview, actual time + 15 XP, asked once; result toast after the answer, grey banner when missed',
   );
-  // ---- 1.4.4 (time): „Час“ in the item editor re-grades today's breakfast (missed 08:30 → 07:20)
+  // ---- 1.4.4 (time) / 1.5.1: the meal's clock (in the meal sheet – an item has none) re-grades today's breakfast (missed 08:30 → 07:20)
   await go('food');
   await clickPast(page.locator('.meal[data-m="breakfast"]'), layer.locator('.mealitems'));
-  await layer.locator('.mealitems .itembtn').first().click();
-  const ie = layer.locator('.itemedit');
-  const it24 = ie.locator('.itemtime input.t24i');
+  const ie = layer.locator('.panel').last();
+  const it24 = ie.locator('.mealclk input.t24i');
   await it24.waitFor();
   assert.equal(await it24.inputValue(), '08:30', 'the logged time, editable');
   assert.match(await ie.innerText(), /Час[\s\S]*важи за цялото хранене/);
@@ -386,28 +385,28 @@ export async function v144(page, h) {
     await it24.fill(hm);
     await it24.press('Tab');
     await settle();
-    assert.match(await ie.locator('.timeerr').innerText(), re, hm);
-    assert.ok(await ie.locator('[data-act="save"]').isDisabled(), `Запази off for ${hm}`);
+    assert.match(await ie.locator('.mclkerr').innerText(), re, hm);
+    assert.equal(await ie.locator('.mclksave').count(), 0, `no „Запази часа“ for ${hm}`);
   }
   await it24.fill('07:05');
   await settle();
-  await ie.locator('.t24b[data-d="-5"]').click();
+  await ie.locator('.mealclk .t24b[data-d="-5"]').click();
   await settle();
-  await ie.locator('.t24b[data-d="-5"]').click();
+  await ie.locator('.mealclk .t24b[data-d="-5"]').click();
   await settle();
   assert.equal(await it24.inputValue(), '07:00', '− stops at the wake-up');
-  for (let i = 0; i < 4; i++) await ie.locator('.t24b[data-d="5"]').click();
+  for (let i = 0; i < 4; i++) await ie.locator('.mealclk .t24b[data-d="5"]').click();
   await settle();
   assert.equal(await it24.inputValue(), '07:20');
-  assert.equal(await ie.locator('.timeerr').count(), 0);
+  assert.equal(await ie.locator('.mclkerr').count(), 0);
   await sheetShot('v144time-editor');
   await clearCel();
-  await ie.locator('[data-act="save"]').click();
-  await ie.waitFor({ state: 'detached' });
+  await ie.locator('.mclksave').click();
   await page.locator('#cel .toastc').first().waitFor({ timeout: 4000 });
   assert.match(await celText(), /Протеинова закуска ✓[\s\S]*перфектно/, 'the result toast after the change');
   await page.waitForTimeout(900);
   await shot('v144time-toast', false, true);
+  await closeAll();
   const bf4 = (await rows('food')).filter((/** @type {any} */ r) => r.date === D4 && r.meal === 'breakfast');
   assert.deepEqual(
     bf4.map((/** @type {any} */ r) => r.time),

@@ -237,5 +237,92 @@ export async function v151(page, h) {
     'nothing saved',
   );
   console.log('  ✔ 1.5.1 4b: a sleep bar opens that night’s editor – filled in; breakfast rule and 16 h cap kept');
+
+  // ---- the meal's one clock (user decision): lunch with egg and chicken at 08:49 → 08:29
+  const fr = (
+    /** @type {string} */ id,
+    /** @type {string} */ meal,
+    /** @type {string} */ hm,
+    /** @type {string} */ name,
+    emoji = '🍽️',
+  ) => ({
+    id,
+    date: D,
+    meal,
+    ts: T(D, hm),
+    time: hm,
+    name: { bg: name, en: name },
+    emoji,
+    grams: 100,
+    kcal: 150,
+    p: 13,
+    c: 1,
+    f: 10,
+  });
+  await idb('food', [
+    fr('mc_egg', 'lunch', '08:49', 'Яйце', '🥚'),
+    fr('mc_ch', 'lunch', '08:49', 'Пилешко', '🍗'),
+    fr('mc_x1', 'x_mc1', '10:30', 'Ябълка', '🍎'),
+    fr('mc_x2', 'x_mc1', '10:30', 'Орехи', '🥜'),
+  ]);
+  await reopen();
+  const foodTime = async (/** @type {string} */ id) =>
+    (await rows('food')).find((/** @type {any} */ r) => r.id === id)?.time;
+  await go('food');
+  await tap(page.locator('.meal[data-m="lunch"]'));
+  const sheet = layer.locator('.panel').last();
+  await sheet.locator('.mealitems').waitFor();
+  assert.equal(await sheet.locator('.mealclk').count(), 1, 'one clock on the meal');
+  assert.equal(await sheet.locator('.mealitems .t24i').count(), 0, 'no clock on a food row');
+  assert.doesNotMatch(await sheet.locator('.mealitems').innerText(), /\d\d:\d\d/, 'no time on a food row');
+  const mc = sheet.locator('.mealclk input.t24i');
+  assert.equal(await mc.inputValue(), '08:49');
+  await page.waitForTimeout(250);
+  await shot('v151-mealclock-before-360');
+  // the item editor has no time either
+  await sheet.locator('.mealitems .itembtn').first().click();
+  await layer.locator('.itemedit').waitFor();
+  assert.equal(await layer.locator('.itemedit .t24i').count(), 0, 'no „Час“ on an item');
+  await page.waitForTimeout(200);
+  await shot('v151-item-no-clock-360');
+  await page.keyboard.press('Escape');
+  await layer.locator('.itemedit').waitFor({ state: 'detached' });
+  await mc.fill('08:29');
+  await mc.press('Tab');
+  await settle();
+  assert.equal(await foodTime('mc_egg'), '08:49', 'not saved yet');
+  await page.waitForTimeout(200);
+  await shot('v151-mealclock-pending-360');
+  await sheet.locator('.mclksave').click();
+  await settle();
+  assert.deepEqual([await foodTime('mc_egg'), await foodTime('mc_ch')], ['08:29', '08:29'], 'every food moved');
+  assert.equal(await layer.locator('.panel').last().locator('.mealclk input.t24i').inputValue(), '08:29');
+  await page.waitForTimeout(250);
+  await shot('v151-mealclock-after-360');
+  await closeAll();
+  assert.match(await page.locator('.meal[data-m="lunch"] .mealhm').innerText(), /^08:29$/);
+  // a new food takes the meal's time (the picker's clock opens at it)
+  await go('food/add/lunch');
+  assert.equal(await page.locator('.mealclock .t24i').inputValue(), '08:29');
+  await closeAll();
+  // an unplanned meal: ±5 and leaving the sheet keeps the time, for every food in it
+  await go('food');
+  await tap(page.locator('.meal[data-m="x_mc1"]'));
+  const xs = layer.locator('.panel').last();
+  await xs.locator('.mealclk').waitFor();
+  assert.equal(await xs.locator('.mealclk input.t24i').inputValue(), '10:30');
+  await xs.locator('.mealclk .t24b[data-d="5"]').click();
+  await settle();
+  await xs.locator('.mealclk .t24b[data-d="5"]').click();
+  await settle();
+  assert.equal(await foodTime('mc_x1'), '10:30', 'nothing saved on each ±5 tap');
+  await page.keyboard.press('Escape');
+  await settle();
+  assert.deepEqual(
+    [await foodTime('mc_x1'), await foodTime('mc_x2')],
+    ['10:40', '10:40'],
+    'kept when the sheet is left',
+  );
+  console.log('  ✔ 1.5.1 meal clock: one clock per meal, foods without one, every food moves (unplanned meals too)');
   await go('home');
 }
