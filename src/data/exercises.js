@@ -7,6 +7,8 @@
  *  equipment  barbell | dumbbell | machine | cable | bodyweight
  *  place      where it can be done: ['gym'] / ['home'] / ['gym','home']
  *  weighted   true = log weight (kg) + reps; false = reps only
+ *  optionalWeight  (1.6.0) bodyweight exercise that can take an optional added weight:
+ *             kg is logged too, 0 kg = bodyweight (no separate weighted variants)
  *  unit       'reps' (default) | 'perLeg' | 'sec' — what the reps counter means
  *  primary / secondary  muscle ids: glutes quads hamstrings calves back chest shoulders biceps triceps core
  *  rest       default rest in seconds
@@ -25,6 +27,7 @@
  * @property {string} equipment
  * @property {string[]} place
  * @property {boolean} weighted
+ * @property {boolean} [optionalWeight]
  * @property {'reps'|'perLeg'|'sec'} [unit]
  * @property {string[]} primary
  * @property {string[]} secondary
@@ -73,6 +76,7 @@ export const EXERCISES = [
     equipment: 'bodyweight',
     place: ['gym', 'home'],
     weighted: false,
+    optionalWeight: true, // 1.6.0: optional added weight (0 kg = bodyweight)
     unit: 'perLeg',
     primary: ['glutes', 'quads'],
     secondary: ['hamstrings', 'core'],
@@ -195,6 +199,7 @@ export const EXERCISES = [
     equipment: 'bodyweight',
     place: ['gym', 'home'],
     weighted: false,
+    optionalWeight: true, // 1.6.0: optional added weight (0 kg = bodyweight)
     primary: ['chest'],
     secondary: ['triceps', 'shoulders', 'core'],
     rest: 60,
@@ -206,6 +211,7 @@ export const EXERCISES = [
     equipment: 'bodyweight',
     place: ['home', 'gym'],
     weighted: false,
+    optionalWeight: true, // 1.6.0: optional added weight (0 kg = bodyweight)
     primary: ['glutes'],
     secondary: ['hamstrings', 'core'],
     rest: 45,
@@ -217,6 +223,7 @@ export const EXERCISES = [
     equipment: 'bodyweight',
     place: ['home', 'gym'],
     weighted: false,
+    optionalWeight: true, // 1.6.0: optional added weight (0 kg = bodyweight)
     primary: ['quads', 'glutes'],
     secondary: ['hamstrings', 'core'],
     rest: 45,
@@ -228,6 +235,7 @@ export const EXERCISES = [
     equipment: 'bodyweight',
     place: ['home', 'gym'],
     weighted: false,
+    optionalWeight: true, // 1.6.0: optional added weight (0 kg = bodyweight)
     unit: 'perLeg',
     primary: ['glutes', 'quads'],
     secondary: ['hamstrings', 'core'],

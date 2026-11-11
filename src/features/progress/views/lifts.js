@@ -13,6 +13,7 @@ import { openSheet } from '../../../ui/sheet.js';
 import { exById, exName } from '../../library/api.js';
 import { sessions } from '../../workouts/api.js';
 import { badges } from '../../motivation/api.js';
+import { byKg } from '../../workouts/logic.js';
 
 const RANGES = { '4w': 28, '8w': 56, '6m': 182 };
 const state = { ex: '', range: /** @type {keyof RANGES} */ ('8w'), allPrs: false };
@@ -63,7 +64,13 @@ export default () => ({
       ),
     ];
     if (!trained.includes(state.ex)) state.ex = trained.find((id) => exById(id)?.weighted) ?? trained[0];
-    const weighted = exById(state.ex)?.weighted ?? true;
+    // 1.6.0: an optional-weight exercise charts kilos once added weight was used, else reps
+    const weighted = byKg(
+      exById(state.ex),
+      all.flatMap((s) =>
+        s.items.filter((/** @type {any} */ i) => i.exId === state.ex).flatMap((/** @type {any} */ i) => i.sets),
+      ),
+    );
     const since = Date.now() - RANGES[state.range] * 864e5;
     let pts = [...all]
       .reverse()

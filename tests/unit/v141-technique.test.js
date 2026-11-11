@@ -87,7 +87,19 @@ test('every exercise has a 2-frame illustration with numbered markers matching i
 });
 
 test('no leftover of the old unverified steps, tips and stick figures', () => {
-  const allowed = ['id', 'name', 'equipment', 'place', 'weighted', 'unit', 'primary', 'secondary', 'rest', 'met'];
+  const allowed = [
+    'id',
+    'name',
+    'equipment',
+    'place',
+    'weighted',
+    'unit',
+    'primary',
+    'secondary',
+    'rest',
+    'met',
+    'optionalWeight',
+  ];
   for (const e of EXERCISES)
     assert.deepEqual(
       Object.keys(e).filter((k) => !allowed.includes(k)),

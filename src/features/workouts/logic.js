@@ -14,13 +14,28 @@ export const MAX_KG = 500;
 /** A set weight rounded to 0.25 kg and kept within 0…{@link MAX_KG}. @param {number} v */
 export const clampKg = (v) => Math.min(MAX_KG, Math.max(0, Math.round((Number(v) || 0) * 4) / 4));
 
+/**
+ * 1.6.0: does an exercise log kilos? Weighted ones always; bodyweight ones with
+ * `optionalWeight` take an optional added weight (0 kg = bodyweight, no separate weighted
+ * variant). Unknown exercises count as weighted (as before).
+ * @param {{weighted?: boolean, optionalWeight?: boolean}|undefined|null} ex
+ */
+export const logsKg = (ex) => (ex ? !!(ex.weighted || ex.optionalWeight) : true);
+
+/**
+ * 1.6.0: should a set / a list of sets be shown and compared by kilos? A weighted exercise
+ * always; an optional-weight one only once some added weight was used (else by reps).
+ * @param {{weighted?: boolean, optionalWeight?: boolean}|undefined|null} ex @param {{w: number}[]} sets
+ */
+export const byKg = (ex, sets) => (ex ? !!ex.weighted || (!!ex.optionalWeight && sets.some((s) => s.w > 0)) : true);
+
 /** Default MET for strength training when exercises have none. */
 export const DEFAULT_MET = 5;
 
 /**
  * Totals for a workout.
  * @param {WItem[]} items
- * @param {(id: string) => {weighted: boolean}|undefined} exById
+ * @param {(id: string) => {weighted: boolean, optionalWeight?: boolean}|undefined} exById
  */
 export function summarize(items, exById) {
   let setsDone = 0,
@@ -28,7 +43,7 @@ export function summarize(items, exById) {
     reps = 0,
     volume = 0;
   for (const it of items) {
-    const weighted = exById(it.exId)?.weighted ?? true;
+    const weighted = logsKg(exById(it.exId)); // 1.6.0: added weight counts (0 kg adds nothing)
     for (const s of it.sets) {
       setsPlanned++;
       if (!s.done) continue;
@@ -83,13 +98,13 @@ const better = (a, b, weighted) => (weighted ? a.w > b.w || (a.w === b.w && a.r 
  * baseline and are not PRs).
  * @param {WItem[]} items
  * @param {WSession[]} history Earlier sessions.
- * @param {(id: string) => {weighted: boolean}|undefined} exById
+ * @param {(id: string) => {weighted: boolean, optionalWeight?: boolean}|undefined} exById
  * @returns {{exId: string, w: number, r: number, prevW: number, prevR: number}[]}
  */
 export function detectPRs(items, history, exById) {
   const out = [];
   for (const it of items) {
-    const weighted = exById(it.exId)?.weighted ?? true;
+    const weighted = logsKg(exById(it.exId)); // 1.6.0: kilos first, then reps (0 kg = bodyweight)
     const prev = bestSet(history, it.exId, weighted);
     const now = bestSet([{ id: '', endedAt: 0, items: [it] }], it.exId, weighted);
     if (prev && now && better(now, prev, weighted))
@@ -192,7 +207,7 @@ export const canResume = (s, today, dayOf, busy = false) => !!s?.partial && !bus
  * After deleting a workout: the later workouts whose PRs (and so XP) change once it is gone.
  * @param {(WSession & {prs?: any[], xp?: number, setsDone: number, setsPlanned?: number, partial?: boolean})[]} rest Remaining sessions.
  * @param {number} goneAt `endedAt` of the deleted workout.
- * @param {(id: string) => {weighted: boolean}|undefined} exById
+ * @param {(id: string) => {weighted: boolean, optionalWeight?: boolean}|undefined} exById
  * @param {(s: {setsDone: number, prs: number, partial?: boolean, setsPlanned?: number}) => number} xpFor
  * @returns {{id: string, prs: any[], xp: number}[]}
  */

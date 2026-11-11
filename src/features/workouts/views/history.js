@@ -17,6 +17,7 @@ import { restore } from '../../../core/trash.js';
 import { exById, exName } from '../../library/api.js';
 import { planName, resumeButton } from '../api.js';
 import { deleteSession } from '../session.js';
+import { byKg } from '../logic.js';
 
 /** One set as text: "40 kg × 10" or "12 reps". @param {{w: number, r: number}} x @param {boolean} weighted */
 export const setText = (x, weighted) => (weighted ? `${fmtKg(x.w)} × ${x.r}` : t('summary.repsN', { n: x.r }));
@@ -54,7 +55,7 @@ ${(s.prs ?? []).map(
 )}
 <div class="section-title"><h2 class="h3">${t('history.exercises')}</h2></div>
 <div class="col gap10">${s.items.map((/** @type {any} */ it) => {
-        const weighted = exById(it.exId)?.weighted ?? true;
+        const weighted = byKg(exById(it.exId), it.sets); // 1.6.0: 0 kg = bodyweight → reps
         return html`<div class="card hex"><div class="b">${exName(it.exId)}</div>
 <ol class="hsets mt6">${it.sets.map(
           (/** @type {any} */ x, /** @type {number} */ j) =>
