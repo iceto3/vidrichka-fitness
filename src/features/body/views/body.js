@@ -10,25 +10,51 @@ import { dayKey, parseDay } from '../../../core/dates.js';
 import { put, uid } from '../../../core/store.js';
 import { emit, on } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
-import { delta } from '../../../ui/components.js';
+import { delta, toggle } from '../../../ui/components.js';
 import { lineChart, mergeSameX, sparkline } from '../../../ui/chart.js';
 import { closeSheet, confirmDialog, openSheet, whenSettled } from '../../../ui/sheet.js';
 import { deleteWithUndo } from '../../../ui/undo.js';
 import { MEASURE_FIELDS, checkMeasure } from '../../../data/measurements.js';
 import { measurements } from '../api.js';
+import { ALL_TILES, tileGroups } from '../fields.js';
+import { customTiles, resetToGender, showTile, visibleFields, visibleTiles } from '../fields-api.js';
+import { settings } from '../../../core/settings.js';
 import { latestAndBase } from '../trend.js';
 import { openCompare, openSession, openTimeline, photoSection } from './photos.js';
 
-/** Tiles: single fields or L/R pairs. */
-const TILES = MEASURE_FIELDS.filter((f) => f.id !== 'weight').reduce(
-  (/** @type {{id: string, fields: string[], unit: string}[]} */ a, f) => {
-    const ex = f.pair && a.find((x) => x.id === f.pair);
-    if (ex) ex.fields.push(f.id);
-    else a.push({ id: f.pair ?? f.id, fields: [f.id], unit: f.unit });
-    return a;
-  },
-  [],
-);
+/** Tiles shown (single fields or L/R pairs; 1.6.1: by gender or the user's own set). */
+const tiles = () => {
+  const on = new Set(visibleTiles());
+  return ALL_TILES.filter((x) => x.id !== 'weight' && on.has(x.id));
+};
+
+/**
+ * 1.6.1 „Кои измервания да следя“: the profile gender's set first, then the rest; a switch
+ * each, with the short "where to measure" cue. Hidden values are never deleted.
+ */
+function openTileSetup() {
+  openSheet({
+    render: () => {
+      const g = tileGroups(settings().gender),
+        on = new Set(visibleTiles());
+      const row = (/** @type {string} */ id) => {
+        const tile = ALL_TILES.find((x) => x.id === id),
+          f = MEASURE_FIELDS.find((x) => x.id === tile?.fields[0]);
+        return html`<div class="lrow msetrow" data-tile="${id}"><span class="f1 minw0"><span class="b block">${t(`measure.${id}`)}</span><span class="xs b muted block">${f ? L(f.hint) : ''}</span></span>${toggle(on.has(id), 'mtile', t(`measure.${id}`), { id })}</div>`;
+      };
+      return html`<h2 class="h2">${t('body.setupTitle')}</h2><p class="muted small b mt4">${t('body.setupHint')}</p>
+<h3 class="b mt12">${t('body.setMine')}</h3><div class="list mset">${g.mine.filter((id) => id !== 'weight').map(row)}</div>
+<h3 class="b mt12">${t('body.setMore')}</h3><div class="list mset">${g.more.map(row)}</div>
+${customTiles() ? html`<p class="xs b muted mt10">${t('body.setCustom')}</p><button class="btn sec w100 mt8 msetreset" data-act="mreset">${t('body.setReset')}</button>` : ''}
+<button class="btn w100 mt12" data-close>${t('common.done')}</button>`;
+    },
+    actions: {
+      mtile: (el) => void showTile(el.dataset.id ?? '', el.getAttribute('aria-checked') !== 'true'),
+      mreset: () => void resetToGender(),
+    },
+    onClose: () => emit('ui:refresh'),
+  });
+}
 
 const fmt1 = (/** @type {number|undefined} */ v) =>
   v == null ? '–' : new Intl.NumberFormat(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v);
@@ -85,6 +111,10 @@ function openChart(f) {
  */
 export function openMeasureForm(focus = '') {
   const last = Object.fromEntries(MEASURE_FIELDS.map((f) => [f.id, latestAndBase(measurements(), f.id).v]));
+  // 1.6.1: the shown measurements (by gender or the user's own set) – plus a field opened directly
+  const fields = visibleFields();
+  const focused = MEASURE_FIELDS.find((f) => f.id === focus);
+  if (focused && !fields.includes(focused)) fields.push(focused);
   /** @type {Record<string, string>} */
   const v = { date: dayKey() };
   /** @type {Record<string, {error?: string, range?: readonly [number, number]}>} */
@@ -95,7 +125,7 @@ export function openMeasureForm(focus = '') {
       () => html`<div class="row between"><h2 class="h2">${t('body.addTitle')}</h2><button class="iconbtn" data-close aria-label="${t('common.close')}">${ic('close', 20)}</button></div>
 <p class="muted small b mt4">${t('body.addHint')}</p>
 <label class="field mt12"><span>${t('body.date')}</span><input class="input" type="date" id="mdate" data-input="v" data-k="date" value="${v.date}" max="${dayKey()}"></label>
-${MEASURE_FIELDS.map(
+${fields.map(
   (
     f,
   ) => html`<label class="field mt10"><span>${t(`measure.${f.id}`)} <small class="muted">(${unitText(f.unit)})</small></span>
@@ -113,7 +143,7 @@ ${
         /** @type {Record<string, any>} */
         const row = { id: uid('m'), date: v.date || dayKey(), ts: Date.now() };
         bad = {};
-        for (const f of MEASURE_FIELDS) {
+        for (const f of fields) {
           const c = checkMeasure(f, v[f.id] ?? '');
           if (c.error) bad[f.id] = c;
           else if (c.value != null) row[f.id] = c.value;
@@ -156,8 +186,8 @@ export default () => {
 <div class="row gap8 mt6 base"><span class="xb num big32">${fmt1(w.v)}</span><span class="muted b">${t('unit.kg')}</span></div>
 <div class="row gap6 mt8">${w.base != null && w.v != null ? html`${delta(w.v - w.base, t('unit.kg'))}<span class="muted xs b">${t('body.vs4w')}</span>` : html`<span class="muted xs b">${t(w.v != null ? 'body.vs4wSoon' : 'body.noWeight')}</span>`}</div></div>
 ${sparkline(weights)}</button>
-<div class="section-title"><h2 class="h3">${t('body.measurements')}</h2><span class="muted xs b">${lastDate ? t('body.vsDate', { date: fmtDate(parseDay(lastDate), { day: 'numeric', month: 'short' }) }) : ''}</span></div>
-<div class="mgrid">${TILES.map((tile) => {
+<div class="section-title"><h2 class="h3">${t('body.measurements')}</h2><span class="row gap8"><span class="muted xs b">${lastDate ? t('body.vsDate', { date: fmtDate(parseDay(lastDate), { day: 'numeric', month: 'short' }) }) : ''}</span><button class="link msetup" data-act="mset">${t('body.setup')}</button></span></div>
+<div class="mgrid">${tiles().map((tile) => {
         const vals = tile.fields.map((f) => latestAndBase(rows, f));
         const d = vals.every((x) => x.v != null && x.base != null)
           ? vals.reduce((s, x) => s + (Number(x.v) - Number(x.base)), 0) / vals.length
@@ -168,6 +198,7 @@ ${photoSection()}`;
     },
     actions: {
       add: () => (openMeasureForm(), false),
+      mset: () => (openTileSetup(), false),
       chart: (el) => (openChart(el.dataset.f ?? 'weight'), false),
       psNew: () => (openSession(), false),
       psEdit: (el) => (openSession(el.dataset.id), false),

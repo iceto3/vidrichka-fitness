@@ -33,6 +33,8 @@ const GENDERED = [
   'home.otter5',
   // 1.4.3 tester round: Графики / What's new „кога си яла“, „Въведи … сама“, the otter's „щом и ти си [готова]“
   'mealChart.empty',
+  'body.setupHint',
+  'body.setMine',
   'notif.supp.body',
   'supp.allAdded',
   'whatsNew.timing143',

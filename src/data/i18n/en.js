@@ -392,9 +392,9 @@ export default {
   'measure.thighR': 'Right thigh',
   'measure.chest': 'Chest',
   'measure.underbust': 'Under bust',
-  'measure.arm': 'Arms L / R',
-  'measure.armL': 'Left arm',
-  'measure.armR': 'Right arm',
+  'measure.arm': 'Upper arms L / R',
+  'measure.armL': 'Left upper arm',
+  'measure.armR': 'Right upper arm',
   'measure.calves': 'Calves',
   'measure.bodyfat': 'Body fat',
   // badges
@@ -1477,4 +1477,20 @@ export default {
   'notif.supp.title': 'Time for {supp}',
   'notif.supp.body': 'Taken your {supp}? Tick “Took it” when done.',
   'prompt.openSupps': 'Open supplements',
+  // 1.6.1 measurements by gender
+  'measure.biceps': 'Flexed biceps',
+  'measure.shoulders': 'Shoulders',
+  'measure.neck': 'Neck',
+  'measure.forearm': 'Forearm',
+  'measure.glutes': 'Glutes',
+  'measure.upperThigh': 'Upper thigh',
+  'body.setup': 'Choose',
+  'body.setupTitle': 'Measurements to track',
+  'body.setupHint':
+    'The defaults follow the gender in your profile. Hide, show or add any – hidden values are never deleted.',
+  'body.setMine': 'For your profile',
+  'body.setMore': 'More measurements',
+  'body.setCustom': 'Your choice is kept even if you change the gender in your profile.',
+  'body.setReset': 'Back to defaults',
+  'body.where': 'Where to measure',
 };

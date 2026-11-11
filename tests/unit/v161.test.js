@@ -367,3 +367,133 @@ test('1.6.1 Food: „Хранителни добавки“ card replaces the cr
   const cards = readFileSync('src/features/day/views/cards.js', 'utf8');
   assert.doesNotMatch(cards, /export function creatineCard/);
 });
+
+// ——— Measurements by gender ———
+import { MEASURE_FIELDS, MEASURE_SETS } from '../../src/data/measurements.js';
+import {
+  ALL_TILES,
+  defaultTiles,
+  fieldsOf,
+  resetTiles,
+  setTile,
+  shownTiles,
+  tileGroups,
+} from '../../src/features/body/fields.js';
+
+test('1.6.1 measurements: the sets by gender, every one with a BG name and a where-to-measure cue', async () => {
+  assert.deepEqual(MEASURE_SETS.common, ['weight', 'waist', 'hips', 'chest', 'thigh', 'calves', 'arm']);
+  assert.deepEqual(MEASURE_SETS.m, ['biceps', 'shoulders', 'neck', 'forearm']);
+  assert.deepEqual(MEASURE_SETS.f, ['underbust', 'glutes', 'upperThigh']);
+  const ids = new Set(ALL_TILES.map((x) => x.id));
+  for (const id of [...MEASURE_SETS.common, ...MEASURE_SETS.m, ...MEASURE_SETS.f]) {
+    assert.ok(ids.has(id), id);
+    assert.ok(bg[`measure.${id}`] && en[`measure.${id}`], id);
+  }
+  for (const f of MEASURE_FIELDS) {
+    assert.ok(f.hint.bg.length > 10 && f.hint.en.length > 10, f.id);
+    assert.ok(bg[`measure.${f.id}`], f.id);
+  }
+  await setLang('bg');
+  assert.equal(t('measure.biceps'), 'Бицепс в сгъвка');
+  assert.equal(t('measure.underbust'), 'Подгръдна обиколка');
+  assert.equal(t('measure.upperThigh'), 'Горна част на бедрото');
+  assert.equal(t('measure.arm'), 'Мишници Л / Д');
+  // the old fields keep their ids (saved values stay where they were)
+  for (const id of [
+    'weight',
+    'waist',
+    'belly',
+    'hips',
+    'thighL',
+    'thighR',
+    'chest',
+    'underbust',
+    'armL',
+    'armR',
+    'calves',
+    'bodyfat',
+  ])
+    assert.ok(
+      MEASURE_FIELDS.some((f) => f.id === id),
+      id,
+    );
+});
+
+test('1.6.1 measurements: defaults by gender (missing gender = women’s set)', () => {
+  assert.deepEqual(shownTiles(undefined, 'm', []), [
+    'weight',
+    'waist',
+    'hips',
+    'thigh',
+    'chest',
+    'arm',
+    'calves',
+    'biceps',
+    'shoulders',
+    'neck',
+    'forearm',
+  ]);
+  assert.deepEqual(shownTiles(undefined, 'f', []), [
+    'weight',
+    'waist',
+    'hips',
+    'thigh',
+    'chest',
+    'underbust',
+    'arm',
+    'calves',
+    'glutes',
+    'upperThigh',
+  ]);
+  assert.deepEqual(shownTiles(undefined, undefined, []), shownTiles(undefined, 'f', []));
+  assert.ok(!shownTiles(undefined, 'f', []).includes('belly'), 'belly / body fat are extras');
+  // the form gets both fields of a pair
+  assert.deepEqual(
+    fieldsOf(['weight', 'thigh']).map((f) => f.id),
+    ['weight', 'thighL', 'thighR'],
+  );
+  const g = tileGroups('m');
+  assert.deepEqual(g.mine, defaultTiles('m'));
+  assert.ok(g.more.includes('underbust') && g.more.includes('belly') && !g.more.includes('biceps'));
+});
+
+test('1.6.1 measurements: migration – fields with saved values stay visible', () => {
+  const rows = [{ id: 'm1', date: '2026-10-01', weight: 61, belly: 74, bodyfat: 24, underbust: 70 }];
+  const shown = shownTiles(undefined, 'm', rows);
+  for (const id of ['belly', 'bodyfat', 'underbust']) assert.ok(shown.includes(id), id);
+});
+
+test('1.6.1 measurements: hide / show / add from the other set, kept after a gender change', () => {
+  const rows = [{ id: 'm1', date: '2026-10-01', weight: 61, belly: 74 }];
+  let p = setTile(undefined, 'f', rows, 'neck', true); // add a men's one
+  assert.equal(p.custom, true);
+  assert.ok(shownTiles(p, 'f', rows).includes('neck'));
+  p = setTile(p, 'f', rows, 'glutes', false); // hide a default
+  p = setTile(p, 'f', rows, 'belly', false); // hide one with data (values stay saved)
+  const mine = shownTiles(p, 'f', rows);
+  assert.ok(!mine.includes('glutes') && !mine.includes('belly') && mine.includes('neck'));
+  // the gender changes in the profile → the user's own set stays exactly the same
+  assert.deepEqual(shownTiles(p, 'm', rows), mine);
+  assert.ok(!shownTiles(p, 'm', rows).includes('biceps'));
+  // weight can't be hidden; unknown ids are ignored
+  assert.ok(shownTiles(setTile(p, 'f', rows, 'weight', false), 'f', rows).includes('weight'));
+  assert.deepEqual(shownTiles(setTile(p, 'f', rows, 'nope', true), 'f', rows), mine);
+  assert.deepEqual(shownTiles({ custom: true, shown: ['waist', 'bogus'] }, 'm', []), ['weight', 'waist']);
+  // back to the defaults → follows gender again
+  assert.deepEqual(shownTiles(resetTiles(), 'm', []), shownTiles(undefined, 'm', []));
+});
+
+test('1.6.1 measurements: stored per user in kv, the Body view and form use the shown set', async () => {
+  const fa = await import('../../src/features/body/fields-api.js');
+  setKv('measureTiles', undefined);
+  assert.equal(fa.customTiles(), false);
+  fa.showTile('forearm', true);
+  assert.equal(fa.customTiles(), true);
+  assert.ok(fa.visibleTiles().includes('forearm'));
+  assert.ok(fa.visibleFields().some((f) => f.id === 'forearm'));
+  fa.resetToGender();
+  assert.equal(fa.customTiles(), false);
+  const body = readFileSync('src/features/body/views/body.js', 'utf8');
+  assert.match(body, /visibleFields\(\)/);
+  assert.match(body, /data-act="mset"/);
+});
