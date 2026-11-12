@@ -1,3 +1,4 @@
+import { setTime, timeVal } from './wheel.mjs';
 /**
  * 1.4.4 e2e (run from smoke.mjs after the 1.4.3 flows, or alone with `--flow v144`):
  * C1 ☆ favorites, the Любими tile and sheet, grouped food lists; C2 Ръчно добавени храни
@@ -274,26 +275,25 @@ export async function v144(page, h) {
     ['08:30', /още не е дошъл/],
     ['06:30', /преди ставането/],
   ]) {
-    await t24.fill(hm);
-    await t24.press('Tab');
+    await setTime(page, t24, hm, layer);
     await settle();
     assert.match(await layer.locator('.whenate .ateerr').innerText(), re, hm);
     assert.ok(await layer.locator('.whenate .wok').isDisabled());
   }
   // 1.4.4 (time): − stops at the wake-up (07:00) – a meal can't be before it
-  await t24.fill('07:05');
+  await setTime(page, t24, '07:05', layer);
   await settle();
   await layer.locator('.whenate .t24b[data-d="-5"]').click();
   await settle();
   await layer.locator('.whenate .t24b[data-d="-5"]').click();
   await settle();
-  assert.equal(await t24.inputValue(), '07:00', 'the picker floor is the wake-up');
+  assert.equal(await timeVal(t24), '07:00', 'the picker floor is the wake-up');
   assert.equal(await layer.locator('.whenate .ateerr').count(), 0);
   await sheetShot('v144time-picker-floor', false);
-  await t24.fill('07:45');
+  await setTime(page, t24, '07:45', layer);
   await settle();
   assert.match(await prev.innerText(), /\+15 мин · \+8 XP/);
-  await t24.fill('07:25');
+  await setTime(page, t24, '07:25', layer);
   await settle();
   assert.match(await prev.innerText(), /Навреме ✓ · \+15 XP/);
   await sheetShot('v144-whenate-pick', false);
@@ -374,30 +374,29 @@ export async function v144(page, h) {
   await go('food');
   await clickPast(page.locator('.meal[data-m="breakfast"]'), layer.locator('.mealitems'));
   const ie = layer.locator('.panel').last();
-  const it24 = ie.locator('.mealclk input.t24i');
+  const it24 = ie.locator('.mealclk .t24i');
   await it24.waitFor();
-  assert.equal(await it24.inputValue(), '08:30', 'the logged time, editable');
+  assert.equal(await timeVal(it24), '08:30', 'the logged time, editable');
   assert.match(await ie.innerText(), /Час[\s\S]*важи за цялото хранене/);
   for (const [hm, re] of [
     ['09:30', /още не е дошъл/],
     ['06:50', /преди ставането/],
   ]) {
-    await it24.fill(hm);
-    await it24.press('Tab');
+    await setTime(page, it24, hm, layer);
     await settle();
     assert.match(await ie.locator('.mclkerr').innerText(), re, hm);
     assert.equal(await ie.locator('.mclksave').count(), 0, `no „Запази часа“ for ${hm}`);
   }
-  await it24.fill('07:05');
+  await setTime(page, it24, '07:05', layer);
   await settle();
   await ie.locator('.mealclk .t24b[data-d="-5"]').click();
   await settle();
   await ie.locator('.mealclk .t24b[data-d="-5"]').click();
   await settle();
-  assert.equal(await it24.inputValue(), '07:00', '− stops at the wake-up');
+  assert.equal(await timeVal(it24), '07:00', '− stops at the wake-up');
   for (let i = 0; i < 4; i++) await ie.locator('.mealclk .t24b[data-d="5"]').click();
   await settle();
-  assert.equal(await it24.inputValue(), '07:20');
+  assert.equal(await timeVal(it24), '07:20');
   assert.equal(await ie.locator('.mclkerr').count(), 0);
   await sheetShot('v144time-editor');
   await clearCel();
@@ -435,7 +434,7 @@ export async function v144(page, h) {
   // a wake-up later than the logged breakfast (07:20) is refused in the sleep editor
   await page.locator('.sleepcard').scrollIntoViewIfNeeded();
   await clickPast(page.locator('.sleepcard'), layer.locator('.sleeptimes'));
-  await layer.locator('.swake input.t24i').fill('07:30');
+  await setTime(page, layer.locator('.swake .t24i'), '07:30', layer);
   await settle();
   assert.equal(
     await layer.locator('.sleeperr').innerText(),
@@ -443,7 +442,7 @@ export async function v144(page, h) {
   );
   assert.ok(await layer.locator('[data-act="done"]').isDisabled(), 'Готово off');
   await sheetShot('v144time-wake-rejected');
-  await layer.locator('.swake input.t24i').fill('07:15');
+  await setTime(page, layer.locator('.swake .t24i'), '07:15', layer);
   await settle();
   assert.equal(await layer.locator('.sleeperr').count(), 0, 'a wake-up before the breakfast is fine');
   await closeAll();

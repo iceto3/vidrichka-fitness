@@ -18,6 +18,8 @@ import { readDays, setDaySleep, setDaySteps, MAX_SLEEP_H } from '../api.js';
 import { shotRows } from '../logic.js';
 import { safely } from './cards.js';
 import { FACES } from '../../daily/views/checkin.js';
+import { dateField, durationField } from '../../../ui/components.js';
+import { durationHours, parseDuration } from '../../../ui/wheel.js';
 
 /**
  * @param {'steps'|'sleep'} kind @param {string} date The day the button belongs to (used
@@ -32,17 +34,6 @@ export function openShot(kind, date) {
 
   const picker = () =>
     html`<label class="btn w100 mt16 shotpick">${ic('image', 18, 2.2)}${t('shot.pick')}<input type="file" accept="image/*" class="sr-only" data-change="file" aria-label="${t('shot.pick')}"></label>`;
-
-  /** @param {HTMLElement} el @param {'h'|'m'} part */
-  const setSleepPart = (el, part) => {
-    const r = st.rows[Number(el.dataset.i)],
-      n = Number(/** @type {HTMLInputElement} */ (el).value.trim() || 0),
-      mins = Math.round(r.value * 60);
-    const next = part === 'h' ? n * 60 + (mins % 60) : Math.floor(mins / 60) * 60 + n;
-    if (Number.isInteger(n) && n >= 0 && (part === 'h' || n < 60) && next > 0 && next <= MAX_SLEEP_H * 60)
-      r.value = next / 60;
-    else toast(t('day.err.range'));
-  };
 
   openSheet({
     render: () => {
@@ -62,14 +53,13 @@ ${picker()}<p class="muted xs b mt8">${t('shot.privacy')}</p>`;
         // 1.4.0: stacked layout — the date field gets the full width (it was squashed next to
         // the weekday and the value), the weekday and the current value sit under it.
         return html`<div class="card pad14 shotrow"><div class="row gap10"><input type="checkbox" class="chk" data-change="on" data-i="${i}" ${r.on ? raw('checked') : ''} aria-label="${t('shot.use')}">
-<label class="f1 minw0 shotdate"><span class="sr-only">${t('shot.date')}</span><input type="date" class="input" data-change="date" data-i="${i}" value="${r.date}" max="${today}" aria-label="${t('shot.date')}"></label></div>
+<label class="f1 minw0 shotdate"><span class="sr-only">${t('shot.date')}</span>${dateField({ value: r.date, act: 'date', i, max: today, label: t('shot.date') })}</label></div>
 <p class="muted xs b mt6">${fmtDate(parseDay(r.date), { weekday: 'long', day: 'numeric', month: 'long' })}${was != null ? ` · ${t('shot.was', { n: fmt(was) })}` : ''}</p>
 ${
   kind === 'steps'
     ? html`<label class="row gap8 mt8 shotval"><span class="b f1">${t('steps.count')}</span><input class="input num" type="text" inputmode="numeric" data-change="val" data-i="${i}" value="${fmtNum(r.value)}" aria-label="${t('steps.count')}"></label>`
     : html`<div class="row gap8 mt8 shotval"><span class="b f1">${t('sleep.hours')}</span>
-<input class="input num" type="text" inputmode="numeric" data-change="hh" data-i="${i}" value="${Math.floor(Math.round(r.value * 60) / 60)}" aria-label="${t('shot.hoursAria')}"><span class="muted b">${t('unit.h')}</span>
-<input class="input num" type="text" inputmode="numeric" data-change="mm" data-i="${i}" value="${String(Math.round(r.value * 60) % 60).padStart(2, '0')}" aria-label="${t('shot.minutesAria')}"><span class="muted b">${t('unit.min')}</span></div>
+${durationField({ value: r.value, act: 'sleepDur', i, maxHours: 16, label: t('sleep.hours') })}</div>
 <p class="xs b mt8">${t('sleep.quality')} <span class="muted">${t('shot.optional')}</span></p>
 <div class="scale sm shotq" role="radiogroup" aria-label="${t('sleep.quality')}">${FACES.map((f, k) => html`<button class="${r.q === k + 1 ? 'on' : ''}" role="radio" aria-checked="${String(r.q === k + 1)}" data-act="q" data-i="${i}" data-v="${k + 1}" aria-label="${t(`scale.sleep${k + 1}`)} (${k + 1}/5)"><span aria-hidden="true">${f}</span></button>`)}</div>`
 }</div>`;
@@ -110,9 +100,14 @@ ${
         if (Number.isFinite(v) && v > 0 && v <= 100_000) r.value = Math.round(v);
         else toast(t('day.err.range'));
       },
-      // sleep: hours and minutes are typed separately; the value is kept to the minute
-      hh: (el) => setSleepPart(el, 'h'),
-      mm: (el) => setSleepPart(el, 'm'),
+      // sleep: hours + minutes on the shared scroll wheel (kept to the minute)
+      sleepDur: (el) => {
+        const r = st.rows[Number(el.dataset.i)],
+          d = parseDuration(/** @type {any} */ (el).value);
+        const next = d ? durationHours(d.h, d.m) : NaN;
+        if (d && next > 0 && next <= MAX_SLEEP_H) r.value = next;
+        else toast(t('day.err.range'));
+      },
       q: (el) => {
         const r = st.rows[Number(el.dataset.i)],
           v = Number(el.dataset.v);

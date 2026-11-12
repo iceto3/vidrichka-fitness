@@ -1,3 +1,4 @@
+import { timeVal } from './wheel.mjs';
 /**
  * 1.6.1 e2e (run from smoke.mjs after the 1.6.0 flow, or alone with `--flow v161`) at 360 px:
  * „Хранителни добавки“ in Храна (creatine row, one-tap add, „Взех“ with the protein powder
@@ -72,7 +73,7 @@ export async function v161(page, h) {
   await settle();
   await layer.locator('.suppremind .t24b').last().click(); // 09:00 + 15 min
   await settle();
-  assert.equal(await layer.locator('.suppremind .t24i').inputValue(), '09:15');
+  assert.equal(await timeVal(layer.locator('.suppremind .t24i')), '09:15');
   await layer.locator('[data-act="suppSave"]').click();
   await settle();
   assert.equal(await dayField('sp_vitd'), 2000);

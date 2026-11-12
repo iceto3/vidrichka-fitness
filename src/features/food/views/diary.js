@@ -9,7 +9,7 @@ import { fmtDate, fmtNum, t } from '../../../core/i18n.js';
 import { settings } from '../../../core/settings.js';
 import { addDays, dayKey, hmComplete, parseDay, parseHM, stepHM } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
-import { bar, ring, time24 } from '../../../ui/components.js';
+import { bar, dateField, ring, time24 } from '../../../ui/components.js';
 import { closeSheet, openSheet, refreshSheet, toast } from '../../../ui/sheet.js';
 import { checkFoodTime, foodTimeFloor, setMealClock } from '../../daily/api.js';
 import { trashList } from '../../../core/trash.js';
@@ -191,7 +191,7 @@ export default () => ({
     return html`<div class="content food">
 <div class="row between"><h1 class="h1">${t('food.title')}</h1><div class="row gap8"><button class="iconbtn" data-go="food/add/${currentMeal()}?q" aria-label="${t('food.search')}">${ic('search', 21)}</button><button class="iconbtn" data-go="food/add/${currentMeal()}?scan" aria-label="${t('food.scan')}">${ic('scan', 21)}</button></div></div>
 <div class="card datebar row between mt12"><button class="iconbtn flat sm" data-act="day" data-d="-1" aria-label="${t('food.prevDay')}">${ic('left', 18)}</button>
-<label class="row gap8 b datepick">${ic('calendar', 18)}<span>${isToday ? `${t('common.today')}, ` : ''}${fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' })}</span><input type="date" data-change="pick" value="${view.date}" max="${today}" aria-label="${t('food.pickDate')}"></label>
+<label class="row gap8 b datepick">${ic('calendar', 18)}<span>${isToday ? `${t('common.today')}, ` : ''}${fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' })}</span>${dateField({ value: view.date, act: 'pick', max: today, label: t('food.pickDate'), cls: 'overlay' })}</label>
 <button class="iconbtn flat sm" data-act="day" data-d="1" aria-label="${t('food.nextDay')}" ${isToday ? raw('disabled') : ''}>${ic('right', 18)}</button></div>
 <div class="card mt12 row gap16 kcalcard">${ring(132, 13, tot.kcal / s.kcalGoal, {
       color: leftK < 0 ? 'var(--warm)' : 'var(--accent)',
