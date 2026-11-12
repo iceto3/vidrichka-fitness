@@ -641,6 +641,84 @@ export const CUES = {
     ],
     sources: [{ text: 'ExRx.net – Kettlebell Snatch', url: 'https://exrx.net/WeightExercises/Kettlebell/KBSnatch' }],
   },
+  // 1.6.3 gym machines (no illustrations; YouTube search link, ExRx where checked)
+  leg_extension: {
+    bg: [
+      'Седни на уреда. Гърбът е опрян в облегалката, а коленете са на оста на въртене.',
+      'Валякът е точно над глезените, не върху тях.',
+      'Изпъни краката контролирано, без да заключваш коленете в горна точка.',
+      'Спусни тежестта бавно, докато коленете са свити около 90°.',
+    ],
+    en: [
+      'Sit on the machine. Back against the pad, knees in line with the pivot.',
+      'The pad sits just above the ankles, not on them.',
+      'Extend the legs under control and do not lock the knees at the top.',
+      'Lower the weight slowly until the knees are at about 90°.',
+    ],
+    sources: [
+      { text: 'ExRx.net – Lever Leg Extension', url: 'https://exrx.net/WeightExercises/Quadriceps/LVLegExtension' },
+    ],
+  },
+  seated_ab_crunch: {
+    bg: [
+      'Седни и закрепи подбедриците под валяка. Хвани дръжките до раменете или над главата, според уреда.',
+      'Стегни корема и сгъни трупа напред, сякаш сближаваш ребрата към таза.',
+      'Не дърпай с ръцете и не дърпай врата.',
+      'Върни се бавно в изходна позиция, без да отпускаш корема.',
+    ],
+    en: [
+      'Sit and hook the shins under the pad. Hold the handles at the shoulders or overhead, depending on the machine.',
+      'Brace the core and curl the torso forward, bringing the ribs towards the hips.',
+      'Do not pull with the arms or yank the neck.',
+      'Return slowly to the start and keep the core tight.',
+    ],
+    sources: [
+      {
+        text: 'ExRx.net – Lever Seated Crunch',
+        url: 'https://exrx.net/WeightExercises/RectusAbdominis/LVSeatedCrunch',
+      },
+    ],
+  },
+  hip_abductor: {
+    bg: [
+      'Седни на уреда и постави външната страна на бедрата към подложките. Гърбът е опрян.',
+      'Разтвори краката навън срещу съпротивлението, с движение от тазобедрената става.',
+      'Задръж за момент в крайна точка, без да извиваш кръста.',
+      'Върни краката бавно, без да удряш тежестите.',
+    ],
+    en: [
+      'Sit on the machine with the outer thighs against the pads and your back supported.',
+      'Open the legs against the resistance from the hips.',
+      'Pause briefly at the end without arching the lower back.',
+      'Bring the legs back slowly and do not let the plates slam.',
+    ],
+    sources: [
+      {
+        text: 'ExRx.net – Lever Seated Hip Abduction',
+        url: 'https://exrx.net/WeightExercises/HipAbductor/LVSeatedHipAbduction',
+      },
+    ],
+  },
+  hip_adductor: {
+    bg: [
+      'Седни на уреда и постави вътрешната страна на бедрата към подложките.',
+      'Събери краката едно към друго срещу съпротивлението, с движение от тазобедрената става.',
+      'Не помагай с трупа и не отлепяй кръста от облегалката.',
+      'Разтвори краката бавно до изходната позиция.',
+    ],
+    en: [
+      'Sit on the machine with the inner thighs against the pads.',
+      'Bring the legs together against the resistance from the hips.',
+      'Do not lean the torso or lift the lower back off the pad.',
+      'Open the legs slowly back to the start.',
+    ],
+    sources: [
+      {
+        text: 'ExRx.net – Lever Seated Hip Adduction',
+        url: 'https://exrx.net/WeightExercises/HipAdductors/LVSeatedHipAdduction',
+      },
+    ],
+  },
   // the coach's videos for the library exercises of the home programs (they keep their
   // verified technique card; the video replaces the YouTube search link)
   back_squat: { bg: [], en: [], video: yt('6SX8fOZ2xSc') },
