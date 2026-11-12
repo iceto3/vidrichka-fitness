@@ -1617,7 +1617,8 @@ async function v131(page, { go, settle, shot, clearCel, layer, rows }) {
   await go('profile');
   await page.locator('.lang [data-v="en"]').click();
   await settle();
-  await page.removeLocatorHandler(layer.locator('.dprompt'));
+  // Keep the “Later” handler on: a reminder prompt can still appear in later flows,
+  // and on a slow WebKit CI run it has sat on top of the next tap (v161 gender).
 }
 
 /**
@@ -3028,7 +3029,14 @@ async function v143r3(page, { go, settle, shot, layer, rows, clearCel }, name, c
 }
 
 async function closeAllSheets(page, layer, settle) {
-  for (let i = 0; i < 5 && (await layer.locator('.panel').count()); i++) {
+  for (let i = 0; i < 8; i++) {
+    const later = layer.locator('.dprompt [data-close]').first();
+    if (await later.count()) {
+      await later.evaluate((b) => /** @type {HTMLElement} */ (b).click()).catch(() => {});
+      await settle();
+      continue;
+    }
+    if (!(await layer.locator('.panel').count())) break;
     await page.keyboard.press('Escape');
     await settle();
   }
