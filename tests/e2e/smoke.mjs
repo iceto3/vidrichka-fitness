@@ -3347,6 +3347,7 @@ async function v141(page, { go, settle, shot, layer, clearCel }, name, ctx) {
       `${what}: no sideways scroll`,
     );
   const heads = [
+    'Съвети от треньора',
     'Изходна позиция',
     'Изпълнение',
     'Дишане',

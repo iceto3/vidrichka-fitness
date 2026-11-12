@@ -208,6 +208,55 @@ test('1.6.3 free workout: a logged set is saved to history; optional save as a p
   assert.equal(savePlanFrom({ items: [] }, 'X'), null);
 });
 
+test('1.6.3: every exercise has coach cues (bg + en, gender-neutral); illustrated cards show them too', async () => {
+  const { techniqueSections } = await import('../../src/features/library/figure.js');
+  await setLang('bg');
+  for (const e of EXERCISES) {
+    const c = CUES[e.id];
+    assert.ok(c && c.bg.length >= 2 && c.bg.length === c.en.length, `${e.id} cues`);
+    for (const x of c.bg) {
+      assert.doesNotMatch(x, /[A-Za-z]/, `${e.id}: English in bg`);
+      assert.doesNotMatch(x, /изправена|застанала|легнала|седнала|адаптир/i, `${e.id}: gendered / „adapted“`);
+    }
+    const html = String(techniqueSections(e.id));
+    assert.ok(html.includes('Съвети от треньора'), `${e.id} shows cues`);
+    assert.ok(html.includes(c.bg[0].slice(0, 12)), `${e.id} bg cue text`);
+  }
+  // the illustrated lying leg curl (the tester's missing-cues report) plus a video exercise
+  assert.ok(!Object.hasOwn(TECHNIQUE, 'leg_extension') && Object.hasOwn(TECHNIQUE, 'lying_leg_curl'));
+  assert.match(String(techniqueSections('lying_leg_curl')), /Съвети от треньора/);
+  assert.match(String(techniqueSections('lying_leg_curl')), /Валякът е малко над петите/);
+  assert.ok(CUES.back_squat.video);
+  await setLang('en');
+  assert.match(String(techniqueSections('lying_leg_curl')), /Coach/);
+});
+
+test('1.6.3 picker: leftover search is cleared; an exercise can be added via the Уред filter alone', async () => {
+  await setLang('bg');
+  const L = await import('../../src/features/library/views/list.js');
+  const picker = readFileSync('src/features/library/views/picker.js', 'utf8');
+  assert.match(picker, /resetFilters\(\)/);
+  L.filterActions.exq(/** @type {any} */ ({ value: 'предно бедро' }));
+  L.filterActions.place(/** @type {any} */ ({ dataset: { v: 'home' } }));
+  assert.ok(L.filtering());
+  assert.ok(!L.filtered().some((e) => e.id === 'lying_leg_curl'), 'leftover search would hide it');
+  L.resetFilters(); // what openPicker does
+  assert.equal(L.filtering(), false);
+  assert.equal(L.filtered().length, 66);
+  L.filterActions.equip(/** @type {any} */ ({ dataset: { v: 'machine' } }));
+  const ids = L.filtered().map((e) => e.id);
+  assert.ok(ids.includes('lying_leg_curl'));
+  assert.ok(ids.includes('leg_extension'));
+  assert.ok(!ids.includes('kb_swing'));
+  const S = await import('../../src/features/workouts/session.js');
+  const { startFreeWorkout, activeWorkout } = await import('../../src/features/workouts/api.js');
+  S.discard();
+  startFreeWorkout();
+  S.addExercise(ids.find((id) => id === 'lying_leg_curl'));
+  assert.equal(activeWorkout().items[0].exId, 'lying_leg_curl');
+  S.discard();
+  L.resetFilters();
+});
 test("1.6.3: version, What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
   const { NOTES } = await import('../../src/features/whatsnew/notes.js');
   assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.6.3');

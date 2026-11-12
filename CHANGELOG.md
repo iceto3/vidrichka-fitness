@@ -10,7 +10,12 @@ All notable changes to this project are documented here. The format follows
 
 - **Free workout („Започни празна тренировка“)** in Тренировки (Ralitsa feedback #8): opens the usual logger with no exercises and an „Добави упражнение“ button that opens the full library picker (search + filters). Exercises can be added or removed while the workout is in progress; sets, reps and kg are logged as usual. Finishing saves it to history like any plan workout (calendar, XP, streaks). After finishing, optional „Запази като план“ (exercises / sets / reps / kg as logged; no days until she assigns them). An empty workout (no done set) is never saved. The running workout is kept in `kv active`, so it survives a reload like a plan workout. Library and picker search by Bulgarian or English name (`library.search`).
 - **Four gym machines** (Ralitsa feedback #9) with equipment `machine`, kg (Profile step), coach cues, technique text and muscles; YouTube technique search (no illustrations): `leg_extension` „Разгъване за предно бедро“, `seated_ab_crunch` „Коремни преси на уред“, `hip_abductor` „Абдуктор на уред“, `hip_adductor` „Аддуктор на уред“. The „Уред“ filter lists them with the existing machines (including `lying_leg_curl`). Single-leg hip thrust was already in 1.6.0. New muscle tag `adductors` („Вътрешно бедро“) for the adductor machine.
+- **Coach cues („Съвети от треньора“)** for the illustrated library exercises that had a verified technique card but no short cues – including `lying_leg_curl` „Сгъване за задно бедро“, plus hip thrust, Romanian deadlift, leg press, cable kickback, lat pulldown, seated cable row, dumbbell bench press, biceps curl, triceps pushdown, push-up, glute bridge, bodyweight squat, plank and dead bug; and text cues (the coach's video is kept) for back squat, reverse lunge, lateral raise, dumbbell shoulder press and Bulgarian split squat. Shown above the detailed technique. Every exercise in the library now has cues in bg + en.
 - What's new entry for 1.6.3 (bg + en). Unit tests `tests/unit/v163.test.js`; e2e flow `tests/e2e/v163.mjs` (also `--flow v163`).
+
+### Fixed
+
+- **Free-workout picker filters:** leftover search or chips from the Exercises tab no longer hide rows when adding an exercise. Opening „Добави упражнение“ resets the filters, so she can pick with „Уред“ (or another chip) alone, without typing in the search.
 
 ## [1.6.2] – 2026-11-11
 

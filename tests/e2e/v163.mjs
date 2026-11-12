@@ -45,21 +45,31 @@ export async function v163(page, h) {
   assert.match(await page.locator('.freeempty').innerText(), /Още няма упражнения/);
   assert.equal((await page.locator('.addex').innerText()).trim().includes('Добави упражнение'), true);
 
-  // Add a machine exercise from the picker (search + Уред filter)
+  // Add a machine exercise from the picker with the Уред filter only (no search).
+  // Opening the picker must reset leftover library filters (the visit above left „Уред“ on).
   await page.locator('[data-act="addEx"]').click();
   await layer.locator('.exsearch input').waitFor();
+  assert.equal(await layer.locator('.exsearch input').inputValue(), '');
+  assert.equal(await layer.locator('.exrow[data-act="pick"]').count(), 66, 'picker starts unfiltered');
   await layer.locator('.fchip[data-act="equip"][data-v="machine"]').click();
   await settle();
-  await layer.locator('.exsearch input').fill('предно бедро');
-  await layer.locator('.exsearch input').dispatchEvent('input');
-  await settle();
-  const pick = layer.locator('.exrow[data-act="pick"]');
-  assert.equal(await pick.count(), 1);
-  assert.match(await pick.locator('.exname').innerText(), /Разгъване за предно бедро/);
-  await pick.click();
+  assert.equal(await layer.locator('.exsearch input').inputValue(), '', 'still no search text');
+  const pickNames = async () => (await layer.locator('.exrow .exname').allInnerTexts()).map((x) => x.trim());
+  for (const n of [
+    'Сгъване за задно бедро',
+    'Разгъване за предно бедро',
+    'Коремни преси на уред',
+    'Абдуктор на уред',
+    'Аддуктор на уред',
+  ])
+    assert.ok((await pickNames()).includes(n), n);
+  assert.ok(!(await pickNames()).includes('Суинг с пудовка'));
+  const curl = layer.locator('.exrow[data-act="pick"]', { hasText: 'Сгъване за задно бедро' });
+  await curl.scrollIntoViewIfNeeded();
+  await curl.click();
   await settle();
   await page.locator('section.ex').waitFor();
-  assert.match(await page.locator('section.ex h2').innerText(), /Разгъване за предно бедро/);
+  assert.match(await page.locator('section.ex h2').innerText(), /Сгъване за задно бедро/);
   assert.equal(await page.locator('section.ex .set').count(), 3);
 
   // Log the first set and finish (remaining sets are dropped)
@@ -95,7 +105,7 @@ export async function v163(page, h) {
   assert.ok(saved, 'plan saved');
   assert.equal(saved.builtin, false);
   assert.deepEqual(saved.days, []);
-  assert.equal(saved.items?.[0]?.exId, 'leg_extension');
+  assert.equal(saved.items?.[0]?.exId, 'lying_leg_curl');
   assert.equal(saved.items?.[0]?.sets, 1);
 
   await go('workouts');

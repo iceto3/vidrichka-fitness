@@ -152,6 +152,7 @@ test('technique sheet / page: sections in order, mistakes as mistake → fix, so
   assert.match(before, /class="tsvg wait"/);
   const heads = [...before.matchAll(/<h3[^>]*>([^<]+)<\/h3>/g)].map((m) => m[1]);
   assert.deepEqual(heads, [
+    'Съвети от треньора',
     'Изходна позиция',
     'Изпълнение',
     'Дишане',
