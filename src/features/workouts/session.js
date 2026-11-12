@@ -9,10 +9,19 @@ import { trash } from '../../core/trash.js';
 import { fmtDate } from '../../core/i18n.js';
 import { exById } from '../library/api.js';
 import { bodyWeight } from '../body/api.js';
-import { award, isCompleteWorkout, raiseAward, setAward, xpForWorkout } from '../motivation/api.js';
+import { award, isCompleteWorkout, minSetsForWorkout, raiseAward, setAward, xpForWorkout } from '../motivation/api.js';
 import { dayKey } from '../../core/dates.js';
-import { activeWorkout, planName, sessions } from './api.js';
-import { canResume, clampKg, detectPRs, estimateKcal, recomputeAfterDelete, sessionMet, summarize } from './logic.js';
+import { FREE_PLAN, activeWorkout, planName, sessions } from './api.js';
+import {
+  canResume,
+  clampKg,
+  detectPRs,
+  itemFor,
+  estimateKcal,
+  recomputeAfterDelete,
+  sessionMet,
+  summarize,
+} from './logic.js';
 
 /** @typedef {import('./logic.js').WItem} WItem */
 
@@ -81,6 +90,23 @@ export const removeSet = (i) =>
     if (k >= 0 && sets.length > 1) sets.splice(k, 1);
   });
 
+/** 1.6.3: add an exercise to the running workout (free workout). @param {string} exId */
+export const addExercise = (exId) =>
+  exById(exId)
+    ? edit((w) => {
+        if (w.items.some((/** @type {WItem} */ it) => it.exId === exId)) return;
+        w.items.push(itemFor(exId, exById(exId), sessions()));
+      })
+    : null;
+
+/** 1.6.3: remove exercise i from the running workout (its sets go with it). @param {number} i */
+export const removeExercise = (i) =>
+  edit((w) => {
+    if (i < 0 || i >= w.items.length) return;
+    w.items.splice(i, 1);
+    if (!w.items.some((/** @type {WItem} */ it) => it.sets.some((s) => !s.done))) w.rest = null;
+  });
+
 /** Adjust the running rest timer. @param {number} sec Seconds to add. */
 export const addRest = (sec) => edit((w) => w.rest && ((w.rest.endAt += sec * 1000), (w.rest.total += sec)));
 
@@ -102,8 +128,22 @@ export function finish() {
   const r = w.resumed ?? null;
   const endedAt = Date.now(),
     durationSec = (r?.durationSec ?? 0) + Math.round((endedAt - w.startedAt) / 1000);
-  const items = w.items.filter((/** @type {WItem} */ it) => it.sets.some((s) => s.done));
-  const totals = summarize(w.items, exById);
+  // 1.6.3 free workout: what she did is the workout – unfinished sets / untouched exercises
+  // are dropped, and it counts as complete from 3 done sets (the usual minimum).
+  const free = w.planId === FREE_PLAN;
+  const all = free
+    ? w.items
+        .map((/** @type {WItem} */ it) => ({ ...it, sets: it.sets.filter((s) => s.done) }))
+        .filter((/** @type {WItem} */ it) => it.sets.length)
+    : w.items;
+  const items = all.filter((/** @type {WItem} */ it) => it.sets.some((s) => s.done));
+  // Never save an empty workout (a free one with no done set).
+  if (free && !items.length) {
+    setKv('active', null);
+    return null;
+  }
+  const totals = summarize(all, exById);
+  if (free) totals.setsPlanned = Math.max(totals.setsDone, minSetsForWorkout(3));
   const prs = detectPRs(
     items,
     sessions().filter((s) => s.id !== w.id),
@@ -122,7 +162,7 @@ export function finish() {
     startedAt: r?.startedAt ?? w.startedAt,
     endedAt,
     durationSec,
-    items: w.items,
+    items: all,
     ...totals,
     prs,
     kcal,

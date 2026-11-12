@@ -14,7 +14,8 @@ import { confetti } from '../../../ui/confetti.js';
 import { shareCard, shareFile } from '../../../ui/share.js';
 import { exName } from '../../library/api.js';
 import { otter, otterSvg } from '../../mascot/api.js';
-import { planName, resumeButton } from '../api.js';
+import { isFree, planName, resumeButton, savePlanFrom } from '../api.js';
+import { closeSheet, openSheet, toast } from '../../../ui/sheet.js';
 
 /** @param {any} s */
 const statTiles = (s) => [
@@ -25,6 +26,45 @@ const statTiles = (s) => [
   ['flame', t('summary.kcal'), html`~${fmtNum(s.kcal)} <small>${t('unit.kcal')}</small>`],
   ['star', t('summary.xp'), html`<span class="gold">+${s.xp}</span>`],
 ];
+
+/**
+ * 1.6.3 after a free workout: optional „Запази като план“ (once; then a link to the plan).
+ * @param {any} s
+ */
+const savePlanBlock = (s) => {
+  const p = s.savedPlanId ? get('plans', s.savedPlanId) : null;
+  return p
+    ? html`<button class="btn sec w100 mt12 planopen" data-go="plan/${p.id}">${ic('check', 18, 3)}${t('summary.planSaved', { plan: planName(p) })}</button>`
+    : html`<button class="btn sec w100 mt12 saveplan" data-act="savePlan">${ic('list', 18, 2.4)}${t('summary.savePlan')}</button><p class="muted xs b mt6 center">${t('summary.savePlanSub')}</p>`;
+};
+
+/** „Запази като план“ sheet: the plan's name, then Save. @param {string} id */
+function openSavePlan(id) {
+  const s = get('sessions', id);
+  if (!s) return;
+  let name = t('summary.freePlanName', { date: fmtDate(s.endedAt, { day: 'numeric', month: 'numeric' }) });
+  openSheet({
+    render: () =>
+      html`<h2 class="h2">${t('summary.savePlan')}</h2><p class="muted small b mt4">${t('summary.savePlanHint')}</p>
+<label class="field mt12"><span>${t('editor.name')}</span><input class="input planname" maxlength="60" value="${name}" data-input="pname" data-change="pname"></label>
+<button class="btn w100 mt16 plansave" data-act="psave"${name.trim() ? '' : ' disabled'}>${ic('check', 18, 3)}${t('common.save')}</button>`,
+    actions: {
+      pname: (el, ev) => {
+        const had = !!name.trim();
+        name = /** @type {HTMLInputElement} */ (el).value;
+        if (ev?.type === 'input' && had === !!name.trim()) return false;
+      },
+      psave: () => {
+        const p = savePlanFrom(get('sessions', id), name);
+        if (!p) return false;
+        closeSheet();
+        toast(t('summary.planSavedToast', { plan: planName(p) }));
+        emit('ui:refresh');
+        return false;
+      },
+    },
+  });
+}
 
 /** @param {{id: string}} p @returns {import('../../../core/registry.js').View} */
 export default ({ id }) => ({
@@ -48,11 +88,13 @@ ${s.prs.map(
 <div class="small b prsub">${p.w ? t('summary.prevBest', { prev: fmtKg(p.prevW), diff: `+${fmtKg(Math.round((p.w - p.prevW) * 100) / 100 || 0)}` }) : t('summary.prevBest', { prev: p.prevR, diff: `+${p.r - p.prevR}` })}</div></div></div>`,
 )}
 ${s.partial ? html`<p class="muted xs b mt12 center partialnote">${t('summary.partialNote')}</p>${resumeButton(s, 'w100 mt10')}` : ''}
+${isFree(s) && s.items?.length ? savePlanBlock(s) : ''}
 <p class="muted xs mt8 center">${t('summary.kcalNote')}</p>
 <div class="row gap10 mt20"><button class="btn sec f1" data-act="share">${ic('share', 19, 2.2)}${t('common.share')}</button><button class="btn f14" data-go="home">${t('workout.done')}</button></div>
 </div>`;
   },
   actions: {
+    savePlan: () => (openSavePlan(id), false), // 1.6.3
     share: async () => {
       const s = get('sessions', id);
       const blob = await shareCard({

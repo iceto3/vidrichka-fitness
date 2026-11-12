@@ -10,7 +10,7 @@ import { html } from '../../ui/dom.js';
 import { ic } from '../../ui/icons.js';
 import { t } from '../../core/i18n.js';
 import { PLANS } from '../../data/workouts.js';
-import { canResume, estimateMinutes, newItems } from './logic.js';
+import { canResume, estimateMinutes, newItems, planFromItems } from './logic.js';
 
 export { estimateMinutes };
 
@@ -87,6 +87,60 @@ export function startWorkout(planId) {
   };
   setKv('active', w);
   return w;
+}
+
+/** 1.6.3: id of a free workout („Свободна тренировка“) – no plan behind it. */
+export const FREE_PLAN = 'free';
+
+/** 1.6.3: is this workout / session a free one? @param {any} w */
+export const isFree = (w) => w?.planId === FREE_PLAN;
+
+/**
+ * 1.6.3 „Започни празна тренировка“ (Ralitsa #8): the normal workout logger with no
+ * exercises; she adds them from the whole library while training (session.addExercise).
+ * A running workout is resumed instead (as for a plan).
+ */
+export function startFreeWorkout() {
+  if (activeWorkout()) return activeWorkout();
+  const w = {
+    id: uid('s'),
+    planId: FREE_PLAN,
+    name: { bg: 'Свободна тренировка', en: 'Free workout' },
+    startedAt: Date.now(),
+    items: [],
+    rest: null,
+  };
+  setKv('active', w);
+  return w;
+}
+
+/**
+ * 1.6.3 „Запази като план“ after a free workout: a new plan (no days, at the end of the list)
+ * from the exercises done – sets / reps / kg / rest as logged. Once per session (the plan id
+ * is kept on the session). @param {any} session @param {string} name
+ * @returns {Plan|null} null if nothing was done or the name is empty
+ */
+export function savePlanFrom(session, name) {
+  const n = String(name ?? '')
+    .trim()
+    .slice(0, 60);
+  if (!session || !n) return null;
+  if (session.savedPlanId && get('plans', session.savedPlanId)) return get('plans', session.savedPlanId);
+  const items = planFromItems(session.items ?? []);
+  if (!items.length) return null;
+  const plan = {
+    id: uid('plan'),
+    name: n,
+    sub: '',
+    place: /** @type {'gym'} */ ('gym'),
+    days: [],
+    builtin: false,
+    items,
+    order: plans().length,
+  };
+  put('plans', plan);
+  put('sessions', { ...session, savedPlanId: plan.id });
+  return plan;
 }
 
 /** Minutes estimate for a plan. @param {Plan} p */

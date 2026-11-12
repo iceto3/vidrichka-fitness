@@ -10,7 +10,7 @@ import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
 import { confirmDialog } from '../../../ui/sheet.js';
 import { EXERCISES } from '../../library/api.js';
-import { activeWorkout, planMinutes, planName, plans, sessions, startWorkout } from '../api.js';
+import { activeWorkout, planMinutes, planName, plans, sessions, startFreeWorkout, startWorkout } from '../api.js';
 import { L } from '../../../core/i18n.js';
 
 /** @returns {import('../../../core/registry.js').View} */
@@ -22,6 +22,7 @@ export default () => ({
     return html`<div class="content">
 <div class="row between"><h1 class="h1">${t('workouts.title')}</h1><button class="iconbtn" data-go="plan/new" aria-label="${t('workouts.newPlan')}">${ic('plus', 22, 2.4)}</button></div>
 ${a ? html`<button class="card resume mt12 row gap12" data-go="workout"><span class="live"><i></i></span><span class="f1 b">${t('home.resume', { plan: planName(a) })}</span>${ic('right', 18, 2.4)}</button>` : ''}
+<button class="card row gap12 mt12 freecard w100" data-act="startFree"><span class="sic acc">${ic('plus', 20, 2.4)}</span><span class="f1 left"><span class="b block">${t('workouts.free')}</span><span class="muted small b block">${t('workouts.freeSub')}</span></span>${ic('play', 18, 2.4, 'var(--accent-d)')}</button>
 <h2 class="sect mt16">${t('workouts.yourPlans')}</h2>
 ${plans().map(
   (p) => html`<article class="card plan mt10${p.days.includes(today) ? ' today' : ''}">
@@ -46,6 +47,23 @@ ${
 </div>`;
   },
   actions: {
+    // 1.6.3 „Започни празна тренировка“ (a running workout is offered first, as for a plan)
+    startFree: async () => {
+      const a = activeWorkout();
+      if (
+        a &&
+        a.planId !== 'free' &&
+        !(await confirmDialog({
+          title: t('workouts.inProgress'),
+          body: t('workouts.inProgressBody', { plan: planName(a) }),
+          ok: t('workouts.resume'),
+        }))
+      )
+        return;
+      startFreeWorkout();
+      emit('nav', { path: 'workout' });
+      return false;
+    },
     start: async (el) => {
       const a = activeWorkout();
       if (
