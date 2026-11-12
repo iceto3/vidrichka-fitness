@@ -27,6 +27,7 @@ import {
 } from '../../workouts/api.js';
 import { backupDue, canInstall, installApp } from '../../profile/api.js';
 import { day, goodnight, isEvening, morningPending, proteinBar, tuckedIn } from '../../daily/api.js';
+import { openWakePicker } from '../../daily/views/wakepick.js';
 import { mealAte, mealSkip, withLate } from '../../daily/views/mealsheet.js';
 import { openVoice, voiceReady } from '../../voice/api.js';
 import { dayRows } from '../../food/api.js';
@@ -77,7 +78,7 @@ function dailyCards() {
     html`<button class="card mt12 daycard ${cls}" ${raw(attrs)}><span class="sq">${ic(icon, 22, 2.3)}</span><span class="f1"><span class="b block">${title}</span><span class="xs b op8">${sub}</span></span>${ic('right', 18, 2.4)}</button>`;
   const out = [];
   if (cfg.morning && morningPending(now))
-    out.push(card('sunrise', 'data-go="morning"', 'sun', t('home.goodMorning'), t('home.goodMorningSub')));
+    out.push(card('sunrise', 'data-act="wakePick"', 'sun', t('home.woke'), t('home.wokeSub')));
   const pb = proteinBarCard();
   if (pb) out.push(pb);
   if (cfg.checkinAm.on && !rec.mood && hm >= cfg.checkinAm.time && hm < '18:00')
@@ -293,6 +294,7 @@ ${
         emit('nav', { path: `recap/${el.dataset.m}` });
         return false;
       },
+      wakePick: () => (openWakePicker(), false),
       tuck: () => {
         goodnight();
         emit('nav', { path: 'goodnight' });
