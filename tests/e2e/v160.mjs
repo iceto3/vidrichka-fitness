@@ -25,7 +25,7 @@ export async function v160(page, h) {
   await go('workouts');
   await settle();
   await closeAll();
-  assert.match(await page.locator('.libcard').innerText(), /62 упражнения/);
+  assert.match(await page.locator('.libcard').innerText(), /66 упражнения/);
   await go('library');
   await settle();
   await closeAll();
@@ -36,7 +36,7 @@ export async function v160(page, h) {
   await chip('kettlebell').click();
   await settle();
   // 1.6.2 (tester): the header count follows the filter
-  assert.equal((await page.locator('.libcount').innerText()).trim(), '40 от 62 упражнения');
+  assert.equal((await page.locator('.libcount').innerText()).trim(), '40 от 66 упражнения');
   const names = async () => (await page.locator('.exrow .exname').allInnerTexts()).map((x) => x.trim());
   // 1.6.1: the whole kettlebell list (40, with the library exercises that can use one)
   const kb = await names();
@@ -56,7 +56,7 @@ export async function v160(page, h) {
   assert.equal((await names()).length, 3);
   await chip('all').click();
   await settle();
-  assert.equal(await page.locator('.exrow').count(), 62);
+  assert.equal(await page.locator('.exrow').count(), 66);
 
   await go('exercise/kb_swing');
   await settle();

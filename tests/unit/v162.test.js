@@ -13,19 +13,19 @@ test('1.6.2 fix 1: the Exercises header count follows the active filters', async
   await setLang('bg');
   const L = await import('../../src/features/library/views/list.js');
   L.resetFilters();
-  assert.equal(L.countLabel(), '62 упражнения');
+  assert.equal(L.countLabel(), '66 упражнения');
   L.filterActions.equip(/** @type {any} */ ({ dataset: { v: 'kettlebell' } }));
   assert.equal(L.filtered().length, 40);
-  assert.equal(L.countLabel(), '40 от 62 упражнения');
+  assert.equal(L.countLabel(), '40 от 66 упражнения');
   L.filterActions.place(/** @type {any} */ ({ dataset: { v: 'gym' } }));
-  assert.equal(L.countLabel(), `${L.filtered().length} от 62 упражнения`);
+  assert.equal(L.countLabel(), `${L.filtered().length} от 66 упражнения`);
   L.filterActions.group(/** @type {any} */ ({ dataset: { v: 'glutes' } }));
-  assert.equal(L.countLabel(), `${L.filtered().length} от 62 упражнения`);
+  assert.equal(L.countLabel(), `${L.filtered().length} от 66 упражнения`);
   L.resetFilters();
-  assert.equal(L.countLabel(), '62 упражнения');
+  assert.equal(L.countLabel(), '66 упражнения');
   await setLang('en');
   L.filterActions.equip(/** @type {any} */ ({ dataset: { v: 'band' } }));
-  assert.match(L.countLabel(), /^\d+ of 62 exercises$/);
+  assert.match(L.countLabel(), /^\d+ of 66 exercises$/);
   L.resetFilters();
   const src = readFileSync('src/features/library/views/list.js', 'utf8');
   assert.match(src, /countLabel\(\)/);
@@ -178,22 +178,17 @@ test('1.6.2 fix 4: Bulgarian split squat – log 0 kg then 4 kg (± by 1 kg, or 
   assert.match(readFileSync('src/features/workouts/views/editor.js', 'utf8'), /kgStep\(exById\(it\.exId\), st\)/);
 });
 
-test("1.6.2: version, What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
+test("1.6.2: What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
   const en = (await import('../../src/data/i18n/en.js')).default;
   const { NOTES } = await import('../../src/features/whatsnew/notes.js');
-  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.6.2');
-  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-  assert.equal(lock.version, '1.6.2');
-  assert.equal(lock.packages[''].version, '1.6.2');
-  const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.6.2');
+  // 1.6.3: the version moved on (asserted in v163.test.js); the 1.6.2 entry stays
   assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.6\.2\] – 2026-11-11/);
-  assert.equal(NOTES[0].v, '1.6.2');
+  const n162 = /** @type {any} */ (NOTES.find((n) => n.v === '1.6.2'));
   assert.deepEqual(
-    NOTES[0].items.map(([, k]) => k),
+    n162.items.map((/** @type {any} */ [, k]) => k),
     ['whatsNew.count162', 'whatsNew.streak162', 'whatsNew.measure162', 'whatsNew.kg162'],
   );
-  for (const k of [...NOTES[0].items.map(([, k]) => k), 'library.countOf', 'supp.streak0']) {
+  for (const k of [...n162.items.map((/** @type {any} */ [, k]) => k), 'library.countOf', 'supp.streak0']) {
     assert.ok(/** @type {any} */ (bg)[k] && /** @type {any} */ (en)[k], k);
     assert.doesNotMatch(
       JSON.stringify(/** @type {any} */ (bg)[k]).replace(/\{\w+\}|"[fm]":/g, ''),

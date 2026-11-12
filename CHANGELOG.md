@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.6.3] – 2026-11-12 (beta)
+
+### Added
+
+- **Free workout („Започни празна тренировка“)** in Тренировки (Ralitsa feedback #8): opens the usual logger with no exercises and an „Добави упражнение“ button that opens the full library picker (search + filters). Exercises can be added or removed while the workout is in progress; sets, reps and kg are logged as usual. Finishing saves it to history like any plan workout (calendar, XP, streaks). After finishing, optional „Запази като план“ (exercises / sets / reps / kg as logged; no days until she assigns them). An empty workout (no done set) is never saved. The running workout is kept in `kv active`, so it survives a reload like a plan workout. Library and picker search by Bulgarian or English name (`library.search`).
+- **Four gym machines** (Ralitsa feedback #9) with equipment `machine`, kg (Profile step), coach cues, technique text and muscles; YouTube technique search (no illustrations): `leg_extension` „Разгъване за предно бедро“, `seated_ab_crunch` „Коремни преси на уред“, `hip_abductor` „Абдуктор на уред“, `hip_adductor` „Аддуктор на уред“. The „Уред“ filter lists them with the existing machines (including `lying_leg_curl`). Single-leg hip thrust was already in 1.6.0. New muscle tag `adductors` („Вътрешно бедро“) for the adductor machine.
+- What's new entry for 1.6.3 (bg + en). Unit tests `tests/unit/v163.test.js`; e2e flow `tests/e2e/v163.mjs` (also `--flow v163`).
+
 ## [1.6.2] – 2026-11-11
 
 ### Fixed (beta tester round on 1.6.1-beta)

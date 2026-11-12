@@ -57,8 +57,8 @@ const REUSED = [
 
 test('1.6.1 kettlebell: 26 new exercises + 13 library ones; the filter lists all 40 (with the 1.6.0 sit-up)', () => {
   const muscles = new Set(Object.values(MUSCLE_GROUPS).flat());
-  assert.equal(EXERCISES.length, 62);
-  assert.equal(new Set(EXERCISES.map((e) => e.id)).size, 62, 'unique ids');
+  assert.equal(EXERCISES.length, 66);
+  assert.equal(new Set(EXERCISES.map((e) => e.id)).size, 66, 'unique ids');
   for (const id of NEW_KB) {
     const e = byId(id);
     assert.ok(e, id);

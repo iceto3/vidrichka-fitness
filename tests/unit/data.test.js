@@ -69,8 +69,8 @@ test('every literal t("key") used in the source exists in en', () => {
   assert.ok(used.size > 100);
 });
 
-test('exercise library: 62 exercises (1.6.0: + 16, 1.6.1: + 26 kettlebell) with bilingual names, muscles and rest (technique: v141 test)', () => {
-  assert.equal(EXERCISES.length, 62);
+test('exercise library: 66 exercises (1.6.0: + 16, 1.6.1: + 26 kettlebell, 1.6.3: + 4 machines) with bilingual names, muscles and rest (technique: v141 test)', () => {
+  assert.equal(EXERCISES.length, 66);
   for (const e of EXERCISES) {
     assert.ok(e.name.en && e.name.bg, e.id);
     assert.ok(e.primary.length > 0, `${e.id} muscles`);
