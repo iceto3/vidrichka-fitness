@@ -30,6 +30,8 @@ import { v151 } from './v151.mjs';
 import { v160 } from './v160.mjs';
 import { v161 } from './v161.mjs';
 import { v163 } from './v163.mjs';
+import { v164 } from './v164.mjs';
+import { confirmWheel, setDate, setTime, timeVal } from './wheel.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
@@ -206,8 +208,14 @@ async function run(name, browser, P) {
     clickPast: (/** @type {any} */ target, /** @type {any} */ opened) =>
       clickPastPrompts(page, layer, settle, target, opened),
   };
+  if (FLOW === 'v164') {
+    await v164(page, h);
+    assert.deepEqual(errors, [], 'no page errors');
+    return void (await ctx.close());
+  }
   if (FLOW === 'v163') {
     await v163(page, h);
+    await v164(page, h);
     assert.deepEqual(errors, [], 'no page errors');
     return void (await ctx.close());
   }
@@ -409,6 +417,7 @@ async function run(name, browser, P) {
   await v160(page, h);
   await v161(page, h);
   await v163(page, h);
+  await v164(page, h);
 
   assert.deepEqual(errors, [], 'no page errors');
   await ctx.close();
@@ -457,6 +466,7 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer, dayFi
   await layer.locator('.dprompt').waitFor();
   assert.match(await layer.locator('.dprompt').innerText(), /morning/i);
   await layer.locator('.dprompt [data-act="go"]').click();
+  await confirmWheel(page, layer);
   await page.locator('.pclock').waitFor();
   assert.match(page.url(), /#\/morning/);
   assert.equal(await page.locator('#nav').isVisible(), false, 'morning page is full-screen');
@@ -582,6 +592,7 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer, dayFi
     await at(d, wake);
     await closePrompts();
     await go('morning');
+    await confirmWheel(page, layer);
     await page.locator('.yes').click();
     await page.waitForURL(/#\/food\/add\/breakfast\?protein$/);
     await clearCel();
@@ -618,6 +629,7 @@ async function daily(page, { go, settle, shot, clearCel, tag, same, layer, dayFi
   await at(24, '07:05');
   await closePrompts();
   await go('morning');
+  await confirmWheel(page, layer);
   await page.locator('.pclock').waitFor();
   assert.match(await page.locator('body').innerText(), /\d+[.,]?\d*\s*h/, 'slept hours shown');
   await page.waitForTimeout(1500);
@@ -850,11 +862,11 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   assert.equal(await layer.locator('.pslot.empty').count(), 4, 'all 4 pose slots offered');
   assert.equal(await layer.locator('.pslot.empty input[capture]').count(), 4, 'camera per slot');
   assert.equal(await layer.locator('.pslot.empty input:not([capture])').count(), 4, 'gallery per slot');
-  assert.equal(await layer.locator('#psdate').inputValue(), today, 'defaults to the upload day');
+  assert.equal(await timeVal(layer.locator('#psdate')), today, 'defaults to the upload day');
 
   // EXIF capture date becomes the session date
   await pick('front', 'pose-front.jpg');
-  const exifSeen = (await layer.locator('#psdate').inputValue()) === '2026-10-18';
+  const exifSeen = (await timeVal(layer.locator('#psdate'))) === '2026-10-18';
   assert.ok(exifSeen, `EXIF DateTimeOriginal read in ${name}`);
   assert.match(await layer.innerText(), /Date from the photo/);
   console.log(`  ✔ EXIF DateTimeOriginal read from the picked JPEG (${name === 'android' ? 'Chromium' : 'WebKit'})`);
@@ -866,7 +878,7 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   await settle();
   assert.equal(await slot('back').locator('img').count(), 1);
   assert.equal(await slot('right').locator('img').count(), 0, 'several go to the empty slots in order');
-  assert.equal(await layer.locator('#psdate').inputValue(), '2026-10-18', 'earliest capture date');
+  assert.equal(await timeVal(layer.locator('#psdate')), '2026-10-18', 'earliest capture date');
   // the right-pose picture landed in "left": move it
   await slot('left').locator('[data-act="mv"]').click();
   await slot('left').locator('[data-act="mvTo"][data-v="right"]').click();
@@ -920,7 +932,7 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   await go('progress/body');
   await page.locator('[data-act="psNew"]').click();
   await pick('front', 'pose-front-sep.jpg');
-  assert.equal(await layer.locator('#psdate').inputValue(), '2026-09-01');
+  assert.equal(await timeVal(layer.locator('#psdate')), '2026-09-01');
   await layer.locator('.sticky-b[data-close]').click();
   await settle();
   await clearCel();
@@ -949,8 +961,7 @@ async function photos121(page, { go, settle, shot, clearCel, layer, rows }, name
   // Edit the September session's date (taken 19 Oct, say) → timeline + before/after re-sort
   await page.locator('[data-act="psTimeline"]').click();
   await layer.locator('.ptimeline .psession').first().click();
-  await layer.locator('#psdate').fill(today);
-  await layer.locator('#psdate').dispatchEvent('change');
+  await setDate(page, layer.locator('#psdate'), today, layer);
   await settle();
   assert.match(await layer.innerText(), /Date set by you/);
   await page.keyboard.press('Escape'); // session
@@ -1636,7 +1647,9 @@ async function v132(page, { go, settle, clearCel, layer }) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.6\.3/);
+  assert.match(txt, /Какво ново в 1\.6\.4/);
+  assert.match(txt, /Събудих се/, 'the 1.6.4 wake item');
+  assert.match(txt, /колелца/, 'the 1.6.4 wheel item');
   assert.match(txt, /40 от 62/, 'the 1.6.2 items');
   assert.match(txt, /Започни празна тренировка/, 'the 1.6.3 items');
   assert.match(txt, /Хранителни добавки/, 'the 1.6.1 items');
@@ -1656,7 +1669,7 @@ async function v132(page, { go, settle, clearCel, layer }) {
   assert.match(txt, /Обратна връзка/, 'the 1.3.4 feedback item');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    57, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4; 1.5.1: +4; 1.6.0: +3; 1.6.1: +3; 1.6.2: +4; 1.6.3: +2
+    59, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4; 1.5.1: +4; 1.6.0: +3; 1.6.1: +3; 1.6.2: +4; 1.6.3: +2; 1.6.4: +2
     'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4, 1.3.3 and 1.3.2 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -1962,7 +1975,9 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   await page.locator('#nav .t').first().waitFor();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.6\.3/);
+  assert.match(txt, /Какво ново в 1\.6\.4/);
+  assert.match(txt, /Събудих се/, 'the 1.6.4 wake item');
+  assert.match(txt, /колелца/, 'the 1.6.4 wheel item');
   assert.match(txt, /40 от 62/, 'the 1.6.2 items');
   assert.match(txt, /Започни празна тренировка/, 'the 1.6.3 items');
   assert.match(txt, /Хранителни добавки/, 'the 1.6.1 items');
@@ -1979,7 +1994,7 @@ async function v133(page, { go, settle, shot, clearCel, layer, rows }, name) {
   assert.match(txt, /Обичайният ти обяд/);
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    54, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4; 1.5.1: +4; 1.6.0: +3; 1.6.1: +3; 1.6.2: +4; 1.6.3: +2
+    56, // 1.4.3 part A: +2 items, part B: +3; 1.4.4: +6; 1.5.0: +4; 1.5.1: +4; 1.6.0: +3; 1.6.1: +3; 1.6.2: +4; 1.6.3: +2; 1.6.4: +2
     'the 1.4.4, 1.4.3, 1.4.2, 1.4.1, 1.4.0, 1.3.4 and 1.3.3 items',
   );
   await layer.locator('[data-close]').first().click();
@@ -2083,7 +2098,9 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   await reopen();
   await layer.locator('.whatsnew').waitFor({ timeout: 6000 });
   const txt = await layer.innerText();
-  assert.match(txt, /Какво ново в 1\.6\.3/);
+  assert.match(txt, /Какво ново в 1\.6\.4/);
+  assert.match(txt, /Събудих се/, 'the 1.6.4 wake item');
+  assert.match(txt, /колелца/, 'the 1.6.4 wheel item');
   assert.match(txt, /40 от 62/, 'the 1.6.2 items');
   assert.match(txt, /Започни празна тренировка/, 'the 1.6.3 items');
   assert.match(txt, /Хранителни добавки/, 'the 1.6.1 items');
@@ -2101,8 +2118,8 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.doesNotMatch(txt, /Обичайният ти обяд/, 'no 1.3.3 items after 1.3.3');
   assert.equal(
     await layer.locator('.whatsnew > div').count(),
-    52,
-    'two 1.6.3, four 1.6.2, three 1.6.1, three 1.6.0, four 1.5.1, four 1.5.0, six 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
+    54,
+    'two 1.6.4, two 1.6.3, four 1.6.2, three 1.6.1, three 1.6.0, four 1.5.1, four 1.5.0, six 1.4.4, eight 1.4.3 (part A: +2, part B: +3) and three 1.4.2 items, the 1.4.1 item, eight 1.4.0 and six 1.3.4 items',
   );
   await page.waitForTimeout(700);
   await shot('whats-new-134');
@@ -2241,9 +2258,9 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
   const [h0, q0] = [await dayField('sleepH'), await dayField('sleepQ')];
-  await layer.locator('input[data-change="sbed"]').fill('23:00');
+  await setTime(page, layer.locator('[data-change="sbed"]'), '23:00', layer);
   await settle();
-  await layer.locator('input[data-change="swake"]').fill('07:00');
+  await setTime(page, layer.locator('[data-change="swake"]'), '07:00', layer);
   await settle();
   await layer.locator('[data-act="rate"][data-v="4"]').click();
   await settle();
@@ -2266,7 +2283,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
     .evaluateAll((e) => e.map((x) => x.getBoundingClientRect().top));
   assert.equal(yb, yf, 'the two day buttons sit side by side');
   // after midnight: 01:10 → same day, 5 ч 50 мин
-  await layer.locator('input[data-change="sbed"]').fill('01:10');
+  await setTime(page, layer.locator('[data-change="sbed"]'), '01:10', layer);
   await settle();
   assert.match(await layer.locator('.sleepdur').innerText(), /^5 (ч|h) 50 (мин|min)$/);
   assert.equal(await layer.locator('.sbed .sdate').getAttribute('data-day'), key);
@@ -2289,7 +2306,7 @@ async function v134(page, { go, settle, shot, clearCel, layer, rows, dayField },
   assert.match(await layer.locator('.sleepdur').innerText(), /^5 (ч|h) 50 (мин|min)$/);
   assert.ok(await layer.locator('[data-act="sshift"][data-d="-1"]').isDisabled(), 'one day at most');
   // a new bedtime resets the override; "ден напред" on 23:00 → wake tomorrow → refused
-  await layer.locator('input[data-change="sbed"]').fill('23:00');
+  await setTime(page, layer.locator('[data-change="sbed"]'), '23:00', layer);
   await settle();
   await layer.locator('[data-act="sshift"][data-d="1"]').click();
   await settle();
@@ -2656,62 +2673,43 @@ async function v143fixes(page, { go, settle, shot, layer, rows, clearCel, dayFie
   await page.locator('.sleepcard').scrollIntoViewIfNeeded();
   await page.locator('.sleepcard').click();
   await layer.locator('.sleeptimes').waitFor();
-  const bed = layer.locator('.sbed input.t24i'),
-    wake = layer.locator('.swake input.t24i');
-  assert.equal(await wake.getAttribute('type'), 'text', 'typed, not a 12-hour wheel');
-  assert.equal(await wake.getAttribute('inputmode'), 'numeric');
-  await bed.fill('2310');
-  await bed.blur();
+  const bed = layer.locator('.sbed .t24i'),
+    wake = layer.locator('.swake .t24i');
+  assert.equal(await wake.getAttribute('data-wheel'), 'time');
+  assert.equal(await wake.evaluate((e) => e.tagName), 'BUTTON', 'scroll wheel, no keyboard');
+  await setTime(page, bed, '23:10', layer);
   await settle();
-  assert.equal(await bed.inputValue(), '23:10', '„2310“ → 23:10');
-  // 1.4.3 round 2: select-all + typing replaces the value (no stray digit), focus is kept
-  await wake.click();
-  await page.keyboard.press('ControlOrMeta+A');
-  await page.keyboard.type('0642');
+  assert.equal(await timeVal(bed), '23:10');
+  await setTime(page, wake, '06:42', layer);
   await settle();
-  assert.equal(await wake.inputValue(), '0642', 'typed over the selection (no stray digit)');
-  assert.ok(await wake.evaluate((e) => e === document.activeElement), 'focus kept while typing');
-  await wake.blur();
-  await settle();
-  assert.equal(await wake.inputValue(), '06:42', 'shown as 06:42 when she leaves the field');
+  assert.equal(await timeVal(wake), '06:42');
   // − / + step exactly 5 min (no snapping): 06:42 + 5 = 06:47, 06:45 − 5 = 06:40
   await layer.locator('.swake .t24b[data-d="5"]').click();
   await settle();
-  assert.equal(await wake.inputValue(), '06:47', '+5 exactly');
-  await wake.fill('06:45');
-  await wake.blur();
+  assert.equal(await timeVal(wake), '06:47', '+5 exactly');
+  await setTime(page, wake, '06:45', layer);
   await settle();
   await layer.locator('.swake .t24b[data-d="-5"]').click();
   await settle();
-  assert.equal(await wake.inputValue(), '06:40', '−5 exactly');
+  assert.equal(await timeVal(wake), '06:40', '−5 exactly');
   await layer.locator('.swake .t24b[data-d="5"]').click();
   await settle();
-  assert.equal(await wake.inputValue(), '06:45', '+5 exactly');
-  await wake.fill('06:30');
-  await wake.blur();
+  assert.equal(await timeVal(wake), '06:45', '+5 exactly');
+  await setTime(page, wake, '06:30', layer);
   await settle();
   assert.match(await layer.locator('.sleepdur').innerText(), /^7 ч 20 мин$/);
-  // the sheet does not move when a field is tapped
-  const p0 = await box(layer.locator('.panel'));
+  // opening the wheel and confirming the current value does not save before Готово
   await bed.click();
+  await confirmWheel(page, layer);
   await settle();
-  const p1 = await box(layer.locator('.panel'));
-  assert.ok(Math.abs(p1.y - p0.y) < 2 && Math.abs(p1.height - p0.height) < 2, `sheet still (${p0.y}→${p1.y})`);
+  assert.equal(await timeVal(bed), '23:10');
   assert.equal(await dayField('proteinStart'), null, 'nothing saved before Готово');
-  // not a time → a hint, Готово off; the 16 h rule as before
-  await wake.fill('25:70');
-  await wake.blur();
-  await settle();
-  assert.match(await layer.locator('.sleeperr').innerText(), /Въведи час като 07:30/);
-  assert.ok(await layer.locator('.sleepdone').isDisabled());
-  await bed.fill('12:00');
-  await bed.blur();
-  await wake.fill('06:40');
-  await wake.blur();
+  // 16 h rule as before (wheels cannot enter an invalid clock time)
+  await setTime(page, bed, '12:00', layer);
+  await setTime(page, wake, '06:40', layer);
   await settle();
   assert.match(await layer.locator('.sleeperr').innerText(), /Сънят трябва да е до 16 ч/);
-  await bed.fill('23:10');
-  await bed.blur();
+  await setTime(page, bed, '23:10', layer);
   await settle();
   assert.equal(await layer.locator('.sleeperr').count(), 0);
   await page.waitForTimeout(200);
@@ -2754,7 +2752,7 @@ async function v143r2(page, { go, settle, shot, layer, rows, clearCel }) {
   await page.locator('.sleepcard').scrollIntoViewIfNeeded();
   await page.locator('.sleepcard').click();
   await layer.locator('.sleeptimes').waitFor();
-  await layer.locator('.swake input.t24i').fill('06:55');
+  await setTime(page, layer.locator('.swake .t24i'), '06:55', layer);
   await settle();
   await closeAllSheets(page, layer, settle);
   let d = await day5();
@@ -3119,9 +3117,8 @@ async function v140(page, { go, settle, shot, layer, rows }) {
     .setInputFiles({ name: 's.png', mimeType: 'image/png', buffer: await fsp.readFile('assets/icons/icon-192.png') });
   await layer.locator('.shotrow, .verr').first().waitFor({ timeout: 8000 });
   assert.equal(await layer.locator('.verr').count(), 0, `screenshot read: ${await layer.innerText()}`);
-  assert.equal(await layer.locator('[data-change="hh"]').inputValue(), '7');
-  assert.equal(await layer.locator('[data-change="mm"]').inputValue(), '20');
-  const dw = (await layer.locator('.shotrow input[type="date"]').boundingBox())?.width ?? 0;
+  assert.equal(await timeVal(layer.locator('.durfield')), '7:20');
+  const dw = (await layer.locator('.shotrow .dfield').boundingBox())?.width ?? 0;
   assert.ok(dw >= 150, `date field readable (${dw}px)`);
   await layer.locator('.shotq [data-v="4"]').click();
   await shot('sleep-shot');
@@ -3467,7 +3464,7 @@ async function v141tester(page, { go, settle, shot }, name, ctx) {
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
   // build id: 1.4.1-<hash> / 1.4.1-beta-<hash> from a build, the plain version from the sources
-  const idRe = DIR === '.' ? /^Билд: 1\.6\.3$/ : /^Билд: 1\.6\.3(-beta)?-[0-9a-f]{7,}$/;
+  const idRe = DIR === '.' ? /^Билд: 1\.6\.4$/ : /^Билд: 1\.6\.4(-beta)?-[0-9a-f]{7,}$/;
   const meta = await page.evaluate(
     () => document.querySelector('meta[name="vf-build"]')?.getAttribute('content') ?? '1.5.1',
   );
@@ -3900,15 +3897,15 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
   await page.waitForTimeout(300);
   await shot('mealpill-late-sheet');
   await sheet.locator('[data-act="ate"]').click();
-  const tin = layer.locator('.mtime input[data-change="atehm"]');
+  const tin = layer.locator('.mtime .t24i');
   await tin.waitFor();
-  assert.equal(await tin.inputValue(), '07:45', 'defaults to now');
-  await tin.fill('07:55');
+  assert.equal(await timeVal(tin), '07:45', 'defaults to now');
+  await setTime(page, tin, '07:55', layer);
   await layer.locator('.ateerr').waitFor();
   assert.match(await layer.locator('.ateerr').innerText(), /още не е дошъл/);
   assert.ok(await layer.locator('.ateok').isDisabled(), 'no future time');
   // round 3: before the start → only the app's own message (ти form), never a browser popup
-  await tin.fill('04:10');
+  await setTime(page, tin, '04:10', layer);
   await page.waitForFunction(() => /преди ставането/.test(document.querySelector('#layer .ateerr')?.textContent ?? ''));
   assert.equal(
     (await layer.locator('.ateerr').innerText()).trim(),
@@ -3923,7 +3920,7 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
     [true, '', false, false, false, false, false],
     'no native validation on the time field',
   );
-  await tin.fill('07:40');
+  await setTime(page, tin, '07:40', layer);
   await page.waitForFunction(() => !document.querySelector('#layer .ateerr'));
   assert.equal(await layer.locator('.ateok').isDisabled(), false);
   await page.waitForTimeout(250);
@@ -3963,7 +3960,7 @@ async function v143(page, { go, settle, shot, layer, rows, clearCel }, name) {
   await page.locator('.meal[data-m="breakfast"]').click();
   await layer.locator('.mealitems').waitFor();
   // 1.5.1: the meal's one clock (the foods have none)
-  assert.equal(await layer.locator('.mealclk input.t24i').inputValue(), '07:40', 'the meal sheet shows 07:40');
+  assert.equal(await timeVal(layer.locator('.mealclk .t24i')), '07:40', 'the meal sheet shows 07:40');
   await closeAllSheets(page, layer, settle);
   await go('progress');
   await page.waitForTimeout(1200);
@@ -4255,6 +4252,7 @@ async function v143a(page, { go, settle, shot, layer, rows, clearCel }) {
   const D2 = '2026-11-13';
   await page.clock.setSystemTime(new Date(`${D2}T07:05:00+02:00`));
   await go('morning');
+  await confirmWheel(page, layer);
   await page.waitForTimeout(600);
   assert.equal(await page.locator('.pcard').count(), 0, 'no protein card');
   const d2 = /** @type {any} */ ((await rows('days')).find((x) => x.id === D2));

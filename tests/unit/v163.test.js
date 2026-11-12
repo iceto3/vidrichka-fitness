@@ -257,24 +257,20 @@ test('1.6.3 picker: leftover search is cleared; an exercise can be added via the
   S.discard();
   L.resetFilters();
 });
-test("1.6.3: version, What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
+test("1.6.3: What's new (bg + en), CHANGELOG, no English in Bulgarian", async () => {
   const { NOTES } = await import('../../src/features/whatsnew/notes.js');
-  assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, '1.6.3');
-  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-  assert.equal(lock.version, '1.6.3');
-  assert.equal(lock.packages[''].version, '1.6.3');
-  const { APP_VERSION } = await import('../../src/core/version.js');
-  assert.equal(APP_VERSION, '1.6.3');
+  // 1.6.4: the version moved on (asserted in v164.test.js); the 1.6.3 entry stays
   assert.match(readFileSync('CHANGELOG.md', 'utf8'), /## \[1\.6\.3\] – 2026-11-12/);
-  assert.equal(NOTES[0].v, '1.6.3');
+  const n163 = NOTES.find((n) => n.v === '1.6.3');
+  assert.ok(n163);
   assert.deepEqual(
-    NOTES[0].items.map(([, k]) => k),
+    n163.items.map(([, k]) => k),
     ['whatsNew.free163', 'whatsNew.machines163'],
   );
   await setLang('bg');
   assert.equal(t('workouts.free'), 'Започни празна тренировка');
   assert.equal(t('summary.savePlan'), 'Запази като план');
-  for (const k of [...NOTES[0].items.map(([, k]) => k), 'workouts.free', 'summary.savePlan', 'library.search']) {
+  for (const k of [...n163.items.map(([, k]) => k), 'workouts.free', 'summary.savePlan', 'library.search']) {
     assert.ok(/** @type {any} */ (bg)[k] && /** @type {any} */ (en)[k], k);
     assert.doesNotMatch(
       JSON.stringify(/** @type {any} */ (bg)[k]).replace(/\{\w+\}|"[fm]":/g, ''),
