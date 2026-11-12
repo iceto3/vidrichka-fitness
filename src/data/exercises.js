@@ -787,12 +787,57 @@ export const EXERCISES = [
     rest: 60,
     met: 9,
   },
+  // 1.6.3: four gym machines (Ralitsa #9) – no illustrations; cues in data/cues.js
+  {
+    id: 'leg_extension',
+    name: { en: 'Leg Extension', bg: 'Разгъване за предно бедро' },
+    equipment: 'machine',
+    place: ['gym'],
+    weighted: true,
+    primary: ['quads'],
+    secondary: [],
+    rest: 60,
+    met: 4,
+  },
+  {
+    id: 'seated_ab_crunch',
+    name: { en: 'Seated Ab Crunch Machine', bg: 'Коремни преси на уред' },
+    equipment: 'machine',
+    place: ['gym'],
+    weighted: true,
+    primary: ['core'],
+    secondary: [],
+    rest: 45,
+    met: 3.5,
+  },
+  {
+    id: 'hip_abductor',
+    name: { en: 'Hip Abductor Machine', bg: 'Абдуктор на уред' },
+    equipment: 'machine',
+    place: ['gym'],
+    weighted: true,
+    primary: ['glutes'],
+    secondary: ['core'],
+    rest: 60,
+    met: 4,
+  },
+  {
+    id: 'hip_adductor',
+    name: { en: 'Hip Adductor Machine', bg: 'Аддуктор на уред' },
+    equipment: 'machine',
+    place: ['gym'],
+    weighted: true,
+    primary: ['adductors'],
+    secondary: [],
+    rest: 60,
+    met: 4,
+  },
 ];
 
 /** Muscle groups used by the library filter (group id -> muscle ids). */
 export const MUSCLE_GROUPS = {
   glutes: ['glutes'],
-  legs: ['quads', 'hamstrings', 'calves'],
+  legs: ['quads', 'hamstrings', 'calves', 'adductors'], // 1.6.3: inner thigh (adductor machine)
   back: ['back'],
   chest: ['chest'],
   shoulders: ['shoulders'],

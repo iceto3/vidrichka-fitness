@@ -174,6 +174,36 @@ export const newItems = (planItems, sessions) =>
   });
 
 /**
+ * 1.6.3: a new item for an exercise added during a workout (free workout): 3 sets, last
+ * time's kg (else 10 kg for a weighted exercise, 0 = bodyweight), its rest.
+ * @param {string} exId @param {{weighted?: boolean, unit?: string, rest?: number}|undefined} ex @param {WSession[]} sessions
+ * @returns {WItem}
+ */
+export const itemFor = (exId, ex, sessions) =>
+  newItems(
+    [{ exId, sets: 3, reps: ex?.unit === 'sec' ? 30 : 10, weight: ex?.weighted ? 10 : 0, rest: ex?.rest ?? 60 }],
+    sessions,
+  )[0];
+
+/**
+ * 1.6.3 „Запази като план“: plan items from a workout's items – only exercises with a done
+ * set; sets = done sets, reps = the most reps done, kg = the last done set's, rest as used.
+ * @param {WItem[]} items
+ * @returns {{exId: string, sets: number, reps: number, weight: number, rest: number}[]}
+ */
+export const planFromItems = (items) =>
+  items
+    .map((it) => ({ it, done: it.sets.filter((s) => s.done) }))
+    .filter(({ done }) => done.length)
+    .map(({ it, done }) => ({
+      exId: it.exId,
+      sets: done.length,
+      reps: Math.max(...done.map((s) => s.r)),
+      weight: done[done.length - 1].w,
+      rest: it.rest,
+    }));
+
+/**
  * Rough duration estimate in minutes (≈40 s work per set + rest).
  * @param {{sets: number, rest: number}[]} items
  */

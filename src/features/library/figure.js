@@ -95,13 +95,16 @@ const list = (/** @type {BgText[]} */ xs, ordered = false) => {
 /**
  * 1.6.0: an exercise without a verified card yet shows the coach's short cues
  * (data/cues.js) in the current language – never an empty page or a missing drawing.
+ * 1.6.3: illustrated cards show the same „Съвети от треньора“ above the detailed
+ * technique (`sources: false` – the card already has its sources).
  * @param {string} id
+ * @param {{sources?: boolean}} [opts]
  */
-export const cueSection = (id) => {
+export const cueSection = (id, { sources = true } = {}) => {
   const c = cuesOf(id);
   const xs = c ? (getLang() === 'bg' ? c.bg : c.en) : [];
   if (!xs.length) return '';
-  const src = c?.sources ?? [];
+  const src = sources ? (c?.sources ?? []) : [];
   return html`${section(t('technique.cues'), html`<ul class="tlist">${xs.map((x) => html`<li>${x}</li>`)}</ul>`, 'cues')}
 ${
   src.length
@@ -120,6 +123,7 @@ export const techniqueSections = (id) => {
   const tq = techniqueOf(id);
   if (!tq) return cueSection(id);
   return html`${getLang() === 'bg' ? '' : html`<p class="xs b muted mt12">${t('technique.bgOnly')}</p>`}
+${cueSection(id, { sources: false })}
 ${section(t('technique.setup'), list(tq.setup), 'setup')}
 ${section(t('technique.steps'), list(tq.steps, true), 'exec')}
 ${section(t('technique.breathing'), list(tq.breathing), 'breath')}

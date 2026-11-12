@@ -641,13 +641,420 @@ export const CUES = {
     ],
     sources: [{ text: 'ExRx.net – Kettlebell Snatch', url: 'https://exrx.net/WeightExercises/Kettlebell/KBSnatch' }],
   },
+  // 1.6.3 gym machines (no illustrations; YouTube search link, ExRx where checked)
+  leg_extension: {
+    bg: [
+      'Седни на уреда. Гърбът е опрян в облегалката, а коленете са на оста на въртене.',
+      'Валякът е точно над глезените, не върху тях.',
+      'Изпъни краката контролирано, без да заключваш коленете в горна точка.',
+      'Спусни тежестта бавно, докато коленете са свити около 90°.',
+    ],
+    en: [
+      'Sit on the machine. Back against the pad, knees in line with the pivot.',
+      'The pad sits just above the ankles, not on them.',
+      'Extend the legs under control and do not lock the knees at the top.',
+      'Lower the weight slowly until the knees are at about 90°.',
+    ],
+    sources: [
+      { text: 'ExRx.net – Lever Leg Extension', url: 'https://exrx.net/WeightExercises/Quadriceps/LVLegExtension' },
+    ],
+  },
+  seated_ab_crunch: {
+    bg: [
+      'Седни и закрепи подбедриците под валяка. Хвани дръжките до раменете или над главата, според уреда.',
+      'Стегни корема и сгъни трупа напред, сякаш сближаваш ребрата към таза.',
+      'Не дърпай с ръцете и не дърпай врата.',
+      'Върни се бавно в изходна позиция, без да отпускаш корема.',
+    ],
+    en: [
+      'Sit and hook the shins under the pad. Hold the handles at the shoulders or overhead, depending on the machine.',
+      'Brace the core and curl the torso forward, bringing the ribs towards the hips.',
+      'Do not pull with the arms or yank the neck.',
+      'Return slowly to the start and keep the core tight.',
+    ],
+    sources: [
+      {
+        text: 'ExRx.net – Lever Seated Crunch',
+        url: 'https://exrx.net/WeightExercises/RectusAbdominis/LVSeatedCrunch',
+      },
+    ],
+  },
+  hip_abductor: {
+    bg: [
+      'Седни на уреда и постави външната страна на бедрата към подложките. Гърбът е опрян.',
+      'Разтвори краката навън срещу съпротивлението, с движение от тазобедрената става.',
+      'Задръж за момент в крайна точка, без да извиваш кръста.',
+      'Върни краката бавно, без да удряш тежестите.',
+    ],
+    en: [
+      'Sit on the machine with the outer thighs against the pads and your back supported.',
+      'Open the legs against the resistance from the hips.',
+      'Pause briefly at the end without arching the lower back.',
+      'Bring the legs back slowly and do not let the plates slam.',
+    ],
+    sources: [
+      {
+        text: 'ExRx.net – Lever Seated Hip Abduction',
+        url: 'https://exrx.net/WeightExercises/HipAbductor/LVSeatedHipAbduction',
+      },
+    ],
+  },
+  hip_adductor: {
+    bg: [
+      'Седни на уреда и постави вътрешната страна на бедрата към подложките.',
+      'Събери краката едно към друго срещу съпротивлението, с движение от тазобедрената става.',
+      'Не помагай с трупа и не отлепяй кръста от облегалката.',
+      'Разтвори краката бавно до изходната позиция.',
+    ],
+    en: [
+      'Sit on the machine with the inner thighs against the pads.',
+      'Bring the legs together against the resistance from the hips.',
+      'Do not lean the torso or lift the lower back off the pad.',
+      'Open the legs slowly back to the start.',
+    ],
+    sources: [
+      {
+        text: 'ExRx.net – Lever Seated Hip Adduction',
+        url: 'https://exrx.net/WeightExercises/HipAdductors/LVSeatedHipAdduction',
+      },
+    ],
+  },
+  // 1.6.3: coach cues for illustrated library exercises (shown above the detailed technique)
+  lying_leg_curl: {
+    bg: [
+      'Легни по корем на уреда. Коленете са на оста на въртене, а тазът е притиснат към пейката.',
+      'Валякът е малко над петите, не върху ахилесовото сухожилие.',
+      'Сгъни коленете и изтегли валяка към седалището контролирано, до над 90°.',
+      'Спусни бавно, докато коленете почти се изпънат. Кръстът не се извива.',
+    ],
+    en: [
+      'Lie face down on the machine. Knees in line with the pivot, hips pressed into the pad.',
+      'The pad sits just above the heels, not on the Achilles tendon.',
+      'Curl the pad towards the glutes under control, past 90°.',
+      'Lower slowly until the knees are almost straight. Do not arch the lower back.',
+    ],
+    sources: [
+      { text: 'ExRx.net – Lever Lying Leg Curl', url: 'https://exrx.net/WeightExercises/Hamstrings/LVLyingLegCurl' },
+    ],
+  },
+  hip_thrust: {
+    bg: [
+      'Горната част на гърба е на ръба на пейката, а тежестта е върху таза.',
+      'Цялото стъпало е на пода, а подбедриците са вертикални в горна точка.',
+      'Избутай таза нагоре, докато раменете, тазът и коленете са в линия.',
+      'Ребрата са прибрани, кръстът не се извива. Спусни контролирано.',
+    ],
+    en: [
+      'Upper back on the edge of the bench, the weight across the hips.',
+      'Feet flat on the floor, shins vertical at the top.',
+      'Drive the hips up until shoulders, hips and knees are in line.',
+      'Ribs down, no arching of the lower back. Lower under control.',
+    ],
+    sources: [
+      { text: 'ExRx.net – Barbell Hip Thrust', url: 'https://exrx.net/WeightExercises/GluteusMaximus/BBHipThrust' },
+    ],
+  },
+  romanian_deadlift: {
+    bg: [
+      'Движението е панта в таза: тазът назад, коленете леко свити, гърбът прав.',
+      'Щангата остава плътно до краката през цялото движение.',
+      'Спускай, докато усетиш разтягане в задното бедро, не до пода на всяка цена.',
+      'Погледът е надолу и леко напред. Изправи се с тласък от таза.',
+    ],
+    en: [
+      'Hinge at the hips: hips back, soft knees, flat back.',
+      'Keep the bar close to the legs throughout.',
+      'Lower until you feel a hamstring stretch, not all the way to the floor at all costs.',
+      'Look down and slightly forward. Stand up by driving the hips.',
+    ],
+    sources: [
+      {
+        text: 'ACE Exercise Library – Romanian Deadlift',
+        url: 'https://www.acefitness.org/resources/everyone/exercise-library/317/romanian-deadlift/',
+      },
+    ],
+  },
+  leg_press: {
+    bg: [
+      'Гърбът и седалището са опрени в облегалката през цялото време.',
+      'Стъпалата са в средата на платформата, а коленете следват пръстите.',
+      'Спусни, докато коленете са около 90°. Бедрата не притискат гърдите.',
+      'Избутай, без да заключваш коленете горе.',
+    ],
+    en: [
+      'Back and hips stay against the pad throughout.',
+      'Feet mid-platform, knees tracking over the toes.',
+      'Lower until the knees are at about 90°. Thighs should not press into the chest.',
+      'Press out without locking the knees at the top.',
+    ],
+    sources: [
+      { text: 'ExRx.net – Sled 45° Leg Press', url: 'https://exrx.net/WeightExercises/Quadriceps/SL45LegPress' },
+    ],
+  },
+  cable_kickback: {
+    bg: [
+      'Маншетът е на глезена, закачен за долната макара. Хвани машината за опора.',
+      'Торсът е почти неподвижен, с лек наклон напред, а опорното коляно е меко.',
+      'Изпъни крака назад от таза, без да извиваш кръста.',
+      'Върни бавно и контролирано, без да се люлееш.',
+    ],
+    en: [
+      'Ankle cuff on the low pulley. Hold the machine for support.',
+      'Keep the torso nearly still with a slight lean, stance knee soft.',
+      'Extend the leg back from the hip without arching the lower back.',
+      'Return slowly and do not swing.',
+    ],
+    sources: [
+      {
+        text: 'ExRx.net – Cable Glute Kickback',
+        url: 'https://exrx.net/WeightExercises/GluteusMaximus/CBGluteKickback',
+      },
+    ],
+  },
+  lat_pulldown: {
+    bg: [
+      'Хватът е широк, гърдите са напред, а наклонът назад е лек и постоянен.',
+      'Дръпни лоста пред лицето към горната част на гърдите, не зад врата.',
+      'Лактите сочат надолу. Прибери ги към тялото в долна точка.',
+      'Горе ръцете се изпъват контролирано.',
+    ],
+    en: [
+      'Wide grip, chest up, a slight steady lean back.',
+      'Pull the bar in front of the face to the upper chest, not behind the neck.',
+      'Elbows point down. Draw them in at the bottom.',
+      'Extend the arms under control at the top.',
+    ],
+    sources: [
+      {
+        text: 'ACE Exercise Library – Seated Lat Pulldown',
+        url: 'https://www.acefitness.org/resources/everyone/exercise-library/158/seated-lat-pulldown/',
+      },
+    ],
+  },
+  seated_cable_row: {
+    bg: [
+      'Седни с леко свити колене и стъпала опрени на платформата. Гърбът е прав.',
+      'Дръпни към корема, лактите близо до тялото, а лопатките се събират в края.',
+      'Торсът остава почти неподвижен, без люлеене напред-назад.',
+      'Върни бавно, без тежестта да дърпа раменете напред.',
+    ],
+    en: [
+      'Sit with soft knees and feet on the platform. Keep a flat back.',
+      'Pull towards the belly, elbows close, shoulder blades together at the end.',
+      'The torso stays nearly still – no rocking.',
+      'Return slowly so the weight does not pull the shoulders forward.',
+    ],
+    sources: [{ text: 'ExRx.net – Cable Seated Row', url: 'https://exrx.net/WeightExercises/BackGeneral/CBSeatedRow' }],
+  },
+  db_bench_press: {
+    bg: [
+      'Легни на пейката. Стъпалата са на пода, лопатките са прибрани, кръстът не се извива прекалено.',
+      'Горе дъмбелите са над раменете, без да се удрят един в друг.',
+      'Спусни до гърдите с лакти около 45°, предмишниците са вертикални.',
+      'Избутай контролирано. Китките са прави.',
+    ],
+    en: [
+      'Lie on the bench. Feet on the floor, shoulder blades tucked, no excessive arch.',
+      'At the top the dumbbells are over the shoulders and do not clang together.',
+      'Lower to the chest with elbows at about 45°, forearms vertical.',
+      'Press under control. Keep the wrists straight.',
+    ],
+    sources: [
+      { text: 'ExRx.net – Dumbbell Bench Press', url: 'https://exrx.net/WeightExercises/PectoralSternal/DBBenchPress' },
+    ],
+  },
+  biceps_curl: {
+    bg: [
+      'Застани изправено, лактите са до тялото и не се движат напред-назад.',
+      'Сгъни дъмбелите нагоре, докато дланите сочат нагоре в горна точка.',
+      'Спускай бавно до пълна амплитуда, без люлеене на трупа.',
+      'Китките са неутрални, без да се огъват назад.',
+    ],
+    en: [
+      'Stand tall, elbows by the sides and still.',
+      'Curl the dumbbells up until the palms face up at the top.',
+      'Lower slowly through a full range and do not swing the torso.',
+      'Keep the wrists neutral, not bent back.',
+    ],
+    sources: [{ text: 'ExRx.net – Dumbbell Curl', url: 'https://exrx.net/WeightExercises/Biceps/DBCurl' }],
+  },
+  triceps_pushdown: {
+    bg: [
+      'Лактите са до тялото и неподвижни. Торсът е с лек наклон напред.',
+      'Изпъни ръцете надолу докрай, без да „падаш“ върху лоста.',
+      'Върни нагоре, докато предмишниците са близо до рамото.',
+      'Китките са в линия с предмишницата.',
+    ],
+    en: [
+      'Elbows by the sides and still. Slight lean forward.',
+      'Extend the arms all the way down without leaning on the bar.',
+      'Return until the forearms are close to the upper arm.',
+      'Wrists in line with the forearms.',
+    ],
+    sources: [{ text: 'ExRx.net – Cable Pushdown', url: 'https://exrx.net/WeightExercises/Triceps/CBPushdown' }],
+  },
+  push_up: {
+    bg: [
+      'Ръцете са под раменете, малко по-широко от тях.',
+      'Тялото е в права линия: тазът нито увисва, нито се вдига.',
+      'Спусни с лакти около 45° от тялото, докато гърдите са близо до пода.',
+      'Изпъни ръцете горе. Коремът е стегнат през цялото време.',
+    ],
+    en: [
+      'Hands under the shoulders, a little wider than them.',
+      'The body is a straight line: hips neither sag nor pike.',
+      'Lower with elbows at about 45° until the chest is close to the floor.',
+      'Lock the arms out at the top. Keep the core tight throughout.',
+    ],
+    sources: [{ text: 'ExRx.net – Push-up', url: 'https://exrx.net/WeightExercises/PectoralSternal/BWPushup' }],
+  },
+  glute_bridge: {
+    bg: [
+      'Легни по гръб, петите са близо до седалището, натискът е през петите.',
+      'Избутай таза нагоре, докато раменете, тазът и коленете са в линия.',
+      'Коремът е стегнат, кръстът не се извива.',
+      'Коленете остават над стъпалата, без да се разтварят или събират.',
+    ],
+    en: [
+      'Lie on your back, heels close to the hips, press through the heels.',
+      'Drive the hips up until shoulders, hips and knees are in line.',
+      'Brace the core and do not arch the lower back.',
+      'Knees stay over the feet, not caving in or flaring out.',
+    ],
+    sources: [
+      {
+        text: 'ACE Exercise Library – Glute Bridge',
+        url: 'https://www.acefitness.org/resources/everyone/exercise-library/49/glute-bridge/',
+      },
+    ],
+  },
+  bodyweight_squat: {
+    bg: [
+      'Застани с крака около ширината на раменете, пръстите леко навън, ръцете напред за баланс.',
+      'Спускай таза назад и надолу, петите остават на пода, гърбът е прав.',
+      'Коленете следват пръстите. Долу бедрата са около успоредни на пода.',
+      'Изправи се, без да заключваш коленете рязко.',
+    ],
+    en: [
+      'Stand about shoulder-width, toes slightly out, arms forward for balance.',
+      'Sit the hips back and down, heels down, flat back.',
+      'Knees track over the toes. At the bottom the thighs are about parallel to the floor.',
+      'Stand up without snapping the knees into a lock.',
+    ],
+    sources: [{ text: 'ExRx.net – Squat', url: 'https://exrx.net/WeightExercises/Quadriceps/BWSquat' }],
+  },
+  plank: {
+    bg: [
+      'Лактите са под раменете, предмишниците са на пода.',
+      'Тялото е в права линия от главата до петите, коленете са изпънати.',
+      'Стегни корема и седалището, без тазът да увисва или да се вдига.',
+      'Вратът е неутрален, погледът е към пода. Дишай спокойно.',
+    ],
+    en: [
+      'Elbows under the shoulders, forearms on the floor.',
+      'A straight line from head to heels, knees straight.',
+      'Brace the core and glutes so the hips neither sag nor pike.',
+      'Neutral neck, look at the floor. Breathe steadily.',
+    ],
+    sources: [{ text: 'ExRx.net – Front Plank', url: 'https://exrx.net/WeightExercises/RectusAbdominis/BWFrontPlank' }],
+  },
+  dead_bug: {
+    bg: [
+      'Легни по гръб. Коленете са над таза под 90°, ръцете са над раменете.',
+      'Кръстът е притиснат към пода през цялото време.',
+      'Изпъни противоположна ръка и крак бавно, докато петата е близо до пода.',
+      'Върни и смени страната. Ако кръстът се отлепи, намаля амплитудата.',
+    ],
+    en: [
+      'Lie on your back. Knees over the hips at 90°, arms over the shoulders.',
+      'Keep the lower back pressed into the floor throughout.',
+      'Slowly extend the opposite arm and leg until the heel is close to the floor.',
+      'Return and switch sides. If the back lifts, shorten the range.',
+    ],
+    sources: [
+      {
+        text: 'ACE Exercise Library – Supine Dead Bug',
+        url: 'https://www.acefitness.org/resources/everyone/exercise-library/147/supine-dead-bug/',
+      },
+    ],
+  },
   // the coach's videos for the library exercises of the home programs (they keep their
   // verified technique card; the video replaces the YouTube search link)
-  back_squat: { bg: [], en: [], video: yt('6SX8fOZ2xSc') },
-  reverse_lunge: { bg: [], en: [], video: yt('adbvywmfLpU') },
-  lateral_raise: { bg: [], en: [], video: yt('f7O4k88h-iQ') },
-  db_shoulder_press: { bg: [], en: [], video: yt('db5tTrvqYiU') },
-  bulgarian_split_squat: { bg: [], en: [], video: yt('z3nkTqRcmHM') },
+  back_squat: {
+    bg: [
+      'Лостът се движи вертикално над средата на стъпалото.',
+      'Гърбът е неутрален: без подвиване на таза долу и без прекомерно извиване.',
+      'Коленете следват пръстите, петите не се отлепят от пода.',
+      'Тазът и раменете се издигат заедно, коремът е стегнат.',
+    ],
+    en: [
+      'The bar travels vertically over mid-foot.',
+      'Neutral back: no tucking at the bottom and no excessive arch.',
+      'Knees track over the toes, heels stay down.',
+      'Hips and shoulders rise together, core braced.',
+    ],
+    video: yt('6SX8fOZ2xSc'),
+  },
+  reverse_lunge: {
+    bg: [
+      'Направи дълга крачка назад, задното коляно стига почти до пода.',
+      'Предното коляно е над глезена и сочи по посока на пръстите.',
+      'Торсът е изправен, тежестта е главно на предния крак.',
+      'Отблъсни се от предната пета и се върни в стоеж. Редувай страните.',
+    ],
+    en: [
+      'Take a long step back, rear knee almost to the floor.',
+      'Front knee over the ankle, pointing in line with the toes.',
+      'Torso upright, most of the load on the front leg.',
+      'Push through the front heel back to stand. Alternate sides.',
+    ],
+    video: yt('adbvywmfLpU'),
+  },
+  lateral_raise: {
+    bg: [
+      'Тежестите са леки, лактите са леко свити.',
+      'Повдигай встрани само до нивото на раменете. Лактите водят движението.',
+      'Китките са неутрални, без да се издигат по-високо от лактите.',
+      'Торсът е изправен, без люлеене и без извиване на кръста.',
+    ],
+    en: [
+      'Light weights, elbows slightly bent.',
+      'Raise out to the sides only to shoulder height. The elbows lead.',
+      'Neutral wrists, not higher than the elbows.',
+      'Torso still, no swinging and no arching of the lower back.',
+    ],
+    video: yt('f7O4k88h-iQ'),
+  },
+  db_shoulder_press: {
+    bg: [
+      'Долу лактите са под китките, а дъмбелите са до раменете.',
+      'Избутай нагоре, докато ръцете са изпънати над главата, без рязко заключване.',
+      'Гърбът е опрян, коремът е стегнат, без накланяне назад.',
+      'Лактите леко сочат напред. Спускай контролирано до раменете.',
+    ],
+    en: [
+      'At the bottom, elbows under the wrists, dumbbells at the shoulders.',
+      'Press up until the arms are straight overhead, without a hard lockout.',
+      'Back supported, core braced, no leaning back.',
+      'Elbows slightly forward. Lower under control to the shoulders.',
+    ],
+    video: yt('db5tTrvqYiU'),
+  },
+  bulgarian_split_squat: {
+    bg: [
+      'Задното стъпало е на пейката, пейката е около височината на коляното.',
+      'Предната пета е на пода, коляното следва пръстите.',
+      'Спускай, докато задното коляно е близо до пода. Торсът е изправен или с лек наклон напред.',
+      'Избутай се от предната пета нагоре.',
+    ],
+    en: [
+      'Rear foot on the bench, bench about knee height.',
+      'Front heel down, knee tracking over the toes.',
+      'Lower until the rear knee is close to the floor. Torso upright or a slight lean.',
+      'Push up through the front heel.',
+    ],
+    video: yt('z3nkTqRcmHM'),
+  },
 };
 
 /** Cues of an exercise (undefined when it has none). @param {string} id */

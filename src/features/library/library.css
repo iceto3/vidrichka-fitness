@@ -290,3 +290,8 @@
   width: 28px;
   height: 28px;
 }
+
+/* 1.6.3 exercise search (library + picker) */
+.exsearch {
+  margin-bottom: 10px;
+}

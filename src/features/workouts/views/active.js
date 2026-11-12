@@ -16,7 +16,7 @@ import { beep, keepAwake, notify, releaseAwake, unlockAudio, vibrate } from '../
 import { exById, exName, muscleTags, repsLabel } from '../../library/api.js';
 import { exThumb } from '../../library/thumb.js';
 import { openTechnique } from '../../library/technique.js';
-import { activeWorkout, planName, sessions } from '../api.js';
+import { activeWorkout, isFree, planName, sessions } from '../api.js';
 import { MAX_KG, activeSet, byKg, kgStep, lastSets, logsKg, suggest } from '../logic.js';
 import * as S from '../session.js';
 
@@ -33,15 +33,18 @@ function lastHint(it, ex) {
 ${tip ? html`<span class="chip warm nudge">${tip.kind === 'weight' ? t('workout.tryKg', { n: fmtNum(tip.value, 2) }) : t('workout.tryReps', { n: tip.value })}</span>` : ''}</div>`;
 }
 
-/** One exercise card. @param {WItem} it @param {number} i @param {[number, number]|null} act */
-function exCard(it, i, act) {
+/**
+ * One exercise card. @param {WItem} it @param {number} i @param {[number, number]|null} act
+ * @param {boolean} [free] 1.6.3 free workout: the exercise can be removed
+ */
+function exCard(it, i, act, free = false) {
   const ex = exById(it.exId),
     weighted = logsKg(ex); // 1.6.0: bodyweight exercises with an optional added weight show kg
   const cols = weighted ? '' : ' bw';
   return html`<section class="card ex mt12" aria-label="${exName(it.exId)}">
 <div class="row between top-al"><div class="row gap12"><div class="exicon">${exThumb(it.exId)}</div>
 <div><h2 class="h2">${exName(it.exId)}</h2><div class="row gap6 mt6 wrap">${ex ? muscleTags(ex, 2) : ''}</div></div></div>
-<button class="iconbtn flat" data-act="howTo" data-id="${it.exId}" aria-label="${t('workout.howTo')}">${ic('info', 20)}</button></div>
+<div class="row gap4"><button class="iconbtn flat" data-act="howTo" data-id="${it.exId}" aria-label="${t('workout.howTo')}">${ic('info', 20)}</button>${free ? html`<button class="iconbtn flat rmex" data-act="rmEx" data-i="${i}" aria-label="${t('workout.removeEx', { name: exName(it.exId) })}">${ic('trash', 19)}</button>` : ''}</div></div>
 ${lastHint(it, ex)}
 <div class="colh${cols}" aria-hidden="true"><div>${t('workout.set')}</div>${weighted ? html`<div>${t('workout.weight')}</div>` : ''}<div>${repsLabel(it.exId)}</div><div></div></div>
 ${it.sets.map((s, j) => {
@@ -107,7 +110,8 @@ export default () => {
         (/** @type {number} */ a, /** @type {WItem} */ it) => a + it.sets.filter((s) => !s.done).length,
         0,
       );
-      const cur = act ? act[0] : w.items.length - 1;
+      const cur = act ? act[0] : w.items.length - 1,
+        free = isFree(w); // 1.6.3
       return html`<div class="wtop"><button class="iconbtn" data-go="home" aria-label="${t('workout.minimize')}">${ic('down', 22)}</button>
 <div class="center"><h1 class="h2">${planName(w)}</h1><div class="live num"><i></i><span id="elapsed">${clock(Math.floor((Date.now() - w.startedAt) / 1000))}</span></div></div>
 <button class="finish" data-act="finish">${t('workout.finish')}</button></div>
@@ -117,8 +121,10 @@ export default () => {
           return html`<i class="${d === it.sets.length ? 'on' : d ? 'half' : ''}"></i>`;
         },
       )}</div>
-<div class="row between wmeta"><span class="muted xs b caps">${t('workout.exerciseOf', { n: cur + 1, total: w.items.length })}</span><span class="muted xs b">${t('workout.setsLeft', { n: left })}</span></div>
-<div class="content wlist">${w.items.map((/** @type {WItem} */ it, /** @type {number} */ i) => exCard(it, i, act))}
+${w.items.length ? html`<div class="row between wmeta"><span class="muted xs b caps">${t('workout.exerciseOf', { n: cur + 1, total: w.items.length })}</span><span class="muted xs b">${t('workout.setsLeft', { n: left })}</span></div>` : ''}
+<div class="content wlist">${w.items.map((/** @type {WItem} */ it, /** @type {number} */ i) => exCard(it, i, act, free))}
+${free && !w.items.length ? html`<div class="card mt12 center freeempty"><p class="b">${t('workout.freeEmpty')}</p><p class="muted small b mt4">${t('workout.freeEmptySub')}</p></div>` : ''}
+${free ? html`<button class="btn sec mt12 w100 addex" data-act="addEx">${ic('plus', 18, 2.6)}${t('editor.addExercise')}</button>` : ''}
 <button class="btn ok mt16 w100" data-act="finish">${ic('check', 20, 3)}${t('workout.finishWorkout')}</button></div>
 ${w.rest ? restBar(w.rest) : ''}`;
     },
@@ -131,6 +137,38 @@ ${w.rest ? restBar(w.rest) : ''}`;
     unmount: () => (clearInterval(timer), releaseAwake()),
     actions: {
       howTo: (el) => (openTechnique(el.dataset.id ?? ''), false), // 1.4.0: a sheet, the set stays
+      // 1.6.3 free workout: add from the whole library (search + filters), remove an exercise
+      addEx: async () => {
+        const { openPicker } = await import('../../library/views/picker.js');
+        openPicker((exId) => {
+          S.addExercise(exId);
+          emit('ui:refresh');
+          // scroll to the new exercise
+          setTimeout(
+            () => document.querySelector('.wlist section.ex:last-of-type')?.scrollIntoView({ block: 'center' }),
+            60,
+          );
+        });
+        return false;
+      },
+      rmEx: async (el) => {
+        const i = num(el, 'i'),
+          it = activeWorkout()?.items[i];
+        if (!it) return;
+        if (
+          it.sets.some((/** @type {any} */ s) => s.done) &&
+          !(await confirmDialog({
+            title: t('workout.removeExTitle', { name: exName(it.exId) }),
+            body: t('workout.removeExBody'),
+            ok: t('common.remove'),
+            danger: true,
+          }))
+        )
+          return;
+        S.removeExercise(i);
+        emit('ui:refresh');
+        return false;
+      },
       w: (el, ev) => {
         const i = num(el, 'i'),
           j = num(el, 'j'),
@@ -189,12 +227,16 @@ ${w.rest ? restBar(w.rest) : ''}`;
           left &&
           !(await confirmDialog({
             title: t('workout.finishTitle'),
-            body: t('workout.finishBody', { n: left }),
+            body: t(isFree(w) ? 'workout.finishBodyFree' : 'workout.finishBody', { n: left }), // 1.6.3
             ok: t('workout.finish'),
           }))
         )
           return;
         const s = S.finish();
+        if (!s) {
+          emit('nav', { path: 'workouts', replace: true });
+          return;
+        }
         emit('nav', { path: `summary/${s.id}`, replace: true });
       },
     },
