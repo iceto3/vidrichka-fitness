@@ -15,7 +15,7 @@
   padding: 0 8px;
   cursor: pointer;
 }
-.datepick input {
+.datepick .dfield {
   position: absolute;
   inset: 0;
   opacity: 0;

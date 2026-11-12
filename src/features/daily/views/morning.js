@@ -1,21 +1,21 @@
 /**
- * #morning — full-screen "Good morning" page. Opening it (from either morning
- * notification, the Home card or a protein reminder) records the wake-up once and starts
- * the 30-min protein countdown; the countdown is computed from the stored start time, so
- * it survives reloads. The ring/clock tick with targeted DOM updates (no re-render).
+ * #morning — full-screen "Good morning" page. Opening it (from a morning notification
+ * or after confirming „Събудих се“) shows last night's sleep and the protein countdown.
+ * 1.6.4: the wake-up is no longer recorded just by opening the page — a time picker
+ * (default = now) confirms the real hour. The countdown follows that time.
  * @module features/daily/views/morning
  */
 import { html, raw } from '../../../ui/dom.js';
 import { fmtDate, fmtDuration, t } from '../../../core/i18n.js';
 import { dailySettings, settings } from '../../../core/settings.js';
 import { emit } from '../../../core/bus.js';
-import { toast } from '../../../ui/sheet.js';
-import { clock, dayKey, hhmm } from '../../../core/dates.js';
+import { clock } from '../../../core/dates.js';
 import { ic } from '../../../ui/icons.js';
 import { rig } from '../../mascot/api.js';
 import { PROTEIN_WINDOW, MIN, proteinQuest } from '../logic.js';
 import { closeNotifications } from '../notify.js';
-import { BREAKFAST_LOGGER, day, isMorning, lastNight, proteinState, sleepHours, wakeConflict, wakeUp } from '../api.js';
+import { BREAKFAST_LOGGER, day, lastNight, proteinState, sleepHours } from '../api.js';
+import { openWakePicker } from './wakepick.js';
 
 const R = 92,
   C = 2 * Math.PI * R;
@@ -77,8 +77,8 @@ ${proteinCard()}
 </div>`;
     },
     mount: (el) => {
-      if (isMorning(Date.now()) && wakeUp()) emit('ui:refresh');
       closeNotifications(['morning']);
+      if (!day().wake) queueMicrotask(() => openWakePicker());
       timer = window.setInterval(() => {
         const ps = proteinState(day(), Date.now());
         if (ps.state !== last && last) emit('ui:refresh');
@@ -92,12 +92,7 @@ ${proteinCard()}
     },
     unmount: () => clearInterval(timer),
     actions: {
-      wake: () => {
-        if (wakeUp()) return;
-        // 1.4.4 (time): a breakfast is already logged earlier – the wake-up must be before it
-        const bf = wakeConflict(dayKey(), Date.now());
-        if (bf != null) toast(t('day.err.wakeAfterBreakfast', { time: hhmm(bf) }));
-      },
+      wake: () => (openWakePicker(), false),
       yes: () => {
         // 1.2.1: only opens the logger; saving a breakfast there ticks the protein quest.
         closeNotifications(['protein']);

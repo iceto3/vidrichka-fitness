@@ -4,8 +4,10 @@
  * @module ui/components
  */
 import { html, raw } from './dom.js';
-import { fmtHM, fmtNum, t } from '../core/i18n.js';
+import { fmtDate, fmtHM, fmtNum, t } from '../core/i18n.js';
+import { parseDay } from '../core/dates.js';
 import { ic } from './icons.js';
+import { initWheels } from './wheel.js';
 
 /**
  * Progress ring.
@@ -116,42 +118,53 @@ export const empty = (icon, text) =>
   html`<div class="empty">${ic(icon, 28, 2)}<div class="b muted">${text}</div></div>`;
 
 /**
- * Time field that always shows the app's clock style (24 h for BG, the locale's for EN),
- * however the browser would draw a native time input. The native input sits invisibly on
- * top, so a tap still opens the system time picker; `data-change` gets its "HH:MM" value.
- * @param {{value: string, act: string, label: string, k?: string, disabled?: boolean, cls?: string}} o
+ * Time field that always shows the app's clock style (24 h for BG, the locale's for EN).
+ * A tap opens the shared scroll-wheel picker (no keyboard, no system time input).
+ * `data-change` gets its "HH:MM" value.
+ * @param {{value: string, act: string, label: string, k?: string, disabled?: boolean, cls?: string, min?: string, max?: string, step?: number}} o
  */
 export const timeInput = (o) =>
-  html`<span class="input tbox ${o.cls ?? ''}${o.disabled ? ' off' : ''}"><span class="tval num" aria-hidden="true">${fmtHM(o.value)}</span><input class="tnative" type="time" data-change="${o.act}" ${o.k ? raw(`data-k="${o.k}"`) : ''} value="${o.value}" aria-label="${o.label}" ${o.disabled ? raw('disabled') : ''}></span>`;
+  html`<button type="button" class="input tbox ${o.cls ?? ''}${o.disabled ? ' off' : ''}" value="${o.value}" data-wheel="time" data-change="${o.act}" data-step="${o.step ?? 1}" ${o.k ? raw(`data-k="${o.k}"`) : ''} ${o.min ? raw(`data-min="${o.min}"`) : ''} ${o.max ? raw(`data-max="${o.max}"`) : ''} aria-label="${o.label}" ${o.disabled ? raw('disabled') : ''}><span class="tval num">${fmtHM(o.value)}</span></button>`;
 
 /**
- * 1.4.3 (tester round): a typed 24-hour time with quick −/+ steps (no 12-hour AM/PM wheel,
- * whatever the phone's locale). The text field is `inputmode="numeric"`; `data-change` and
- * `data-input` both go to `o.act` (the view commits a complete time while typing, see
- * `hmComplete`, and anything else on change, see `parseHM`). The step buttons call `o.step`
- * with `data-f` = `o.f` and `data-d` = ±minutes.
- * @param {{value: string, act: string, step: string, f?: string, label: string, mins?: number, bad?: boolean, cls?: string}} o
+ * 24-hour time with −/+ steps. 1.6.4: the middle control opens the scroll-wheel picker
+ * (no keyboard, every minute). The step buttons still move the time by `o.mins`.
+ * `data-change` gets a complete "HH:MM". Optional `min` / `max` ("HH:MM") limit the wheel.
+ * @param {{value: string, act: string, step: string, f?: string, label: string, mins?: number, bad?: boolean, cls?: string, min?: string, max?: string}} o
  */
 export const time24 = (o) => {
   const d = o.mins ?? 15,
-    f = o.f ? raw(` data-f="${o.f}"`) : '';
-  return html`<span class="t24 ${o.cls ?? ''}${o.bad ? ' bad' : ''}"><button type="button" class="t24b" data-act="${o.step}"${f} data-d="-${d}" aria-label="${t('time24.minus', { n: d })}">${ic('minus', 18, 2.6)}</button><input class="t24i num" type="text" inputmode="numeric" maxlength="5" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="${t('time24.ph')}" value="${o.value}" data-change="${o.act}" data-input="${o.act}" aria-label="${o.label}" aria-invalid="${o.bad ? 'true' : 'false'}"><button type="button" class="t24b" data-act="${o.step}"${f} data-d="${d}" aria-label="${t('time24.plus', { n: d })}">${ic('plus', 18, 2.6)}</button></span>`;
+    f = o.f ? raw(` data-f="${o.f}"`) : '',
+    min = o.min ? raw(` data-min="${o.min}"`) : '',
+    max = o.max ? raw(` data-max="${o.max}"`) : '';
+  // The wheel lists every minute; −/+ still move by `d`. A 5-min wheel could not
+  // replace a typed time like 06:42 (sleep) or 08:29 (meal clock).
+  return html`<span class="t24 ${o.cls ?? ''}${o.bad ? ' bad' : ''}"><button type="button" class="t24b" data-act="${o.step}"${f} data-d="-${d}" aria-label="${t('time24.minus', { n: d })}">${ic('minus', 18, 2.6)}</button><button type="button" class="t24i num" value="${o.value}" data-wheel="time" data-change="${o.act}"${min}${max} aria-label="${o.label}" aria-invalid="${o.bad ? 'true' : 'false'}">${o.value}</button><button type="button" class="t24b" data-act="${o.step}"${f} data-d="${d}" aria-label="${t('time24.plus', { n: d })}">${ic('plus', 18, 2.6)}</button></span>`;
 };
 
-// 1.4.3 round 2: tapping a typed time selects it, so what is typed replaces it completely.
-if (typeof document !== 'undefined')
-  document.addEventListener('focusin', (e) => {
-    const i = /** @type {HTMLInputElement|null} */ (/** @type {HTMLElement} */ (e.target)?.closest?.('.t24i'));
-    if (i) setTimeout(() => document.activeElement === i && i.select(), 0);
-  });
+/**
+ * Date field: a tap opens the day / month / year scroll wheels (no native date keyboard).
+ * `data-change` (or `data-input` when `o.input`) gets "YYYY-MM-DD". Optional `min` / `max`.
+ * @param {{value: string, act: string, label: string, min?: string, max?: string, id?: string, k?: string, i?: number, cls?: string, input?: boolean, text?: string}} o
+ */
+export function dateField(o) {
+  const ev = o.input ? `data-input="${o.act}"` : `data-change="${o.act}"`;
+  const text =
+    o.text ?? (o.value ? fmtDate(parseDay(o.value), { weekday: 'short', day: 'numeric', month: 'short' }) : '');
+  return html`<button type="button" class="input dfield ${o.cls ?? ''}" ${o.id ? raw(`id="${o.id}"`) : ''} ${raw(ev)} value="${o.value}" data-wheel="date" ${o.k ? raw(`data-k="${o.k}"`) : ''} ${o.i != null ? raw(`data-i="${o.i}"`) : ''} ${o.min ? raw(`data-min="${o.min}"`) : ''} ${o.max ? raw(`data-max="${o.max}"`) : ''} aria-label="${o.label}">${text}</button>`;
+}
 
-// Desktop browsers only open the picker from their own icon: open it on any tap.
-if (typeof document !== 'undefined')
-  document.addEventListener('click', (e) => {
-    const i = /** @type {HTMLInputElement|null} */ (/** @type {HTMLElement} */ (e.target)?.closest?.('.tnative'));
-    try {
-      if (i && !i.disabled) i.showPicker?.();
-    } catch {
-      /* not allowed here (e.g. cross-origin frame): the input still works */
-    }
-  });
+/**
+ * Sleep-duration field (hours + minutes wheels). `value` is decimal hours; the confirm
+ * value is "H:MM" (see `parseDuration`).
+ * @param {{value: number, act: string, label: string, i?: number, maxHours?: number, cls?: string}} o
+ */
+export function durationField(o) {
+  const min = Math.max(0, Math.round(Number(o.value || 0) * 60));
+  const h = Math.floor(min / 60),
+    m = min % 60,
+    hm = `${h}:${String(m).padStart(2, '0')}`;
+  return html`<button type="button" class="input durfield num ${o.cls ?? ''}" value="${hm}" data-wheel="duration" data-change="${o.act}" data-max-hours="${o.maxHours ?? 16}" ${o.i != null ? raw(`data-i="${o.i}"`) : ''} aria-label="${o.label}">${h} ${t('unit.h')} ${String(m).padStart(2, '0')} ${t('unit.min')}</button>`;
+}
+
+if (typeof document !== 'undefined') initWheels();

@@ -10,7 +10,7 @@ import { dayKey, parseDay } from '../../../core/dates.js';
 import { put, uid } from '../../../core/store.js';
 import { emit, on } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
-import { delta, toggle } from '../../../ui/components.js';
+import { delta, toggle, dateField } from '../../../ui/components.js';
 import { lineChart, mergeSameX, sparkline } from '../../../ui/chart.js';
 import { closeSheet, confirmDialog, openSheet, whenSettled } from '../../../ui/sheet.js';
 import { deleteWithUndo } from '../../../ui/undo.js';
@@ -163,7 +163,7 @@ export function openMeasureForm(focus = '') {
     render:
       () => html`<div class="row between"><h2 class="h2">${t('body.addTitle')}</h2><button class="iconbtn" data-close aria-label="${t('common.close')}">${ic('close', 20)}</button></div>
 <p class="muted small b mt4">${t('body.addHint')}</p>
-<label class="field mt12"><span>${t('body.date')}</span><input class="input" type="date" id="mdate" data-input="v" data-k="date" value="${v.date}" max="${dayKey()}"></label>
+<label class="field mt12"><span>${t('body.date')}</span>${dateField({ value: v.date, act: 'v', k: 'date', id: 'mdate', max: dayKey(), label: t('body.date'), input: true })}</label>
 ${fields.map(
   (
     f,

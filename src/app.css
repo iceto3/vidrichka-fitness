@@ -1,6 +1,7 @@
 /* Stylesheet entry. Each feature owns its CSS file; register new ones here. */
 @import url('./styles/base.css');
 @import url('./styles/components.css');
+@import url('./styles/wheel.css');
 @import url('./features/home/home.css');
 @import url('./features/workouts/workouts.css');
 @import url('./features/library/library.css');

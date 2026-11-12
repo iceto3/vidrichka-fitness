@@ -10,7 +10,7 @@ import { fmtDate, fmtHM, t } from '../../../core/i18n.js';
 import { dayKey, hhmm, parseDay } from '../../../core/dates.js';
 import { emit } from '../../../core/bus.js';
 import { ic } from '../../../ui/icons.js';
-import { seg } from '../../../ui/components.js';
+import { seg, dateField } from '../../../ui/components.js';
 import { confirmDialog, openSheet, snack } from '../../../ui/sheet.js';
 import { restore } from '../../../core/trash.js';
 import { POSES, photoMonth, photoSessions, photos } from '../api.js';
@@ -118,7 +118,7 @@ export function openSession(id) {
       return html`<div class="row between"><h2 class="h2">${t(id ? 'photo.session' : 'photo.newSession')}</h2><button class="iconbtn" data-close aria-label="${t('common.close')}">${ic('close', 20)}</button></div>
 <p class="muted small b mt4">${t('photo.sessionHint')}</p>
 <label class="field mt12"><span>${t('photo.date')}${src === 'exif' ? html` <small class="chip chip-sm psrc">${t('photo.fromExif')}</small>` : src === 'file' ? html` <small class="chip chip-sm psrc">${t('photo.fromFile')}</small>` : src === 'edited' ? html` <small class="chip warm chip-sm psrc">${t('photo.edited')}</small>` : ''}</span>
-<input class="input" type="date" id="psdate" data-change="date" value="${date}" max="${dayKey()}"><small class="hint">${t('photo.dateHint')}${s ? html` · ${addedAt(s.ts)}` : ''}</small></label>
+${dateField({ value: date, act: 'date', id: 'psdate', max: dayKey(), label: t('photo.dateHint') })}<small class="hint">${t('photo.dateHint')}${s ? html` · ${addedAt(s.ts)}` : ''}</small></label>
 <div class="pslots edit mt12">${POSES.map((p) => {
         const ph = s?.slots[p];
         if (!ph)

@@ -585,29 +585,26 @@ html[lang='bg'] .nav .t {
   margin-left: 3px;
 }
 
-/* time field: our own text over an invisible native time input (ui/components.js › timeInput) */
+/* time field: tap opens the scroll-wheel picker (ui/components.js › timeInput) */
 .tbox {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  color: inherit;
 }
 .tbox.wide {
   justify-content: flex-start;
 }
-.tbox .tnative {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-}
-.tbox:focus-within {
+.tbox:focus,
+.tbox:focus-visible {
   border-color: var(--accent);
+  outline: none;
 }
 
 /* v1.3.2 mockup: small undo pill (deletions only) */
@@ -708,8 +705,12 @@ html[lang='bg'] .nav .t {
   text-align: center;
   letter-spacing: 0.02em;
   padding: 0 6px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
-.t24 .t24i:focus {
+.t24 .t24i:focus,
+.t24 .t24i:focus-visible {
   border-color: var(--accent);
   outline: none;
 }

@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.6.4] – 2026-11-12
+
+### Added
+
+- **Wake clock („Събудих се“)** on Начало: the brown sunrise card opens a time picker that defaults to now. Confirm keeps the one-tap „сега“ path; if she taps later she can scroll back to the real wake time. Not in the future, not before a logged bedtime (and still not after a logged breakfast). Sleep duration, breakfast timing and breakfast reminders follow the chosen time, not the tap. Opening #morning from a notification asks the same way (no automatic wake-up on open).
+- **Scroll-wheel picker** for every time and date in the app (shared iOS-style hours + minutes, or day / month / year; Bulgarian month names in bg). Replaces native `type=time`/`type=date` and the typed 24-hour fields, so no keyboard pops up on Android Chrome or iPhone Safari. Existing min/max limits are kept; −/+ steps on time fields remain. Sleep-screenshot duration uses hours + minutes wheels too. What's new entry for 1.6.4 (bg + en). Unit tests `tests/unit/v164.test.js`; e2e flow `tests/e2e/v164.mjs` (also `--flow v164`).
+
 ## [1.6.3] – 2026-11-12
 
 ### Added

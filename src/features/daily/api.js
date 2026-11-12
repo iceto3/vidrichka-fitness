@@ -6,10 +6,11 @@
  */
 import { all, get, put } from '../../core/store.js';
 import { emit } from '../../core/bus.js';
-import { addDays, dayKey, hhmm, parseDay } from '../../core/dates.js';
+import { addDays, dayKey, hhmm, parseDay, parseHM } from '../../core/dates.js';
 import { dailySettings } from '../../core/settings.js';
 import { award, setAward } from '../motivation/api.js';
 import {
+  at,
   eveningKey,
   fillBedtime,
   isEvening,
@@ -245,6 +246,40 @@ export function wakeConflict(date, wake) {
     all('food').filter((r) => r.date === date),
     wake,
   );
+}
+
+/**
+ * Logged bedtime that a wake-up must follow, if any: the morning's `sleepBed` (sleep
+ * editor) or last night's goodnight time (not an estimate).
+ * @param {number} [now]
+ * @returns {number|null}
+ */
+export function wakeFloor(now = Date.now()) {
+  const today = dayKey(now);
+  const rec = day(today);
+  if (typeof rec.sleepBed === 'number') return rec.sleepBed;
+  const eve = get('days', yesterday(today));
+  if (eve && typeof eve.bed === 'number' && !eve.bedEst) return eve.bed;
+  return null;
+}
+
+/**
+ * 1.6.4: validate a chosen wake-up clock time for today (not in the future, not before a
+ * logged bedtime, not after a logged breakfast).
+ * @param {string} hm
+ * @param {number} [now]
+ * @returns {{ok: true, at: number} | {ok: false, err: 'invalid'|'future'|'early'|'breakfast', at?: number}}
+ */
+export function checkWakeTime(hm, now = Date.now()) {
+  const parsed = parseHM(hm);
+  if (!parsed) return { ok: false, err: 'invalid' };
+  const ts = at(dayKey(now), parsed);
+  if (ts > now + 5 * 60_000) return { ok: false, err: 'future' };
+  const floor = wakeFloor(now);
+  if (floor != null && ts <= floor) return { ok: false, err: 'early', at: floor };
+  const bf = wakeConflict(dayKey(now), ts);
+  if (bf != null) return { ok: false, err: 'breakfast', at: bf };
+  return { ok: true, at: ts };
 }
 
 /**

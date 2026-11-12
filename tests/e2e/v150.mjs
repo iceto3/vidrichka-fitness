@@ -1,3 +1,4 @@
+import { setTime, timeVal } from './wheel.mjs';
 /**
  * 1.5.0 e2e (run from smoke.mjs after the 1.4.4 flows, or alone with `--flow v150`):
  * part 1 – the „Въведи“ button on one line at 360 px, the meal of the time without
@@ -151,12 +152,12 @@ export async function v150(page, h) {
   await go('food/add/lunch');
   const ck = page.locator('.mealclock .t24i');
   await ck.waitFor();
-  assert.equal(await ck.inputValue(), '13:00', 'default: now');
+  assert.equal(await timeVal(ck), '13:00', 'default: now');
   await tap(page.locator('.mealclock .t24b[data-d="-5"]'));
   await settle();
   await tap(page.locator('.mealclock .t24b[data-d="-5"]'));
   await settle();
-  assert.equal(await ck.inputValue(), '12:50');
+  assert.equal(await timeVal(ck), '12:50');
   await page.evaluate(() => scrollTo(0, 0));
   await page.waitForTimeout(200);
   await shot('v150-picker-clock');
@@ -164,13 +165,11 @@ export async function v150(page, h) {
     ['13:30', /още не е дошъл/],
     ['06:50', /преди ставането/],
   ]) {
-    await ck.fill(hm);
-    await ck.press('Tab');
+    await setTime(page, ck, hm, layer);
     await settle();
     assert.match(await page.locator('.clockerr').innerText(), re, hm);
   }
-  await ck.fill('12:30');
-  await ck.press('Tab');
+  await setTime(page, ck, '12:30', layer);
   await settle();
   assert.equal(await page.locator('.clockerr').count(), 0);
   const addOne = async (/** @type {number} */ i) => {
@@ -194,16 +193,15 @@ export async function v150(page, h) {
   // 2a (1.5.1: the meal's one clock, in the meal sheet): it moves the whole meal
   await go('food');
   await h.clickPast(page.locator('.meal[data-m="lunch"]'), layer.locator('.mealitems'));
-  const it = layer.locator('.mealclk input.t24i');
+  const it = layer.locator('.mealclk .t24i');
   await it.waitFor();
   assert.match(await layer.innerText(), /важи за цялото хранене/);
-  await it.fill('12:45');
-  await it.press('Tab');
+  await setTime(page, it, '12:45', layer);
   await settle();
   await layer.locator('.mclksave').click();
   await settle();
   assert.deepEqual(await lunch(), ['12:45', '12:45'], 'the whole meal moved');
-  assert.equal(await layer.locator('.mealclk input.t24i').inputValue(), '12:45');
+  assert.equal(await timeVal(layer.locator('.mealclk .t24i')), '12:45');
   assert.doesNotMatch(await layer.locator('.mealitems').innerText(), /\d\d:\d\d/, 'no time on a food row');
   await page.waitForTimeout(400);
   await shot('v150-meal-time-moved');
@@ -225,8 +223,7 @@ export async function v150(page, h) {
   assert.match(page.url(), /#\/food\/add\/x_/);
   assert.match(await page.locator('.topbar').innerText(), /Междинно следобедно/, 'now 15:10: between lunch and dinner');
   const xc = page.locator('.mealclock .t24i');
-  await xc.fill('10:30');
-  await xc.press('Tab');
+  await setTime(page, xc, '10:30', layer);
   await settle();
   assert.match(await page.locator('.topbar').innerText(), /Междинно сутрешно/, 'the name follows the clock');
   await addOne(2);

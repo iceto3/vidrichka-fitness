@@ -1,3 +1,4 @@
+import { timeVal } from './wheel.mjs';
 /**
  * 1.6.1 e2e (run from smoke.mjs after the 1.6.0 flow, or alone with `--flow v161`) at 360 px:
  * „Хранителни добавки“ in Храна (creatine row, one-tap add, „Взех“ with the protein powder
@@ -14,6 +15,15 @@ import assert from 'node:assert/strict';
 export async function v161(page, h) {
   const { go, settle, shot, layer, rows, closeAll, dayField, clearCel } = h;
   await page.setViewportSize({ width: 360, height: 780 });
+  // --flow v161 has no earlier “Later” handler; a reminder prompt (e.g. the supplement
+  // time set below) must not block the Profile gender tap on WebKit.
+  await page.addLocatorHandler(layer.locator('.dprompt'), async (l) => {
+    await l
+      .locator('[data-close]')
+      .first()
+      .evaluate((b) => /** @type {HTMLElement} */ (b).click());
+    await l.waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+  });
   await go('profile');
   await page.locator('.lang [data-v="bg"]').click();
   await settle();
@@ -72,7 +82,7 @@ export async function v161(page, h) {
   await settle();
   await layer.locator('.suppremind .t24b').last().click(); // 09:00 + 15 min
   await settle();
-  assert.equal(await layer.locator('.suppremind .t24i').inputValue(), '09:15');
+  assert.equal(await timeVal(layer.locator('.suppremind .t24i')), '09:15');
   await layer.locator('[data-act="suppSave"]').click();
   await settle();
   assert.equal(await dayField('sp_vitd'), 2000);
@@ -113,6 +123,8 @@ export async function v161(page, h) {
   const tiles = async () => (await page.locator('.mgrid .m .n').allInnerTexts()).map((x) => x.trim());
   const gender = async (/** @type {'f'|'m'} */ g) => {
     await go('profile');
+    await settle();
+    await closeAll();
     await page.locator(`[data-act="gender"][data-v="${g}"]`).click();
     await settle();
   };
